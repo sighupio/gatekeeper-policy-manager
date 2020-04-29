@@ -6,17 +6,15 @@ It can display all the defined **Constraint Templates** with their rego code, an
 
 ## Deploying GPM
 
-In order to deploy Gatekeper Policy Manager to your cluster, apply the provided manifest running the following command:
+In order to deploy Gatekeper Policy Manager to your cluster, apply the provided kustomization file running the following command:
 
 ```shell
 $ kubectl apply -k .
 ```
 
-This will create a deployment and a service both with the name `gatekeper-policy-manager` in the `gatekeeper-system` namespace. You can edit
-the `gatekeeper-policy-manager.yaml` file to customize the values.
+By default, this will create a deployment and a service both with the name `gatekeper-policy-manager` in the `gatekeeper-system` namespace. We invite you to take a look into the `kustomization.yaml` file to do further configuration.
 
-> The app can be run as a POD in a Kubernetes cluster or locally with a
-kubeconfig file. It will try it best to autodetect the correct configuration.
+> The app can be run as a POD in a Kubernetes cluster or locally with a kubeconfig file. It will try it best to autodetect the correct configuration.
 
 ## Configuration
 
@@ -26,9 +24,9 @@ Env Var Name | Description | Default
 -------------|-------------|--------
 `GPM_AUTH_ENABLED` | Enable Authentication current options: "Anonymous", "OIDC" | Anonymous
 `GPM_SECRET_KEY` | The secret key used to generate tokens. CHANGE THIS VALUE IN PRODUCTION. | `g8k1p3rp0l1c7m4n4g3r`
-`GPM_PREFERRED_URL_SCHEME` | URL scheme to be used while generating links. | "http"
+`GPM_PREFERRED_URL_SCHEME` | URL scheme to be used while generating links. | `http`
 `GPM_OIDC_REDIRECT_DOMAIN` | The server name under the app is being exposed. This is where the client will be redirected after authenticating |
-`GPM_OIDC_ISSUER` | OIDC Issue hostname |
+`GPM_OIDC_ISSUER` | OIDC Issuer hostname |
 `GPM_OIDC_AUTHORIZATION_ENDPOINT` | OIDC Authorizatoin Endpoint |
 `GPM_OIDC_JWKS_URI` | OIDC JWKS URI |
 `GPM_OIDC_TOKEN_ENDPOINT` | OIDC TOKEN Endpoint |
@@ -38,9 +36,9 @@ Env Var Name | Description | Default
 `GPM_OIDC_CLIENT_ID` | The Client ID used to authenticate against the OIDC Provider |
 `GPM_OIDC_CLIENT_SECRET` | The Client Secret used to authenticate against the OIDC Provider |
 
-> ⚠️ Please notice that OIDC Authentication is in beta state. It has been testes to work wit Keycloak as a provider.
+> ⚠️ Please notice that OIDC Authentication is in beta state. It has been tested to work wit Keycloak as a provider.
 
-This environment variables are already provided and ready to be set in the `gatekeeper-policy-manager.yaml` file.
+> These environment variables are already provided and ready to be set in the `manifests/enable-oidc.yaml` file.
 
 ## Screenshots
 
