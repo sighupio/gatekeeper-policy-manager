@@ -1,0 +1,14 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: gatekeeper-policy-manager
+spec:
+  rules:
+  # Set the HOST accordingly
+  - host: gpm.internal.mycompany.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: gatekeeper-policy-manager
+          servicePort: http

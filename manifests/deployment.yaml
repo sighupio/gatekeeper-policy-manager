@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gatekeeper-policy-manager
+spec:
+  selector:
+    matchLabels:
+      app: gatekeeper-policy-manager
+  template:
+    metadata:
+      labels:
+        app: gatekeeper-policy-manager
+    spec:
+      serviceAccountName: gatekeeper-policy-manager
+      containers:
+      - name: gatekeeper-policy-manager
+        image: ralgozino/gatekeeper-policy-manager
+        imagePullPolicy: Always
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+        readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+        ports:
+        - containerPort: 8080
+          name: http
+        securityContext:
+          privileged: false

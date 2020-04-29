@@ -1,0 +1,18 @@
+namespace: gatekeeper-system
+
+resources:
+  - manifests/rbac.yaml
+  - manifests/deployment.yaml
+  - manifests/service.yaml
+  # Uncomment the following line to create an ingress if you want to expose the
+  # the app to the outside. Remember to edit the file and set the host accordingly.
+  # - manifests/ingress.yaml
+
+# Uncomment the following patch to enable OIDC authentication.
+# Remember to edit the file to set the right values.
+# patchesStrategicMerge:
+#   - manifests/enable-oidc.yaml
+
+images:
+  - name: ralgozino/gatekeeper-policy-manager
+    newTag: "0.1"

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <title>Gatekeeper Policy Manager - {{ title }}</title>
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.4/dist/semantic.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.4/dist/semantic.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='prism.css') }}">
+  <style>
+    .footer.segment {
+      padding: 5em 0em;
+      margin-top: 10em !important;
+    }
+  </style>
+  <script src={{ url_for('static', filename='prism.js') }}></script>
+</head>
+<body style="background-color: #f0f0f0;">
+  <div class="ui top secondary pointing menu">
+      <a class="header item" href="/">
+        <i class="user tie icon"></i>
+        GPM
+      </a>
+    <a class="{% if title == 'Constraint Templates' %}active{% endif %} item" href="/constrainttemplates">
+      Contraint Templates
+    </a>
+    <a class="{% if title == 'Constraints' %}active{% endif %} item" href="/constraints">
+      Constraints
+    </a>
+    {% if config.AUTH_ENABLED == 'OIDC' %}
+    <div class="ui right item"><a href="/logout" class="ui very basic button"><i class="sign out icon"></i> logout</a></div>
+    {% endif %}
+  </div>
+  <div class="ui relaxed grid">
+      <div class="ui three wide column">
+          <div class="ui small fluid vertical menu">
+              {% block sidebar %}{% endblock %}
+          </div>
+      </div>
+
+      <div class="ui twelve wide stretched column">
+        {% block content %}{% endblock %}
+      </div>
+</div>
+
+
+{% include 'footer.html' %}
+
+<script>
+$('.ui.accordion')
+  .accordion()
+;
+</script>
+</body>
+</html>

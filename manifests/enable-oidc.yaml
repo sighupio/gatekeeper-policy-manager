@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gatekeeper-policy-manager
+spec:
+  template:
+    spec:
+      containers:
+      - name: gatekeeper-policy-manager
+        env:
+          - name: GPM_OIDC_REDIRECT_DOMAIN
+            value: "127-0-0-1.nip.io:8080"
+          - name: GPM_SECRET_KEY
+            value: "changeme!"
+            # YOU SHOULD USE A KUBERNETES SECRET INSTEAD.
+            # valueFrom:
+            #   secretKeyRef:
+            #     name: gpm-secrets
+            #     key: secret-key
+          - name: GPM_PREFERRED_URL_SCHEME
+            value: http
+          - name: GPM_AUTH_ENABLED
+            value: "OIDC"
+          - name: GPM_OIDC_CLIENT_ID
+            value: gatekeeper-policy-manager
+          - name: GPM_OIDC_CLIENT_SECRET
+            value: "30d6b009-9ae4-42b0-a5c0-b4f65aa6451e"
+            # YOU SHOULD USE A KUBERNETES SECRET INSTEAD.
+            # valueFrom:
+            #   secretKeyRef:
+            #     name: gpm-secrets
+            #     key: oidc-client-secret
+            # The following URLs are an example of a Keycloak OIDC provider:
+          - name: GPM_OIDC_ISSUER
+            value: http://192.168.1.6:8081/auth/realms/devops
+          - name: GPM_OIDC_AUTHORIZATION_ENDPOINT
+            value: http://192.168.1.6:8081/auth/realms/devops/protocol/openid-connect/auth
+          - name: GPM_OIDC_JWKS_URI
+            value: http://192.168.1.6:8081/auth/realms/devops/protocol/openid-connect/certs
+          - name: GPM_OIDC_TOKEN_ENDPOINT
+            value: http://192.168.1.6:8081/auth/realms/devops/protocol/openid-connect/token
+          - name: GPM_OIDC_INTROSPECTION_ENDPOINT
+            value: http://192.168.1.6:8081/auth/realms/devops/protocol/openid-connect/token/introspect
+          - name: GPM_OIDC_USERINFO_ENDPOINT
+            value: http://192.168.1.6:8081/auth/realms/devops/protocol/openid-connect/userinfo
+          - name: GPM_OIDC_END_SESSION_ENDPOINT
+            value: http://192.168.1.6:8081/auth/realms/devops/protocol/openid-connect/logout

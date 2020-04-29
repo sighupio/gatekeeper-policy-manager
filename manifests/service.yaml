@@ -1,0 +1,11 @@
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: gatekeeper-policy-manager
+spec:
+  selector:
+    app: gatekeeper-policy-manager
+  ports:
+  - port: 80
+    targetPort: http

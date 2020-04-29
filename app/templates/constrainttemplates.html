@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block sidebar %}
+  {% for constrainttemplate in constrainttemplates["items"] %}
+    <a class="item" href="#{{ constrainttemplate.spec.crd.spec.names.kind }}">
+      {{ constrainttemplate.spec.crd.spec.names.kind }}
+    </a>
+  {% endfor %}
+{% endblock %}
+{% block content %}
+  {% for constrainttemplate in constrainttemplates["items"] %}
+  <div class="ui segments" id="{{ constrainttemplate.spec.crd.spec.names.kind }}">
+    <div class="ui {% if constrainttemplate.status.created %} green {% endif %} secondary header segment">{{ constrainttemplate.spec.crd.spec.names.kind }} {% if constrainttemplate.status.created %} <span class="ui small horizontal label green">CREATED</span> {% endif %}</div>
+    {% for t in constrainttemplate.spec.targets %}
+      <div class="ui segment">
+        <h5 class="header">Target {{ t.target }}</h5>
+
+        <div class="ui styled fluid accordion">
+          {% if t.libs|length > 0 %}
+          <div class="title">
+            <i class="dropdown icon"></i>
+            Libs definition
+          </div>
+          {% for lib in t.libs %}
+          <div class="content">
+            <pre class="line-numbers"><code class="language-ruby">{{ lib }}</code></pre>
+          </div>
+          {% endfor %}
+          {% endif %}
+
+          <div class="title">
+            <i class="dropdown icon"></i>
+            Rego definition
+          </div>
+          <div class="content">
+            <pre class="line-numbers"><code class="language-ruby">{{ t.rego }}</code></pre>
+          </div>
+        </div>
+
+      </div>
+    {% endfor %}
+
+    {% if constrainttemplate.spec.crd.spec.validation is defined %}
+    <div class="ui segment">
+      <h5 class="header">Parameters schema</h5>
+        <div class="ui styled fluid accordion">
+          <div class="title">
+            <i class="dropdown icon"></i>
+            Schema definition
+          </div>
+
+        <div class="ui horizontal very relaxed divided list content">
+        {% for property,value in constrainttemplate.spec.crd.spec.validation.openAPIV3Schema.properties.items() %}
+        <div class="top aligned item">
+          <div class="content">
+            <div class="header">{{ property }}</div>
+            {{ value|dict_to_ul|safe }}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+      {#
+      <div class="ui styled fluid accordion">
+        <div class="title">
+          <i class="dropdown icon"></i>
+          Schema validation definition
+        </div>
+        <div class="content">
+          <pre class="line-numbers"><code class="language-json">{{ constrainttemplate.spec.crd.spec.validation.openAPIV3Schema.properties|pprint }}</code></pre>
+        </div>
+      </div>
+      #}
+
+    </div>
+    {% endif %}
+
+    <div class="ui segment">
+      <h5>Status</h6>
+        <div class="ui horizontal list">
+          {% for pod in constrainttemplate.status.byPod %}
+            <div class="item">
+              <div class="content">
+                <div class="ui image label">
+                {{ pod.id }}
+                <div class="detail">GENERATION {{ pod.observedGeneration }}</div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+    {% endfor %}
+{% endblock %}

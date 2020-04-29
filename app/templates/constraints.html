@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block sidebar %}
+  {% for constraint in constraints %}
+  <a class="item" href="#{{ constraint.metadata.name }}">
+    <i class="lock {% if constraint.spec.enforcementAction == 'dryrun' %}open{% endif %} icon"></i>
+    <div class="ui small {% if constraint.status.totalViolations is not defined %} grey {% else %}{% if constraint.status.totalViolations != 0 %} red {%else%} green {% endif %}{% endif %} label">{{ constraint.status.totalViolations|default('?') }}</div>
+    {{ constraint.metadata.name }}
+    </a>
+  {% endfor %}
+{% endblock %}
+{% block content %}
+  {% for constraint in constraints %}
+  <div class="ui segments" id="{{ constraint.metadata.name }}">
+    <div class="ui {% if constraint.status.totalViolations is not defined %} grey {% else %}{%if constraint.status.totalViolations != 0 %} red {% else %} green {% endif %}{% endif %} header secondary segment">
+      <div class="ui small basic horizontal labels"><span style="margin-right: 1em;">{{ constraint.metadata.name }}</span><div class="ui {% if constraint.status.totalViolations is not none %}{% if constraint.status.totalViolations != 0 %} red {%else %} green {% endif %}{% else %} grey {% endif %} label">VIOLATIONS <div class="detail">{{ constraint.status.totalViolations|default('?') }}</div></div> <div class="ui {% if not constraint.spec.enforcementAction %}orange{% elif constraint.spec.enforcementAction == 'dryrun' %}grey{% else %}orange{% endif %} label"><i class="lock {% if constraint.spec.enforcementAction == 'dryrun' %}open{% endif %} icon"></i> MODE <div class="detail">{{ constraint.spec.enforcementAction|default('deny')|upper }}</div></div> <a class="ui primary label" href="/constrainttemplates/#{{ constraint.kind }}"><i class="external alternate icon"></i> TEMPLATE <div class="detail">{{ constraint.kind }}</div></a><div class="ui grey label">CREATED ON <div class="detail">{{constraint.metadata.creationTimestamp}}</div></div></div></div>
+      {% if constraint.status.totalViolations is defined and constraint.status.totalViolations > 0 %}
+        <div class="ui segment">
+          <h5>Violation(s):</h5>
+          {% for violation in constraint.status.violations %}
+          <table class="ui compact table">
+            <thead>
+              <tr><th colspan="2"><i class="red exclamation circle icon"></i> {{ violation.message }}</th>
+            </tr></thead>
+            <tbody>
+              {% for k,v in violation.items() %}
+              {% if k != "message" %}
+              <tr>
+                <td class="collapsing">{{ k }}</td>
+                <td>{{ v }}</td>
+              </tr>
+              {% endif %}
+              {% endfor %}
+          </tbody></table>
+          {% endfor %}
+        </div>
+      {% endif %}
+      <div class="ui segment">
+      <h5>Matches</h5>
+
+      <div class="ui horizontal very relaxed divided list">
+
+        {% if constraint.spec.match.kinds %}
+        <div class="top aligned item">
+        <div class="header">Kinds</div>
+        <div class="content">
+        <div class="ui horizontal relaxed list">
+
+        {% for k in constraint.spec.match.kinds %}
+        <div class="top aligned item">
+          <div class="header">API Groups</div>
+            {% for ag in k.apiGroups %}
+              <div class="content">
+                {{ ag or '*' }}
+              </div>
+            {% endfor %}
+        </div>
+        <div class="top aligned item">
+          <div class="header">Kinds</div>
+          {% for k in k.kinds %}
+            <div class="content">
+              {{ k }}
+            </div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+
+        {% endif %}
+      </div>
+      </div>
+      </div> 
+
+
+        {% if constraint.spec.match.namespaces %}
+        <div class="top aligned item">
+          <div class="header">Namespaces</div>
+              {% for ns in constraint.spec.match.namespaces %}
+              <div class="content">{{ ns }}</div>
+              {% endfor %}
+        </div>
+        {% endif %}
+        {% if constraint.spec.match.excludedNamespaces %}
+        <div class="top aligned item">
+           <div class="header">Excluded Namespaces</div>
+              {% for excludedns in constraint.spec.match.excludedNamespaces %}
+              <div class="content">{{ excludedns }}</div>
+              {% endfor %}
+        </div>
+        {% endif %}
+        {% if constraint.spec.match.labelSelector %}
+        <div class="top aligned item">
+          <div class="header">Label Selector</div>
+            {% for ls in constraint.spec.match.labelSelector %}
+              <div class="content">{{ ls }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% if constraint.spec.match.namespaceSelector %}
+        <div class="top aligned item">
+          <div class="header">Namespace Selector</div>
+              {% for nsselector in constraint.spec.match.namespaceSelector %}
+              <div class="content">{{ nsselector }}</div>
+              {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+       
+      </div>
+  </div>
+ 
+      {% if constraint.spec.parameters %}
+      <div class="ui segment">
+        <h5>Parameters</h5>
+        <div class="ui horizontal very relaxed divided list">
+          {% for k,v in constraint.spec.parameters.items() %}
+          <div class="top aligned item">
+            <div class="content">
+              <div class="header">{{ k }}</div>
+              {{ v }}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+    <div class="ui secondary segment">
+      <h5>Status at {{ constraint.status.auditTimestamp }}</h5>
+      <div class="ui horizontal list">
+      {% for pod in constraint.status.byPod %}
+        <div class="item">
+          <div class="content">
+            <div class="ui image label" data-tooltip="Constraint is {% if not pod.enforced %}NOT{% endif %} being ENFORCED by this POD" data-variation="tiny">
+            {% if pod.enforced %}
+            <i class="green shield alternate icon"></i>
+            {% else %}
+            <i class="red open lock icon"></i>
+            {% endif %}
+            {{ pod.id }}
+            <div class="detail">GENERATION {{ pod.observedGeneration }}</div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+      </div>
+    </div>
+
+  </div>
+  {% endfor %}
+{% endblock %}
