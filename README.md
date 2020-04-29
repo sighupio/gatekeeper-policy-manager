@@ -52,8 +52,6 @@ Env Var Name | Description | Default
 
 ![Constraint view 2](screenshots/05-constraints.png)
 
-![Error handling screen](screenshots/06-error.png)
-
 ## Development
 
 GPM is written in Python using the Flask framework for the backend and Fromantic-UI for the frontend. In order to develop GPM, you'll must create a Python 3 virtual environment, install all the dependencies specified in the provided `requirements.txt` and you are good to go.
