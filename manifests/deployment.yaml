@@ -14,7 +14,7 @@ spec:
       serviceAccountName: gatekeeper-policy-manager
       containers:
       - name: gatekeeper-policy-manager
-        image: ralgozino/gatekeeper-policy-manager
+        image: quay.io/sighup/gatekeeper-policy-manager
         imagePullPolicy: Always
         resources:
           requests:

@@ -14,5 +14,5 @@ resources:
 #   - manifests/enable-oidc.yaml
 
 images:
-  - name: ralgozino/gatekeeper-policy-manager
+  - name: quay.io/sighup/gatekeeper-policy-manager
     newTag: "0.1"
