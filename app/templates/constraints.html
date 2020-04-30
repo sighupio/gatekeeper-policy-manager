@@ -50,7 +50,7 @@
           <div class="header">API Groups</div>
             {% for ag in k.apiGroups %}
               <div class="content">
-                {{ ag or '*' }}
+                {{ ag or 'empty (core)' }}
               </div>
             {% endfor %}
         </div>
