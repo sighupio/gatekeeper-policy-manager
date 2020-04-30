@@ -4,6 +4,12 @@ Gatekeper Policy Manager is a simple **read only** web UI for viewing OPA Gateke
 
 It can display all the defined **Constraint Templates** with their rego code, and all the **Contraints** with it's current status, violations, enforcement action, matches definition, etc.
 
+## Requirements
+
+You'll need OPA Gatekeeper running in your cluster and at least some constraint templates and constraints defined in order to take advantage of this tool.
+
+ℹ You can easily deploy Gatekeeper to your cluster using the (also open source) [Fury Kubernetes OPA](https://github.com/sighupio/fury-kubernetes-opa) module.
+
 ## Deploying GPM
 
 In order to deploy Gatekeper Policy Manager to your cluster, apply the provided kustomization file running the following command:
@@ -15,6 +21,14 @@ $ kubectl apply -k .
 By default, this will create a deployment and a service both with the name `gatekeper-policy-manager` in the `gatekeeper-system` namespace. We invite you to take a look into the `kustomization.yaml` file to do further configuration.
 
 > The app can be run as a POD in a Kubernetes cluster or locally with a kubeconfig file. It will try it best to autodetect the correct configuration.
+
+Once you've deployed the application, if you haven't set up an ingress, you can access the web-ui using port-forward:
+
+```bash
+kubectl -n gatekeeper-system port-forward  svc/gatekeeper-policy-manager 8080:80
+````
+
+Then access it with your browser on: [http://127.0.0.1:8080](http://127.0.0.1:8080)
 
 ## Configuration
 
