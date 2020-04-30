@@ -23,7 +23,7 @@ GPM is an stateless application, but it can be configured using environment vari
 Env Var Name | Description | Default
 -------------|-------------|--------
 `GPM_AUTH_ENABLED` | Enable Authentication current options: "Anonymous", "OIDC" | Anonymous
-`GPM_SECRET_KEY` | The secret key used to generate tokens. CHANGE THIS VALUE IN PRODUCTION. | `g8k1p3rp0l1c7m4n4g3r`
+`GPM_SECRET_KEY` | The secret key used to generate tokens. **Change this value in production**. | `g8k1p3rp0l1c7m4n4g3r`
 `GPM_PREFERRED_URL_SCHEME` | URL scheme to be used while generating links. | `http`
 `GPM_OIDC_REDIRECT_DOMAIN` | The server name under the app is being exposed. This is where the client will be redirected after authenticating |
 `GPM_OIDC_ISSUER` | OIDC Issuer hostname |
@@ -35,10 +35,11 @@ Env Var Name | Description | Default
 `GPM_OIDC_END_SESSION_ENDPOINT` | OIDC End Session Endpoint |
 `GPM_OIDC_CLIENT_ID` | The Client ID used to authenticate against the OIDC Provider |
 `GPM_OIDC_CLIENT_SECRET` | The Client Secret used to authenticate against the OIDC Provider |
+`GPM_LOG_LEVEL` | Log level (see [python logging docs](https://docs.python.org/2/library/logging.html#levels) for available levels) | `INFO`
 
 > ⚠️ Please notice that OIDC Authentication is in beta state. It has been tested to work wit Keycloak as a provider.
 
-> These environment variables are already provided and ready to be set in the `manifests/enable-oidc.yaml` file.
+> These environment variables are already provided and ready to be set in the [`manifests/enable-oidc.yaml`](manifests/enable-oidc.yaml) file.
 
 ## Screenshots
 
@@ -59,7 +60,7 @@ GPM is written in Python using the Flask framework for the backend and Fromantic
 The following commands should get you up and running:
 
 ```bash
-#Create a virtualenv
+# Create a virtualenv
 $ python3 -m venv env
 # Activate it
 $ source ./env/bin/activate
