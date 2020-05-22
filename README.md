@@ -30,6 +30,18 @@ kubectl -n gatekeeper-system port-forward  svc/gatekeeper-policy-manager 8080:80
 
 Then access it with your browser on: [http://127.0.0.1:8080](http://127.0.0.1:8080)
 
+## Running locally
+
+GPM can also be run locallly using docker and a kubeconfig, assuming that the kubeconfig file you want to use is located at `~/.kube/config` the command to run GPM locallly would be:
+
+```bash
+$ docker run -v ~/.kube/config:/root/.kube/config -p 8080:8080 quay.io/sighup/gatekeeper-policy-manager:0.1
+```
+
+Then access it with your browser on: [http://127.0.0.1:8080](http://127.0.0.1:8080)
+
+> You can also run the flask app directly, see the development section for further information.
+
 ## Configuration
 
 GPM is an stateless application, but it can be configured using environment variables. The possible configurations are:
