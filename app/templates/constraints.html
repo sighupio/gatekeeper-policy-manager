@@ -80,6 +80,12 @@
       </div> 
 
 
+        {% if constraint.spec.match.scope %}
+        <div class="top aligned item">
+          <div class="header">Scope</div>
+              <div class="content">{{ constraint.spec.match.scope }}</div>
+        </div>
+        {% endif %}
         {% if constraint.spec.match.namespaces %}
         <div class="top aligned item">
           <div class="header">Namespaces</div>
