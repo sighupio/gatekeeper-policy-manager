@@ -15,27 +15,37 @@
       <div class="ui small basic horizontal labels"><span style="margin-right: 1em;">{{ constraint.metadata.name }}</span><div class="ui {% if constraint.status.totalViolations is not none %}{% if constraint.status.totalViolations != 0 %} red {%else %} green {% endif %}{% else %} grey {% endif %} label">VIOLATIONS <div class="detail">{{ constraint.status.totalViolations|default('?') }}</div></div> <div class="ui {% if not constraint.spec.enforcementAction %}orange{% elif constraint.spec.enforcementAction == 'dryrun' %}grey{% else %}orange{% endif %} label"><i class="lock {% if constraint.spec.enforcementAction == 'dryrun' %}open{% endif %} icon"></i> MODE <div class="detail">{{ constraint.spec.enforcementAction|default('deny')|upper }}</div></div> <a class="ui primary label" href="/constrainttemplates/#{{ constraint.kind }}"><i class="external alternate icon"></i> TEMPLATE <div class="detail">{{ constraint.kind }}</div></a><div class="ui grey label">CREATED ON <div class="detail">{{constraint.metadata.creationTimestamp}}</div></div></div></div>
       {% if constraint.status.totalViolations is defined and constraint.status.totalViolations > 0 %}
         <div class="ui segment">
-          <h5>Violation(s):</h5>
-          {% for violation in constraint.status.violations %}
-          <table class="ui compact table">
+          <table class="ui compact selectable striped table">
             <thead>
-              <tr><th colspan="2"><i class="red exclamation circle icon"></i> {{ violation.message }}</th>
-            </tr></thead>
-            <tbody>
-              {% for k,v in violation.items() %}
-              {% if k != "message" %}
               <tr>
-                <td class="collapsing">{{ k }}</td>
-                <td>{{ v }}</td>
+                <th colspan="5"><i class="red exclamation circle icon"></i> Violations</th>
               </tr>
-              {% endif %}
-              {% endfor %}
-          </tbody></table>
-          {% endfor %}
+              <tr>
+                <th>Action</th>
+                <th>Kind</th>
+                <th>Namespace</th>
+                <th>Name</th>
+                <th>Message</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for violation in constraint.status.violations %}
+                <tr>
+                  <td>{{ violation.enforcementAction }}</td>
+                  <td>{{ violation.kind }}</td>
+                  <td>{{ violation.namespace }}</td>
+                  <td>{{ violation.name }}</td>
+                  <td>{{ violation.message }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+          </table>
         </div>
+      {% else %}
+      <div class="ui segment"><i class="ui green icon checkmark"></i> There are no violations for this Constraint</div>
       {% endif %}
       <div class="ui segment">
-      <h5>Matches</h5>
+      <h5>Match criteria</h5>
 
       <div class="ui horizontal very relaxed divided list">
 
