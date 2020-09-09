@@ -231,7 +231,7 @@ def get_constrainttemplates():
 
 @app.route('/health')
 def health():
-    """Health check endpoitn for probes"""
+    """Health check endpoint for probes"""
     return {'message': 'OK'}
 
 
