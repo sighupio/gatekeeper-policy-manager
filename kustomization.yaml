@@ -15,4 +15,4 @@ resources:
 
 images:
   - name: quay.io/sighup/gatekeeper-policy-manager
-    newTag: "0.1"
+    newTag: "0.2"
