@@ -2,11 +2,10 @@ import os
 from logging.config import dictConfig
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
-from flask import Flask, render_template, session, jsonify
+from flask import Flask, render_template
 from urllib3.exceptions import NewConnectionError, MaxRetryError
 from flask_pyoidc import OIDCAuthentication
 from flask_pyoidc.provider_configuration import ProviderConfiguration, ProviderMetadata, ClientMetadata
-from flask_pyoidc.user_session import UserSession
 from functools import wraps
 
 # Set up logging
@@ -229,6 +228,48 @@ def get_constrainttemplates():
                                )
 
 
+@app.route('/configs/')
+@login_required_conditional
+def get_gatekeeperconfigs():
+    """Gatekeeper Configs View"""
+    api = get_api()
+
+    try:
+        configs = api.get_cluster_custom_object(group="config.gatekeeper.sh",
+                                                           version="v1alpha1",
+                                                           plural="configs",
+                                                           name="",
+                                                           )
+    except NewConnectionError as e:
+        return render_template("error.html",
+                               title="Error",
+                               error="Could not connect to Kubernetes Cluster",
+                               action="Is the current Kubeconfig context valid?",
+                               description=e
+                               )
+    except MaxRetryError as e:
+        return render_template("error.html",
+                               title="Error",
+                               error="Could not connect to Kubernetes Cluster",
+                               action="Is the current Kubeconfig context valid?",
+                               description=e
+                               )
+    except ApiException as e:
+        return render_template("message.html",
+                               type="error",
+                               title="Error",
+                               message="We had a problem while asking the API for Gatekeeper Config objects",
+                               action="Is Gatekeeper deployed in the cluster?",
+                               description=e
+                               )
+    else:
+        return render_template("configs.html",
+                               gatekeeper_configs=configs.get('items'),
+                               title="Gatekeeper Configurations",
+                               hide_sidebar=len(configs["items"]) == 0
+                               )
+
+
 @app.route('/health')
 def health():
     """Health check endpoint for probes"""
@@ -256,12 +297,3 @@ if app.config.get('AUTH_ENABLED') == 'OIDC':
                                action='Something is wrong with your OIDC session. Please try to <a href="/logout">logout</a> and login again',
                                description=error_description
                                )
-
-    # This can be useful to debug OIDC login
-    # @app.route('/login')
-    # @auth.oidc_auth('oidc')
-    # def login():
-    #     user_session = UserSession(session)
-    #     return jsonify(access_token=user_session.access_token,
-    #                    id_token=user_session.id_token,
-    #                    userinfo=user_session.userinfo)

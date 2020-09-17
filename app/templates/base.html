@@ -20,28 +20,33 @@
         <i class="user tie icon"></i>
         GPM
       </a>
-    <a class="{% if title == 'Constraint Templates' %}active{% endif %} item" href="/constrainttemplates">
+    <a class="{% if title == 'Constraint Templates' %}active{% endif %} item" href="/constrainttemplates" title="See all the templates available for creating Constraints creation and their rego source code">
       Contraint Templates
     </a>
-    <a class="{% if title == 'Constraints' %}active{% endif %} item" href="/constraints">
+    <a class="{% if title == 'Constraints' %}active{% endif %} item" href="/constraints" title="See all the Contratints defined and their violations">
       Constraints
+    </a>
+    <a class="{% if title == 'Gatekeeper Configurations' %}active{% endif %} item" href="/configs" title="See all the CRDs that define Gatekeeper's configuration">
+      Configurations
     </a>
     {% if config.AUTH_ENABLED == 'OIDC' %}
     <div class="ui right item"><a href="/logout" class="ui very basic button"><i class="sign out icon"></i> logout</a></div>
     {% endif %}
   </div>
   <div class="ui relaxed grid">
+      {% if hide_sidebar == true %}
+      {% else %}
       <div class="ui three wide column">
           <div class="ui small fluid vertical menu">
               {% block sidebar %}{% endblock %}
           </div>
       </div>
+      {% endif %}
 
-      <div class="ui twelve wide stretched column">
+      <div class="{% if hide_sidebar == true %}centered row{%else%}ui twelve wide stretched column{% endif %}">
         {% block content %}{% endblock %}
       </div>
 </div>
-
 
 {% include 'footer.html' %}
 
