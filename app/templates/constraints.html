@@ -44,6 +44,8 @@
       {% else %}
       <div class="ui segment"><i class="ui green icon checkmark"></i> There are no violations for this Constraint</div>
       {% endif %}
+
+      {%if constraint.spec.match %}
       <div class="ui segment">
       <h5>Match criteria</h5>
 
@@ -123,6 +125,7 @@
        
       </div>
   </div>
+  {% endif %}
  
       {% if constraint.spec.parameters %}
       <div class="ui segment">
