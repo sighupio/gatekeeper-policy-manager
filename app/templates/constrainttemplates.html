@@ -7,9 +7,19 @@
   {% endfor %}
 {% endblock %}
 {% block content %}
+{% if constrainttemplates["items"]|length == 0 %}
+    <div class="ui segments">
+      <div class="ui secondary header segment">
+        <i class="ui info icon"></i> There are no Constraint Templates defined
+      </div>
+      <div class="ui blue segment">
+        We didn't find any Constraint Template CRDs defined in the cluster.
+      </div>
+    </div>
+{% else %}
   {% for constrainttemplate in constrainttemplates["items"] %}
   <div class="ui segments" id="{{ constrainttemplate.spec.crd.spec.names.kind }}">
-    <div class="ui {% if constrainttemplate.status.created %} green {% endif %} secondary header segment">{{ constrainttemplate.spec.crd.spec.names.kind }} {% if constrainttemplate.status.created %} <span class="ui small horizontal label green">CREATED</span> {% endif %}</div>
+    <div class="ui {% if constrainttemplate.status and constrainttemplate.status.created %} green {% endif %} secondary header segment">{{ constrainttemplate.spec.crd.spec.names.kind }} {% if constrainttemplate.status and constrainttemplate.status.created %} <span class="ui small horizontal label green">CREATED</span>{% else %}<span class="ui small horizontal basic label red" title="Status field is not set, is Gatekeeper healthy?">UNKOWN STATE</span>{% endif %}</div>
     {% for t in constrainttemplate.spec.targets %}
       <div class="ui segment">
         <h5 class="header">Target {{ t.target }}</h5>
@@ -74,6 +84,7 @@
     </div>
     {% endif %}
 
+    {% if constrainttemplate.status %}
     <div class="ui segment">
       <h5>Status</h6>
         <div class="ui horizontal list">
@@ -88,8 +99,10 @@
           </div>
           {% endfor %}
         </div>
-      </div>
+    </div>
+    {% endif %}
 
     </div>
     {% endfor %}
+  {% endif %}
 {% endblock %}

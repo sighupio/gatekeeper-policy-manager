@@ -1,1 +1,6 @@
 app/__pycache__
+.git
+.vscode
+env
+screenshots
+manifests

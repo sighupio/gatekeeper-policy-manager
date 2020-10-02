@@ -2,3 +2,4 @@ env
 .vscode
 __pycache__
 launch.json
+app/static/node_modules

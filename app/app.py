@@ -217,14 +217,15 @@ def get_constrainttemplates():
         return render_template("message.html",
                                type="error",
                                title="Error",
-                               message="We had a problem while asking the API for Gatekeeper objects",
+                               message="We had a problem while asking the API for Gatekeeper Constraint Templates objects",
                                action="Is Gatekeeper deployed in the cluster?",
                                description=e
                                )
     else:
         return render_template("constrainttemplates.html",
                                constrainttemplates=constrainttemplates,
-                               title="Constraint Templates"
+                               title="Constraint Templates",
+                               hide_sidebar=len(constrainttemplates["items"]) == 0
                                )
 
 

@@ -2,17 +2,18 @@
 <html lang="en">
 <head>
   <title>Gatekeeper Policy Manager - {{ title }}</title>
-  <script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.4/dist/semantic.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.4/dist/semantic.min.js"></script>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='user-tie.svg') }}"/>
+  <script src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='node_modules/fomantic-ui-css/semantic.min.css') }}">
+  <script src="{{ url_for('static', filename='node_modules/fomantic-ui-css/semantic.min.js') }}"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='prism.css') }}">
+  <script src={{ url_for('static', filename='prism.js') }}></script>
   <style>
     .footer.segment {
       padding: 5em 0em;
       margin-top: 10em !important;
     }
   </style>
-  <script src={{ url_for('static', filename='prism.js') }}></script>
 </head>
 <body style="background-color: #f0f0f0;">
   <div class="ui top secondary pointing menu">

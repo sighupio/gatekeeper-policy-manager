@@ -15,7 +15,7 @@ You'll need OPA Gatekeeper running in your cluster and at least some constraint 
 In order to deploy Gatekeper Policy Manager to your cluster, apply the provided kustomization file running the following command:
 
 ```shell
-$ kubectl apply -k .
+kubectl apply -k .
 ```
 
 By default, this will create a deployment and a service both with the name `gatekeper-policy-manager` in the `gatekeeper-system` namespace. We invite you to take a look into the `kustomization.yaml` file to do further configuration.
