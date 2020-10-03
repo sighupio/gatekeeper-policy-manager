@@ -35,7 +35,7 @@ Then access it with your browser on: [http://127.0.0.1:8080](http://127.0.0.1:80
 GPM can also be run locallly using docker and a kubeconfig, assuming that the kubeconfig file you want to use is located at `~/.kube/config` the command to run GPM locallly would be:
 
 ```bash
-docker run -v ~/.kube/config:/root/.kube/config -p 8080:8080 quay.io/sighup/gatekeeper-policy-manager:0.2
+docker run -v ~/.kube/config:/root/.kube/config -p 8080:8080 quay.io/sighup/gatekeeper-policy-manager:0.3
 ```
 
 Then access it with your browser on: [http://127.0.0.1:8080](http://127.0.0.1:8080)

@@ -1,5 +1,14 @@
 # Gatekeeper Policy Manager Changelog
 
+## v0.3
+
+- Added support for offline frontend usage.
+- Added favicon.
+- Updated base image and pinned OS-level dependencies packages versions.
+- Added message when there are no Constraint Templates instead of showing an empty view.
+- Fixed crash when constraints don't have any match criteria defined.
+- Improved error handling in general
+
 ## v0.2
 
 We are pleased to announce the release of Gatekeeper Policy Manager v0.2, changes in this new release:
