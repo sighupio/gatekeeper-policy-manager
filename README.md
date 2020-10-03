@@ -79,6 +79,10 @@ Env Var Name | Description | Default
 
 ![Constraint view 2](screenshots/05-constraints.png)
 
+![Constraint view 3](screenshots/06-constraints.png)
+
+![Configurations view 2](screenshots/07-configs.png)
+
 ## Development
 
 GPM is written in Python using the Flask framework for the backend and Fromantic-UI for the frontend. In order to develop GPM, you'll must create a Python 3 virtual environment, install all the dependencies specified in the provided `requirements.txt` and you are good to go.
@@ -112,3 +116,5 @@ The following is a wishlist of features that we would like to add to GPM (in no 
 - Multi-cluster view
 - Minimal write capabilities?
 - Refactor app in Golang?
+
+Please, let us know if you are using GPM and what features would you like to have by creating an issue in GitHub
