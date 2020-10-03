@@ -2,6 +2,7 @@ import os
 from logging.config import dictConfig
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
+from kubernetes.config.config_exception import ConfigException
 from flask import Flask, render_template
 from urllib3.exceptions import NewConnectionError, MaxRetryError
 from flask_pyoidc import OIDCAuthentication
@@ -125,8 +126,8 @@ def index():
 @login_required_conditional
 def get_constraints():
     """Contraints view"""
-    api = get_api()
     try:
+        api = get_api()
         all_constraints = api.get_cluster_custom_object(group="constraints.gatekeeper.sh",
                                                         version="v1beta1",
                                                         plural="",
@@ -149,11 +150,26 @@ def get_constraints():
                                description=e
                                )
     except ApiException as e:
+        if e.status == 404:
+            return render_template("constraints.html",
+                                   constraints=[],
+                                   title="Constraints",
+                                   hide_sidebar=True
+                                   )
+        else:
+            return render_template("message.html",
+                                   type="error",
+                                   title="Error",
+                                   message="We had a problem while asking the API for Gatekeeper objects",
+                                   action="Is Gatekeeper deployed in the cluster?",
+                                   description=e
+                                   )
+    except ConfigException as e:
         return render_template("message.html",
                                type="error",
                                title="Error",
-                               message="We had a problem while asking the API for Gatekeeper objects",
-                               action="Is Gatekeeper deployed in the cluster?",
+                               message="Can't connect to cluster due to an invalid kubeconfig file",
+                               action="Please verify your kubeconfig file and location",
                                description=e
                                )
     else:
@@ -170,55 +186,65 @@ def get_constraints():
                                                       )
                     for i in c["items"]:
                         constraints.append(i)
-        if len(constraints) > 0:
-            # We pass to the template all the constratins sorted by ammount of violations
-            return render_template("constraints.html",
-                                   constraints=sorted(constraints,
-                                                      reverse=True,
-                                                      key=lambda x: x.get("status").get("totalViolations") or -1
-                                                      ),
-                                   title="Constraints")
-        else:
-            return render_template("message.html",
-                                   type="error",
-                                   title="Error",
-                                   message="We had a problem while asking the API for Gatekeeper Constraints objects",
-                                   action="There are no Constraints found",
-                                   )
+        # We pass to the template all the constratins sorted by ammount of violations
+        return render_template("constraints.html",
+                               constraints=sorted(constraints,
+                                                  reverse=True,
+                                                  key=lambda x: x.get("status").get("totalViolations") or -1
+                                                  ),
+                               title="Constraints",
+                               hide_sidebar=len(constraints) == 0
+                               )
 
 
 @app.route('/constrainttemplates/')
 @login_required_conditional
 def get_constrainttemplates():
     """Constraint Templates View"""
-    api = get_api()
-
     try:
+        api = get_api()
         constrainttemplates = api.get_cluster_custom_object(group="templates.gatekeeper.sh",
                                                             version="v1beta1",
                                                             plural="constrainttemplates",
                                                             name="",
                                                             )
     except NewConnectionError as e:
-        return render_template("error.html",
+        return render_template("message.html",
+                               type="error",
                                title="Error",
                                error="Could not connect to Kubernetes Cluster",
                                action="Is the current Kubeconfig context valid?",
                                description=e
                                )
     except MaxRetryError as e:
-        return render_template("error.html",
+        return render_template("message.html",
+                               type="error",
                                title="Error",
                                error="Could not connect to Kubernetes Cluster",
                                action="Is the current Kubeconfig context valid?",
                                description=e
                                )
     except ApiException as e:
+        if e.status == 404:
+            return render_template("constrainttemplates.html",
+                                   constrainttemplates=[],
+                                   title="Constraints",
+                                   hide_sidebar=True
+                                   )
+        else:
+            return render_template("message.html",
+                                   type="error",
+                                   title="Error",
+                                   message="We had a problem while asking the API for Gatekeeper Constraint Templates objects",
+                                   action="Is Gatekeeper deployed in the cluster?",
+                                   description=e
+                                   )
+    except ConfigException as e:
         return render_template("message.html",
                                type="error",
                                title="Error",
-                               message="We had a problem while asking the API for Gatekeeper Constraint Templates objects",
-                               action="Is Gatekeeper deployed in the cluster?",
+                               message="Can't connect to cluster due to an invalid kubeconfig file",
+                               action="Please verify your kubeconfig file and location",
                                description=e
                                )
     else:
@@ -233,23 +259,24 @@ def get_constrainttemplates():
 @login_required_conditional
 def get_gatekeeperconfigs():
     """Gatekeeper Configs View"""
-    api = get_api()
-
     try:
+        api = get_api()
         configs = api.get_cluster_custom_object(group="config.gatekeeper.sh",
-                                                           version="v1alpha1",
-                                                           plural="configs",
-                                                           name="",
-                                                           )
+                                                version="v1alpha1",
+                                                plural="configs",
+                                                name="",
+                                                )
     except NewConnectionError as e:
-        return render_template("error.html",
+        return render_template("message.html",
+                               type="error",
                                title="Error",
                                error="Could not connect to Kubernetes Cluster",
                                action="Is the current Kubeconfig context valid?",
                                description=e
                                )
     except MaxRetryError as e:
-        return render_template("error.html",
+        return render_template("message.html",
+                               type="error",
                                title="Error",
                                error="Could not connect to Kubernetes Cluster",
                                action="Is the current Kubeconfig context valid?",
@@ -261,6 +288,14 @@ def get_gatekeeperconfigs():
                                title="Error",
                                message="We had a problem while asking the API for Gatekeeper Config objects",
                                action="Is Gatekeeper deployed in the cluster?",
+                               description=e
+                               )
+    except ConfigException as e:
+        return render_template("message.html",
+                               type="error",
+                               title="Error",
+                               message="Can't connect to cluster due to an invalid kubeconfig file",
+                               action="Please verify your kubeconfig file and location",
                                description=e
                                )
     else:

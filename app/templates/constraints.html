@@ -9,6 +9,16 @@
   {% endfor %}
 {% endblock %}
 {% block content %}
+{% if constraints|length == 0 %}
+<div class="ui segments">
+  <div class="ui secondary header segment">
+    <i class="ui info icon"></i> There are no Constraint defined
+  </div>
+  <div class="ui blue segment">
+    We didn't find any Constraint CRDs defined in the cluster.
+  </div>
+</div>
+{% else %}
   {% for constraint in constraints %}
   <div class="ui segments" id="{{ constraint.metadata.name }}">
     <div class="ui {% if constraint.status.totalViolations is not defined %} grey {% else %}{%if constraint.status.totalViolations != 0 %} red {% else %} green {% endif %}{% endif %} header secondary segment">
@@ -166,4 +176,5 @@
 
   </div>
   {% endfor %}
+{% endif %}
 {% endblock %}
