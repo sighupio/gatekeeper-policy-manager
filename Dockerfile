@@ -8,7 +8,7 @@ RUN npm install
 
 
 FROM tiangolo/uwsgi-nginx-flask:python3.8-alpine
-RUN apk --update --no-cache add gcc>=6.4.0-r9 linux-headers>=4.4.6-r2 musl-dev>=1.1.19-r11 libffi-dev>=3.2.1-r4 libressl-dev>=2.7.5-r0
+RUN apk --update --no-cache add gcc6=6.4.0-r11 linux-headers=4.19.36-r0 musl-dev=1.1.24-r2 libffi-dev=3.2.1-r6 libressl-dev=3.0.2-r0
 ENV STATIC_URL /static
 ENV STATIC_PATH /app/static
 ENV LISTEN_PORT 8080
