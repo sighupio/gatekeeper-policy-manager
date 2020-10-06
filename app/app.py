@@ -319,14 +319,22 @@ def get_gatekeeperconfigs():
             description=e,
         )
     except ApiException as e:
-        return render_template(
-            "message.html",
-            type="error",
-            title="Error",
-            message="We had a problem while asking the API for Gatekeeper Config objects",
-            action="Is Gatekeeper deployed in the cluster?",
-            description=e,
-        )
+        if e.status == 404:
+            return render_template(
+                "configs.html",
+                gatekeeper_configs=[],
+                title="Gatekeeper Configurations",
+                hide_sidebar=True,
+            )
+        else:
+            return render_template(
+                "message.html",
+                type="error",
+                title="Error",
+                message="We had a problem while asking the API for Gatekeeper Config objects",
+                action="Is Gatekeeper deployed in the cluster?",
+                description=e,
+            )
     except ConfigException as e:
         return render_template(
             "message.html",
