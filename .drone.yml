@@ -28,7 +28,7 @@ steps:
     image: quay.io/sighup/policeman
     pull: always
     environment:
-      VALIDATE_JAVASCRIPT_STANDARD: "false"
+      FILTER_REGEX_EXCLUDE: app/static/prism.*
     depends_on:
       - clone
 
