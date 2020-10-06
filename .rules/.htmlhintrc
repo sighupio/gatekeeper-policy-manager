@@ -20,6 +20,8 @@
   "attr-unsafe-chars": true,
   "head-script-disabled": true,
   
+  "__COMMENT__": "From here, custom rules. Jinja2 requires special characters. Also there is some HTML templates.",
+
   "spec-char-escape": false,
   "id-class-value": false,
   "doctype-first": false
