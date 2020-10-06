@@ -52,6 +52,10 @@ steps:
 kind: pipeline
 name: release
 
+depends_on:
+  - license
+  - policeman
+
 platform:
   os: linux
   arch: amd64
