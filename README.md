@@ -63,8 +63,8 @@ Env Var Name | Description | Default
 `GPM_OIDC_CLIENT_SECRET` | The Client Secret used to authenticate against the OIDC Provider |
 `GPM_LOG_LEVEL` | Log level (see [python logging docs](https://docs.python.org/2/library/logging.html#levels) for available levels) | `INFO`
 
-> ⚠️ Please notice that OIDC Authentication is in beta state. It has been tested to work wit Keycloak as a provider.
-
+> ⚠️ Please notice that OIDC Authentication is in beta state. It has been tested to work with Keycloak as a provider.
+>
 > These environment variables are already provided and ready to be set in the [`manifests/enable-oidc.yaml`](manifests/enable-oidc.yaml) file.
 
 ## Screenshots
@@ -100,8 +100,8 @@ $ pip install -r app/requirements.txt
 $ FLASK_APP=app/app.py flask run
 ```
 
-> Access to a kubernetes cluster with Gatekeeper deployed is recomended to debug the application.
-
+> Access to a Kubernetes cluster with Gatekeeper deployed is recommended to debug the application.
+>
 > You'll need an OIDC provider to test the OIDC authentication. You can use our [fury-kubernetes-keycloak](https://github.com/sighupio/fury-kubernetes-keycloak) module.
 
 ## Roadmap
