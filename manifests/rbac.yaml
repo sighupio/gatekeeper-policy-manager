@@ -16,6 +16,9 @@ rules:
 - apiGroups: ["templates.gatekeeper.sh"]
   resources: ["*"]
   verbs: ["get", "list", "watch"]
+- apiGroups: ["config.gatekeeper.sh"]
+  resources: ["*"]
+  verbs: ["get", "list", "watch"]
 
 ---
 
