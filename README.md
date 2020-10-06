@@ -2,7 +2,7 @@
 
 Gatekeeper Policy Manager is a simple **read-only** web UI for viewing OPA Gatekeeper policies' status in a Kubernetes Cluster.
 
-It can display all the defined **Constraint Templates** with their rego code, and all the **Contraints** with its current status, violations, enforcement action, matched definitions, etc.
+It can display all the defined **Constraint Templates** with their rego code, and all the **Contraints** with its current status, violations, enforcement action, matches definitions, etc.
 
 ## Requirements
 
@@ -20,7 +20,7 @@ kubectl apply -k .
 
 By default, this will create a deployment and a service both with the name `gatekeper-policy-manager` in the `gatekeeper-system` namespace. We invite you to take a look into the `kustomization.yaml` file to do further configuration.
 
-> The app can be run as a POD in a Kubernetes cluster or locally with a `kubeconfig` file. It will try it best to autodetect the correct configuration.
+> The app can be run as a POD in a Kubernetes cluster or locally with a `kubeconfig` file. It will try its best to autodetect the correct configuration.
 
 Once you've deployed the application, if you haven't set up an ingress, you can access the web-UI using port-forward:
 
@@ -85,7 +85,7 @@ GPM is a stateless application, but it can be configured using environment varia
 
 ## Development
 
-GPM is written in Python using the Flask framework for the backend and Fromantic-UI for the frontend. To develop GPM, you'll create a Python 3 virtual environment, install all the dependencies specified in the provided `requirements.txt` and you are good to go.
+GPM is written in Python using the Flask framework for the backend and Fromantic-UI for the frontend. To develop GPM, you'll need to create a Python 3 virtual environment, install all the dependencies specified in the provided `requirements.txt` and you are good to start hacking.
 
 The following commands should get you up and running:
 
@@ -115,6 +115,6 @@ The following is a wishlist of features that we would like to add to GPM (in no 
 - Root-less docker image
 - Multi-cluster view
 - Minimal write capabilities?
-- Refactor app in Golang?
+- Re-write app in Golang?
 
-Please, let us know if you are using GPM and what features would you like to have by creating an issue in GitHub
+Please, let us know if you are using GPM and what features would you like to have by creating an issue here in GitHub
