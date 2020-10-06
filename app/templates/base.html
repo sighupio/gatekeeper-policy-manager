@@ -6,9 +6,10 @@
 -->
 
 <html lang="en">
+
 <head>
   <title>Gatekeeper Policy Manager - {{ title }}</title>
-  <link rel="icon" type="image/png" href="{{ url_for('static', filename='user-tie.svg') }}"/>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='user-tie.svg') }}" />
   <link rel="stylesheet" href="{{ url_for('static', filename='node_modules/fomantic-ui-css/semantic.min.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='prism.css') }}">
   <style>
@@ -18,49 +19,55 @@
     }
   </style>
 </head>
+
 <body style="background-color: #f0f0f0;">
   <script src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
   <script src="{{ url_for('static', filename='node_modules/fomantic-ui-css/semantic.min.js') }}"></script>
   <script src={{ url_for('static', filename='prism.js') }}></script>
   <div class="ui top secondary pointing menu">
-      <a class="header item" href="/">
-        <i class="user tie icon"></i>
-        GPM
-      </a>
-    <a class="{% if title == 'Constraint Templates' %}active{% endif %} item" href="/constrainttemplates" title="See all the templates available for creating Constraints creation and their rego source code">
+    <a class="header item" href="/">
+      <i class="user tie icon"></i>
+      GPM
+    </a>
+    <a class="{% if title == 'Constraint Templates' %}active{% endif %} item" href="/constrainttemplates"
+      title="See all the templates available for creating Constraints creation and their rego source code">
       Contraint Templates
     </a>
-    <a class="{% if title == 'Constraints' %}active{% endif %} item" href="/constraints" title="See all the Contratints defined and their violations">
+    <a class="{% if title == 'Constraints' %}active{% endif %} item" href="/constraints"
+      title="See all the Contratints defined and their violations">
       Constraints
     </a>
-    <a class="{% if title == 'Gatekeeper Configurations' %}active{% endif %} item" href="/configs" title="See all the CRDs that define Gatekeeper's configuration">
+    <a class="{% if title == 'Gatekeeper Configurations' %}active{% endif %} item" href="/configs"
+      title="See all the CRDs that define Gatekeeper's configuration">
       Configurations
     </a>
     {% if config.AUTH_ENABLED == 'OIDC' %}
-    <div class="ui right item"><a href="/logout" class="ui very basic button"><i class="sign out icon"></i> logout</a></div>
+    <div class="ui right item"><a href="/logout" class="ui very basic button"><i class="sign out icon"></i> logout</a>
+    </div>
     {% endif %}
   </div>
   <div class="ui relaxed grid">
-      {% if hide_sidebar == true %}
-      {% else %}
-      <div class="ui three wide column">
-          <div class="ui small fluid vertical menu">
-              {% block sidebar %}{% endblock %}
-          </div>
+    {% if hide_sidebar == true %}
+    {% else %}
+    <div class="ui three wide column">
+      <div class="ui small fluid vertical menu">
+        {% block sidebar %}{% endblock %}
       </div>
-      {% endif %}
+    </div>
+    {% endif %}
 
-      <div class="{% if hide_sidebar == true %}centered row{%else%}ui twelve wide stretched column{% endif %}">
-        {% block content %}{% endblock %}
-      </div>
-</div>
+    <div class="{% if hide_sidebar == true %}centered row{%else%}ui twelve wide stretched column{% endif %}">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
 
-{% include 'footer.html' %}
+  {% include 'footer.html' %}
 
-<script>
-$('.ui.accordion')
-  .accordion()
-;
-</script>
+  <script>
+    $('.ui.accordion')
+      .accordion()
+      ;
+  </script>
 </body>
+
 </html>
