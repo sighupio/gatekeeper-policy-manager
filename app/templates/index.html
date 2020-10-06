@@ -9,9 +9,7 @@
 <head>
   <title>Gatekeeper Policy Manager - {{ title }}</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='user-tie.svg') }}"/>
-  <script src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='node_modules/fomantic-ui-css/semantic.min.css') }}">
-  <script src="{{ url_for('static', filename='node_modules/fomantic-ui-css/semantic.min.js') }}"></script>
   <style type="text/css">
     body {
       background-color: #1b1c1d;
@@ -105,6 +103,8 @@
 </head>
 
 <body>
+  <script src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='node_modules/fomantic-ui-css/semantic.min.js') }}"></script>
 
 <div class="pusher">
   <div class="ui inverted vertical masthead center aligned segment">
