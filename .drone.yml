@@ -71,8 +71,11 @@ steps:
         from_secret: quay_password
       registry: quay.io
       repo: quay.io/sighup/gatekeeper-policy-manager
+      cache_from:
+        - quay.io/sighup/gatekeeper-policy-manager:unstable
       tags:
         - ${DRONE_COMMIT_SHA}
+        - unstable
     when:
       event:
         - push
@@ -86,8 +89,11 @@ steps:
         from_secret: quay_password
       registry: quay.io
       repo: quay.io/sighup/gatekeeper-policy-manager
+      cache_from:
+        - quay.io/sighup/gatekeeper-policy-manager:unstable
       tags:
         - ${DRONE_TAG}
+        - latest
     when:
       event:
         - tag
