@@ -1,0 +1,43 @@
+kind: pipeline
+name: license
+
+steps:
+  - name: check
+    image: docker.io/library/golang:1.14.3
+    pull: always
+    commands:
+      - go get -u github.com/google/addlicense
+      - addlicense -c "SIGHUP s.r.l" -v -l bsd --check .
+---
+kind: pipeline
+name: policeman
+
+depends_on:
+  - license
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+  - name: lint
+    image: quay.io/sighup/policeman
+    pull: always
+    depends_on:
+      - clone
+
+  - name: render
+    image: quay.io/sighup/e2e-testing:1.1.0_0.2.2_2.16.1_1.4.0_1.18.8_3.3.0_2.4.1
+    pull: always
+    depends_on:
+      - clone
+    commands:
+      - kustomize build . > gpm.yml
+
+  - name: deprek8ion
+    image: eu.gcr.io/swade1987/deprek8ion:1.1.31
+    pull: always
+    depends_on:
+      - render
+    commands:
+      - /conftest test -p /policies gpm.yml
