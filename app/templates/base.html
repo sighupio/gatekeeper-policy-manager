@@ -9,11 +9,8 @@
 <head>
   <title>Gatekeeper Policy Manager - {{ title }}</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='user-tie.svg') }}"/>
-  <script src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='node_modules/fomantic-ui-css/semantic.min.css') }}">
-  <script src="{{ url_for('static', filename='node_modules/fomantic-ui-css/semantic.min.js') }}"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='prism.css') }}">
-  <script src={{ url_for('static', filename='prism.js') }}></script>
   <style>
     .footer.segment {
       padding: 5em 0em;
@@ -22,6 +19,9 @@
   </style>
 </head>
 <body style="background-color: #f0f0f0;">
+  <script src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='node_modules/fomantic-ui-css/semantic.min.js') }}"></script>
+  <script src={{ url_for('static', filename='prism.js') }}></script>
   <div class="ui top secondary pointing menu">
       <a class="header item" href="/">
         <i class="user tie icon"></i>
