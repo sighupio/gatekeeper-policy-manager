@@ -1,5 +1,7 @@
 # Gatekeeper Policy Manager (GPM)
 
+[![Build Status](https://ci.sighup.io/api/badges/sighupio/gatekeeper-policy-manager/status.svg)](https://ci.sighup.io/sighupio/gatekeeper-policy-manager)
+
 Gatekeeper Policy Manager is a simple **read-only** web UI for viewing OPA Gatekeeper policies' status in a Kubernetes Cluster.
 
 It can display all the defined **Constraint Templates** with their rego code, and all the **Contraints** with its current status, violations, enforcement action, matches definitions, etc.
@@ -35,7 +37,7 @@ Then access it with your browser on: [http://127.0.0.1:8080](http://127.0.0.1:80
 GPM can also be run locally using docker and a `kubeconfig`, assuming that the `kubeconfig` file you want to use is located at `~/.kube/config` the command to run GPM locally would be:
 
 ```bash
-docker run -v ~/.kube/config:/root/.kube/config -p 8080:8080 quay.io/sighup/gatekeeper-policy-manager:0.3
+docker run -v ~/.kube/config:/root/.kube/config -p 8080:8080 quay.io/sighup/gatekeeper-policy-manager:v0.3.0
 ```
 
 Then access it with your browser on: [http://127.0.0.1:8080](http://127.0.0.1:8080)

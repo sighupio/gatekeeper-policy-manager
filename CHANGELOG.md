@@ -1,6 +1,6 @@
 # Gatekeeper Policy Manager Changelog
 
-## v0.3
+## v0.3.0
 
 - Added support for offline frontend usage.
 - Added favicon.
