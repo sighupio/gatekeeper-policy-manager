@@ -1,6 +1,6 @@
 astroid==2.4.2
 Beaker==1.11.0
-cachetools==4.0.0
+cachetools==4.1.1
 certifi==2019.11.28
 cffi==1.14.0
 chardet==3.0.4
