@@ -227,7 +227,9 @@ def get_constraints():
             constraints=sorted(
                 constraints,
                 reverse=True,
-                key=lambda x: x.get("status").get("totalViolations") or -1,
+                key=lambda x: x.get("status").get("totalViolations") or -1
+                if x.get("status")
+                else -1,
             ),
             title="Constraints",
             hide_sidebar=len(constraints) == 0,
