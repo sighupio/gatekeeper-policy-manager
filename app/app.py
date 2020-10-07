@@ -18,14 +18,14 @@ from kubernetes.client.rest import ApiException
 from kubernetes.config.config_exception import ConfigException
 from urllib3.exceptions import MaxRetryError, NewConnectionError
 
+from urllib.parse import urljoin
+
 # Set up logging
 dictConfig(
     {
         "version": 1,
         "formatters": {
-            "default": {
-                "format": "[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
-            }
+            "default": {"format": "[%(asctime)s] %(levelname)s: %(message)s"}
         },
         "handlers": {
             "wsgi": {
@@ -64,12 +64,20 @@ app.config.update(
         "KUBERNETES": os.environ.get("KUBERNETES_SERVICE_HOST"),
         "PREFERRED_URL_SCHEME": os.environ.get("GPM_PREFERRED_URL_SCHEME", "http"),
         "AUTH_ENABLED": os.environ.get("GPM_AUTH_ENABLED"),
-        "OIDC_REDIRECT_DOMAIN": os.environ.get("GPM_OIDC_REDIRECT_DOMAIN"),
+        "OIDC_REDIRECT_URI": urljoin(
+            os.environ.get("GPM_OIDC_REDIRECT_DOMAIN"), "oidc-auth"
+        ),
     }
 )
 
 if app.config.get("AUTH_ENABLED") == "OIDC":
     app.logger.info("AUTHENTICATION ENABLED WITH %s" % app.config.get("AUTH_ENABLED"))
+
+    if not os.environ.get("GPM_OIDC_REDIRECT_DOMAIN"):
+        app.logger.error(
+            "Authentication is enabled with OIDC but GPM_OIDC_REDIRECT_DOMAIN environment variable has not been set."
+        )
+
     provider_metadata = ProviderMetadata(
         issuer=os.environ.get("GPM_OIDC_ISSUER"),
         authorization_endpoint=os.environ.get("GPM_OIDC_AUTHORIZATION_ENDPOINT"),
@@ -370,7 +378,7 @@ if app.config.get("AUTH_ENABLED") == "OIDC":
             "message.html",
             type="success",
             message="Logout successful",
-            action='<a href="/" class="ui huge primary button">Go back to the home <i class="right arrow icon"></i></a>',  # noqa: E501
+            action="",  # noqa: E501
         )
 
     @auth.error_view

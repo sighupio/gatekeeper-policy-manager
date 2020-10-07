@@ -150,7 +150,16 @@
         <a href="/constraints" class="ui huge primary button">See Constraints status <i
             class="right arrow icon"></i></a>
         {% if config.AUTH_ENABLED == 'OIDC' %}
-        <h6>Authentication is enabled. You'll be asked to login when proceeding.</h6>
+        <div class="ui hidden fitted divider"></div>
+        <div class="ui compact mini icon inverted message">
+          <i class="info icon"></i>
+          <div class="content">
+            <div class="header">
+              Authentication is enabled
+            </div>
+            <p>You'll be asked to login when proceeding</p>
+          </div>
+        </div>
         {% endif %}
       </div>
 
