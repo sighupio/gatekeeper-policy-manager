@@ -119,9 +119,6 @@
 </head>
 
 <body>
-  <script src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
-  <script src="{{ url_for('static', filename='node_modules/fomantic-ui-css/semantic.min.js') }}"></script>
-
   <div class="pusher">
     <div class="ui inverted vertical masthead center aligned segment">
 
@@ -168,6 +165,9 @@
     {% include 'footer.html' %}
 
   </div>
+  
+  <script src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='node_modules/fomantic-ui-css/semantic.min.js') }}"></script>
 
 </body>
 
