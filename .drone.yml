@@ -19,10 +19,6 @@ name: policeman
 depends_on:
   - license
 
-platform:
-  os: linux
-  arch: amd64
-
 steps:
   - name: lint
     image: quay.io/sighup/policeman
@@ -50,18 +46,117 @@ steps:
 
 ---
 kind: pipeline
+name: e2e
+
+depends_on:
+  - policeman
+
+trigger:
+  ref:
+    include:
+      - refs/tags/**
+      - refs/heads/master
+      - refs/heads/renovate/*
+
+steps:
+  - name: build
+    image: docker:dind
+    pull: always
+    environment:
+      CACHE_FROM: quay.io/sighup/gatekeeper-policy-manager:unstable
+      CONTAINER_IMAGE_NAME: gatekeeper-policy-manager
+      CONTAINER_IMAGE_TAG: test-${DRONE_BUILD_NUMBER}
+      DOCKERFILE: Dockerfile
+      BUILD_CONTEXT: "."
+    volumes:
+      - name: dockersock
+        path: /var/run/docker.sock
+    commands:
+      - docker pull $${CACHE_FROM}
+      - docker build
+        --pull=true
+        --rm=true
+        --cache-from $${CACHE_FROM}
+        -f $${DOCKERFILE}
+        -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG}
+        $${BUILD_CONTEXT}
+
+  - name: kind
+    image: docker:dind
+    pull: always
+    environment:
+      KIND_VERSION: v0.9.0
+      CLUSTER_VERSION: v1.19.1
+      LOAD_IMAGE: gatekeeper-policy-manager:test-${DRONE_BUILD_NUMBER}
+      CLUSTER_NAME: ${DRONE_REPO_NAME}-${DRONE_BUILD_NUMBER}
+    volumes:
+      - name: dockersock
+        path: /var/run/docker.sock
+    commands:
+      - wget -qO /usr/local/bin/kind "https://kind.sigs.k8s.io/dl/$${KIND_VERSION}/kind-$(uname)-amd64"
+      - wget -qO /usr/local/bin/kubectl "https://storage.googleapis.com/kubernetes-release/release/$${CLUSTER_VERSION}/bin/linux/amd64/kubectl"
+      - chmod +x /usr/local/bin/kind /usr/local/bin/kubectl
+      - kind create cluster --name $${CLUSTER_NAME} --image kindest/node:$${CLUSTER_VERSION}
+      - kind load docker-image $${LOAD_IMAGE} --name $${CLUSTER_NAME}
+      - kind get kubeconfig --name $${CLUSTER_NAME} > kubeconfig.yml
+
+  - name: tests
+    image: quay.io/sighup/e2e-testing:1.1.0_0.2.2_2.16.1_1.4.0_1.19.0_3.3.0_2.4.1
+    pull: always
+    network_mode: host
+    environment:
+      KUBECONFIG: /tmp/kubeconfig.yml
+      LOAD_IMAGE: gatekeeper-policy-manager:test-${DRONE_BUILD_NUMBER}
+    commands:
+      - mv kubeconfig.yml $${KUBECONFIG}
+      - cd tests
+      - kustomize edit set image quay.io/sighup/gatekeeper-policy-manager=$${LOAD_IMAGE}
+      - cd -
+      - bats -t tests/tests.sh
+
+  - name: kind-destroy
+    image: docker:dind
+    pull: always
+    environment:
+      KIND_VERSION: v0.9.0
+      LOAD_IMAGE: gatekeeper-policy-manager:test-${DRONE_BUILD_NUMBER}
+      CLUSTER_NAME: ${DRONE_REPO_NAME}-${DRONE_BUILD_NUMBER}
+    volumes:
+      - name: dockersock
+        path: /var/run/docker.sock
+    commands:
+      - docker rmi $${LOAD_IMAGE}
+      - wget -qO /usr/local/bin/kind "https://kind.sigs.k8s.io/dl/$${KIND_VERSION}/kind-$(uname)-amd64"
+      - chmod +x /usr/local/bin/kind
+      - kind delete cluster --name $${CLUSTER_NAME}
+    when:
+      status:
+        - success
+        - failure
+
+volumes:
+  - name: dockersock
+    host:
+      path: /var/run/docker.sock
+
+---
+kind: pipeline
 name: release
 
 depends_on:
   - license
   - policeman
+  - e2e
 
-platform:
-  os: linux
-  arch: amd64
+trigger:
+  ref:
+    include:
+      - refs/tags/**
+      - refs/heads/**
+    exclude:
+      - refs/heads/renovate/*
 
 steps:
-
   - name: registry-sha
     image: plugins/docker
     settings:
