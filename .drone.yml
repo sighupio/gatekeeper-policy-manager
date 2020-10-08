@@ -76,7 +76,6 @@ steps:
       - docker build
         --pull=true
         --rm=true
-        --cache-from $${CACHE_FROM}
         -f $${DOCKERFILE}
         -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG}
         $${BUILD_CONTEXT}
