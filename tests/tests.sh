@@ -48,7 +48,7 @@ load ./helper
 @test "Check tests" {
     info
     test(){
-        kubectl -n kube-system wait --for=condition=complete --timeout=30s job/e2e-tests
+        kubectl -n kube-system wait --for=condition=complete --timeout=120s job/e2e-tests
     }
     run test
     [ "$status" -eq 0 ]

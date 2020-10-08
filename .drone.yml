@@ -46,10 +46,47 @@ steps:
 
 ---
 kind: pipeline
-name: e2e
+name: build
 
 depends_on:
   - policeman
+
+trigger:
+  ref:
+    include:
+      - refs/tags/**
+      - refs/heads/**
+
+steps:
+  - name: build
+    image: docker:dind
+    pull: always
+    environment:
+      CONTAINER_IMAGE_NAME: gatekeeper-policy-manager
+      CONTAINER_IMAGE_TAG: test-${DRONE_BUILD_NUMBER}
+      DOCKERFILE: Dockerfile
+      BUILD_CONTEXT: "."
+    volumes:
+      - name: dockersock
+        path: /var/run/docker.sock
+    commands:
+      - docker build
+        --pull=true
+        --rm=true
+        -f $${DOCKERFILE}
+        -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG}
+        $${BUILD_CONTEXT}
+
+volumes:
+  - name: dockersock
+    host:
+      path: /var/run/docker.sock
+---
+kind: pipeline
+name: e2e
+
+depends_on:
+  - build
 
 trigger:
   ref:
@@ -59,28 +96,6 @@ trigger:
       - refs/heads/renovate/*
 
 steps:
-  - name: build
-    image: docker:dind
-    pull: always
-    environment:
-      CACHE_FROM: quay.io/sighup/gatekeeper-policy-manager:unstable
-      CONTAINER_IMAGE_NAME: gatekeeper-policy-manager
-      CONTAINER_IMAGE_TAG: test-${DRONE_BUILD_NUMBER}
-      DOCKERFILE: Dockerfile
-      BUILD_CONTEXT: "."
-    volumes:
-      - name: dockersock
-        path: /var/run/docker.sock
-    commands:
-      - docker pull $${CACHE_FROM}
-      - docker build
-        --pull=true
-        --rm=true
-        --cache-from $${CACHE_FROM}
-        -f $${DOCKERFILE}
-        -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG}
-        $${BUILD_CONTEXT}
-
   - name: kind
     image: docker:dind
     pull: always
@@ -119,13 +134,11 @@ steps:
     pull: always
     environment:
       KIND_VERSION: v0.9.0
-      LOAD_IMAGE: gatekeeper-policy-manager:test-${DRONE_BUILD_NUMBER}
       CLUSTER_NAME: ${DRONE_REPO_NAME}-${DRONE_BUILD_NUMBER}
     volumes:
       - name: dockersock
         path: /var/run/docker.sock
     commands:
-      - docker rmi $${LOAD_IMAGE}
       - wget -qO /usr/local/bin/kind "https://kind.sigs.k8s.io/dl/$${KIND_VERSION}/kind-$(uname)-amd64"
       - chmod +x /usr/local/bin/kind
       - kind delete cluster --name $${CLUSTER_NAME}
@@ -138,7 +151,6 @@ volumes:
   - name: dockersock
     host:
       path: /var/run/docker.sock
-
 ---
 kind: pipeline
 name: release
@@ -157,38 +169,135 @@ trigger:
       - refs/heads/renovate/*
 
 steps:
-  - name: registry-sha
-    image: plugins/docker
+  - name: prepare-tar-gz
+    image: alpine:latest
+    pull: always
+    depends_on: [ clone ]
+    commands:
+      - tar -zcvf gatekeeper-policy-manager-${DRONE_TAG}.tar.gz manifests/ kustomization.yaml LICENSE README.md
+    when:
+      ref:
+        include:
+          - refs/tags/**
+
+  - name: prepare-release-notes
+    image: quay.io/sighup/fury-release-notes-plugin:3.7_2.8.4
+    pull: always
+    depends_on: [ clone ]
     settings:
+      release_notes_file_path: release-notes.md
+    when:
+      ref:
+        include:
+          - refs/tags/**
+
+  - name: registry-sha
+    image: docker:dind
+    pull: always
+    depends_on: [ clone ]
+    environment:
       username:
         from_secret: quay_username
       password:
         from_secret: quay_password
       registry: quay.io
       repo: quay.io/sighup/gatekeeper-policy-manager
-      cache_from:
-        - quay.io/sighup/gatekeeper-policy-manager:unstable
-      tags:
-        - ${DRONE_COMMIT_SHA}
-        - unstable
+      container_image_name: gatekeeper-policy-manager
+      container_image_tag: test-${DRONE_BUILD_NUMBER}
+    volumes:
+      - name: dockersock
+        path: /var/run/docker.sock
+    commands:
+      - docker login $${registry} -u $${username} -p $${password}
+      - docker tag $${container_image_name}:$${container_image_tag} $${repo}:unstable
+      - "docker tag $${container_image_name}:$${container_image_tag} $${repo}:${DRONE_COMMIT_SHA}"
+      - docker push $${repo}:unstable
+      - "docker push $${repo}:${DRONE_COMMIT_SHA}"
+      - docker rmi $${container_image_name}:$${container_image_tag}
     when:
       event:
         - push
 
   - name: registry-tag
-    image: plugins/docker
-    settings:
+    image: docker:dind
+    pull: always
+    depends_on: [ clone ]
+    environment:
       username:
         from_secret: quay_username
       password:
         from_secret: quay_password
       registry: quay.io
       repo: quay.io/sighup/gatekeeper-policy-manager
-      cache_from:
-        - quay.io/sighup/gatekeeper-policy-manager:unstable
-      tags:
-        - ${DRONE_TAG}
-        - latest
+      container_image_name: gatekeeper-policy-manager
+      container_image_tag: test-${DRONE_BUILD_NUMBER}
+    volumes:
+      - name: dockersock
+        path: /var/run/docker.sock
+    commands:
+      - docker login $${registry} -u $${username} -p $${password}
+      - docker tag $${container_image_name}:$${container_image_tag} $${repo}:latest
+      - "docker tag $${container_image_name}:$${container_image_tag} $${repo}:${DRONE_TAG}"
+      - docker push $${repo}:latest
+      - "docker push $${repo}:${DRONE_TAG}"
+      - docker rmi $${container_image_name}:$${container_image_tag}
     when:
       event:
         - tag
+
+  - name: publish-prerelease
+    image: plugins/github-release
+    pull: always
+    depends_on:
+      - prepare-tar-gz
+      - prepare-release-notes
+      - registry-tag
+    settings:
+      api_key:
+        from_secret: github_token
+      file_exists: overwrite
+      files:
+        - gatekeeper-policy-manager-${DRONE_TAG}.tar.gz
+      prerelease: true
+      overwrite: true
+      title: "Preview ${DRONE_TAG}"
+      note: release-notes.md
+      checksum:
+        - md5
+        - sha256
+    when:
+      ref:
+        include:
+          - refs/tags/v**-rc**
+
+  - name: publish-stable
+    image: plugins/github-release
+    pull: always
+    depends_on:
+      - prepare-tar-gz
+      - prepare-release-notes
+      - registry-tag
+    settings:
+      api_key:
+        from_secret: github_token
+      file_exists: overwrite
+      files:
+        - gatekeeper-policy-manager-${DRONE_TAG}.tar.gz
+      prerelease: false
+      overwrite: true
+      title: "Release ${DRONE_TAG}"
+      note: release-notes.md
+      checksum:
+        - md5
+        - sha256
+    when:
+      ref:
+        exclude:
+          - refs/tags/v**-rc**
+        include:
+          - refs/tags/v**
+
+volumes:
+  - name: dockersock
+    host:
+      path: /var/run/docker.sock
