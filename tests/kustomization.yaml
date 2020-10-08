@@ -1,0 +1,21 @@
+# Copyright (c) 2020 SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+namespace: gatekeeper-system
+
+bases:
+  - github.com/sighupio/fury-kubernetes-opa/katalog/gatekeeper?ref=v1.2.1
+
+resources:
+  - ../manifests/rbac.yaml
+  - ../manifests/deployment.yaml
+  - ../manifests/service.yaml
+
+patchesStrategicMerge:
+  - deploy-patch.yaml
+
+images:
+  - name: quay.io/sighup/gatekeeper-policy-manager
+    newName: gatekeeper-policy-manager
+    newTag: test
