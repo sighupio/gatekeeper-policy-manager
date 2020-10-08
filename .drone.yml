@@ -157,8 +157,32 @@ trigger:
       - refs/heads/renovate/*
 
 steps:
+  - name: prepare-tar-gz
+    image: alpine:latest
+    pull: always
+    depends_on: [ clone ]
+    commands:
+      - tar -zcvf gatekeeper-policy-manager-${DRONE_TAG}.tar.gz manifests/ kustomization.yaml LICENSE README.md
+    when:
+      ref:
+        include:
+          - refs/tags/**
+
+  - name: prepare-release-notes
+    image: quay.io/sighup/fury-release-notes-plugin:3.7_2.8.4
+    pull: always
+    depends_on: [ clone ]
+    settings:
+      release_notes_file_path: release-notes.md
+    when:
+      ref:
+        include:
+          - refs/tags/**
+
   - name: registry-sha
     image: plugins/docker
+    pull: always
+    depends_on: [ clone ]
     settings:
       username:
         from_secret: quay_username
@@ -177,6 +201,8 @@ steps:
 
   - name: registry-tag
     image: plugins/docker
+    pull: always
+    depends_on: [ clone ]
     settings:
       username:
         from_secret: quay_username
@@ -192,3 +218,55 @@ steps:
     when:
       event:
         - tag
+
+  - name: publish-prerelease
+    image: plugins/github-release
+    pull: always
+    depends_on:
+      - prepare-tar-gz
+      - prepare-release-notes
+      - registry-tag
+    settings:
+      api_key:
+        from_secret: github_token
+      file_exists: overwrite
+      files:
+        - gatekeeper-policy-manager-${DRONE_TAG}.tar.gz
+      prerelease: true
+      overwrite: true
+      title: "Preview ${DRONE_TAG}"
+      note: release-notes.md
+      checksum:
+        - md5
+        - sha256
+    when:
+      ref:
+        include:
+          - refs/tags/v**-rc**
+
+  - name: publish-stable
+    image: plugins/github-release
+    pull: always
+    depends_on:
+      - prepare-tar-gz
+      - prepare-release-notes
+      - registry-tag
+    settings:
+      api_key:
+        from_secret: github_token
+      file_exists: overwrite
+      files:
+        - gatekeeper-policy-manager-${DRONE_TAG}.tar.gz
+      prerelease: false
+      overwrite: true
+      title: "Release ${DRONE_TAG}"
+      note: release-notes.md
+      checksum:
+        - md5
+        - sha256
+    when:
+      ref:
+        exclude:
+          - refs/tags/v**-rc**
+        include:
+          - refs/tags/v**
