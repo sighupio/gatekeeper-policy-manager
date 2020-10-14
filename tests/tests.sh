@@ -30,7 +30,7 @@ load ./helper
 @test "Wait until GPM is ready" {
     info
     ready(){
-        kubectl -n gatekeeper-system wait --for=condition=available --timeout=420s deployment/gatekeeper-policy-manager
+        kubectl -n gatekeeper-system wait --for=condition=available --timeout=1200s deployment/gatekeeper-policy-manager
     }
     run ready
     [ "$status" -eq 0 ]
@@ -48,7 +48,7 @@ load ./helper
 @test "Check tests" {
     info
     test(){
-        kubectl -n kube-system wait --for=condition=complete --timeout=300s job/e2e-tests
+        kubectl -n kube-system wait --for=condition=complete --timeout=600s job/e2e-tests
     }
     run test
     [ "$status" -eq 0 ]
