@@ -7,7 +7,7 @@ name: license
 
 steps:
   - name: check
-    image: docker.io/library/golang:1.15.2
+    image: docker.io/library/golang:1.15.3
     pull: always
     commands:
       - go get -u github.com/google/addlicense
