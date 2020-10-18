@@ -37,7 +37,7 @@ steps:
       - kustomize build . > gpm.yml
 
   - name: deprek8ion
-    image: eu.gcr.io/swade1987/deprek8ion:1.1.31
+    image: eu.gcr.io/swade1987/deprek8ion:1.1.32
     pull: always
     depends_on:
       - render
