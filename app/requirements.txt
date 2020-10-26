@@ -42,4 +42,4 @@ urllib3==1.25.11
 websocket-client==0.57.0
 Werkzeug==1.0.1
 wrapt==1.12.1
-zipp==3.3.2
+zipp==3.4.0
