@@ -56,6 +56,15 @@
                 {% endfor %}
             </tbody>
           </table>
+          {% if constraint.status.totalViolations > constraint.status.violations|length %}
+          <div class="ui warning small icon message">
+            <i class="exclamation triangle icon"></i>
+            <div class="content">
+              <div class="header">Not all violations are being shown</div>
+              Gatekeeper's configuration is limiting the audit violations per constraint to {{constraint.status.violations|length}}. See Gatekeeper's <span style="font-family: monospace">--constraint-violations-limit</span> audit configuration flag.
+            </div>
+          </div>
+          {% endif %}
         </div>
       {% elif constraint.status.totalViolations is not defined %}
       <div class="ui segment"><i class="ui grey icon circle question"></i> Violations for this Constraint are unkown. This probably means that the Constraint has not been processed by Gatekeeper yet. Please, try refreshing the page.</div>
