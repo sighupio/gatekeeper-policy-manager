@@ -122,14 +122,50 @@
               {% endfor %}
         </div>
         {% endif %}
+
         {% if constraint.spec.match.labelSelector %}
         <div class="top aligned item">
           <div class="header">Label Selector</div>
-            {% for ls in constraint.spec.match.labelSelector %}
-              <div class="content">{{ ls }}</div>
-            {% endfor %}
+          <div class="content">
+            <div class="ui horizontal relaxed list">
+
+              {% if constraint.spec.match.labelSelector.matchExpressions %}
+              <div class="top aligned item">
+                <div class="header">Match Expressions</div>
+                <div class="top aligned item">
+                {% for me in constraint.spec.match.labelSelector.matchExpressions %}
+                <div class="content">
+                  <div class="ui divided list">
+                    <div class="top aligned item">
+                      <div class="content">
+                        {% for k,v in me.items() %}
+                        {{ k }}: {{ v }}<br />
+                        {% endfor %}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+              </div>
+              {% endif %}
+
+              {% if constraint.spec.match.labelSelector.matchLabels %}
+              <div class="top aligned item">
+                <div class="header">Match Labels</div>
+                {% for label, value in constraint.spec.match.labelSelector.matchLabels.items() %}
+                <div class="content">
+                  {{ label }}: {{ value }}
+                </div>
+                {% endfor %}
+              </div>
+              {% endif %}
+
+            </div>
+          </div>
         </div>
         {% endif %}
+
         {% if constraint.spec.match.namespaceSelector %}
         <div class="top aligned item">
           <div class="header">Namespace Selector</div>
