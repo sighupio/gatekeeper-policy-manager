@@ -1,0 +1,140 @@
+# Default values for gatekeeper-policy-manager.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 2
+
+image:
+  repository: quay.io/sighup/gatekeeper-policy-manager
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "gatekeeper-policy-manager"
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  annotations: {}
+    #kubernetes.io/ingress.class: "nginx"
+    #nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    #nginx.ingress.kubernetes.io/auth-signin: https://$host/oauth2/start?rd=https://$host$request_uri$is_args$args
+    #nginx.ingress.kubernetes.io/auth-url: https://$host/oauth2/auth
+    #nginx.ingress.kubernetes.io/proxy-buffer-size: "8k"
+    #nginx.ingress.kubernetes.io/secure-backends: "true"
+    #nginx.ingress.kubernetes.io/configuration-snippet: |
+    # auth_request_set $token $upstream_http_authorization;
+    # proxy_set_header Authorization $token;
+  hosts:
+    - host: gpm.local
+      paths: []
+  tls: []
+  #  - secretName: gpm-tls
+  #    hosts:
+  #      - gpm.local
+
+resources:
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+   limits:
+     cpu: 100m
+     memory: 128Mi
+   requests:
+     cpu: 100m
+     memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Extra env variables to pass to the gatekeeper-policy-manager container
+# Uncomment and add OIDC variables for enabling OIDC
+extraEnvs: []
+#  - name: GPM_OIDC_REDIRECT_DOMAIN
+#    value: "127-0-0-1.nip.io:8080"
+#  - name: GPM_SECRET_KEY
+#    value: "changeme!"
+#    # YOU SHOULD USE A KUBERNETES SECRET INSTEAD.
+#    # valueFrom:
+#    #   secretKeyRef:
+#    #     name: gpm-secrets
+#    #     key: secret-key
+#  - name: GPM_PREFERRED_URL_SCHEME
+#    value: http
+#  - name: GPM_AUTH_ENABLED
+#    value: "OIDC"
+#  - name: GPM_OIDC_CLIENT_ID
+#    value: gatekeeper-policy-manager
+#  - name: GPM_OIDC_CLIENT_SECRET
+#    value: "30d6b009-9ae4-42b0-a5c0-b4f65aa6451e"
+#    # YOU SHOULD USE A KUBERNETES SECRET INSTEAD.
+#    # valueFrom:
+#    #   secretKeyRef:
+#    #     name: gpm-secrets
+#    #     key: oidc-client-secret
+#    # The following URLs are an example of a Keycloak OIDC provider:
+#  - name: GPM_OIDC_ISSUER
+#    value: http://192.168.1.6:8081/auth/realms/devops
+#  - name: GPM_OIDC_AUTHORIZATION_ENDPOINT
+#    value: http://192.168.1.6:8081/auth/realms/devops/protocol/openid-connect/auth
+#  - name: GPM_OIDC_JWKS_URI
+#    value: http://192.168.1.6:8081/auth/realms/devops/protocol/openid-connect/certs
+#  - name: GPM_OIDC_TOKEN_ENDPOINT
+#    value: http://192.168.1.6:8081/auth/realms/devops/protocol/openid-connect/token
+#  - name: GPM_OIDC_INTROSPECTION_ENDPOINT
+#    value: http://192.168.1.6:8081/auth/realms/devops/protocol/openid-connect/token/introspect
+#  - name: GPM_OIDC_USERINFO_ENDPOINT
+#    value: http://192.168.1.6:8081/auth/realms/devops/protocol/openid-connect/userinfo
+#  - name: GPM_OIDC_END_SESSION_ENDPOINT
+#    value: http://192.168.1.6:8081/auth/realms/devops/protocol/openid-connect/logout
+
+rbac:
+  # Specifies whether RBAC resources should be created
+  create: true
+
+# If create is `false` the Helm Operator will be restricted to the namespace
+# where it is deployed, and no ClusterRole or ClusterRoleBinding will be created.
+# Additionally, the kubeconfig default context will be set to that namespace.
+clusterRole:
+  create: true
+  # The name of a cluster role to bind to; if not set and create is
+  # true, a name based on fullname is generated
+  name: "gatekeeper-policy-manager-crd-view"
