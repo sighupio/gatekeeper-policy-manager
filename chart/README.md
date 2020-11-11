@@ -13,10 +13,10 @@ Please refer to Helm's [documentation](https://helm.sh/docs/) to get started.
 If you have custom options or values you want to override:
 Navigate to the chart/ folder and 
 
+**On Helm3**
 ```bash
-  helm install . --namespace gpm -f my-gpm-values.yaml --name gpm
+  helm install gpm . --namespace gpm -f my-gpm-values.yaml
 ```
-
 * Specific versions of the chart can be installed using the `--version` option, with the default being the latest release.
 * You can also use `--dry-run --debug` flags to see the computed values.
 
