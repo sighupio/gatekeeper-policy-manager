@@ -18,11 +18,6 @@
       margin-top: 10em !important;
     }
   </style>
-  <script>
-    function highlight(){
-      $(window.location.hash).transition('shake');
-    }
-  </script>
 </head>
 
 <body style="background-color: #f0f0f0;" onhashchange="highlight()">
@@ -68,8 +63,10 @@
   <script src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
   <script src="{{ url_for('static', filename='node_modules/fomantic-ui-css/semantic.min.js') }}"></script>
   <script src="{{ url_for('static', filename='prism.js') }}"></script>
-
   <script>
+    function highlight(){
+      $(window.location.hash).transition('shake');
+    }
     $('.ui.accordion').accordion();
     highlight();
   </script>
