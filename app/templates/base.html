@@ -18,9 +18,14 @@
       margin-top: 10em !important;
     }
   </style>
+  <script>
+    function highlight(){
+      $(window.location.hash).transition('shake');
+    }
+  </script>
 </head>
 
-<body style="background-color: #f0f0f0;">
+<body style="background-color: #f0f0f0;" onhashchange="highlight()">
   <div class="ui top secondary pointing menu">
     <a class="header item" href="/">
       <i class="user tie icon"></i>
@@ -65,9 +70,8 @@
   <script src="{{ url_for('static', filename='prism.js') }}"></script>
 
   <script>
-    $('.ui.accordion')
-      .accordion()
-      ;
+    $('.ui.accordion').accordion();
+    highlight();
   </script>
 
 </body>
