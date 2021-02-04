@@ -8,7 +8,7 @@ from functools import wraps
 from logging.config import dictConfig
 from urllib.parse import urljoin
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, jsonify, request
 from flask_pyoidc import OIDCAuthentication
 from flask_pyoidc.provider_configuration import (
     ClientMetadata,
@@ -260,7 +260,7 @@ def get_constraints(context=None):
             description=e,
         )
     else:
-        # For some reasing, the previous query returns a lot of objects that we
+        # For some reason, the previous query returns a lot of objects that we
         # are not interested. We need to filter the ones that we do care about.
         constraints = []
         for c in all_constraints["resources"]:
@@ -274,26 +274,30 @@ def get_constraints(context=None):
                     )
                     for i in c["items"]:
                         constraints.append(i)
-        # We pass to the template all the constraints sorted by amount of violations
-        if request.args.get("report"):
-            template_file = "constraints-report.html"
+        # Return a JSON if we are asked nicely
+        if request.headers.environ.get('HTTP_ACCEPT') == 'application/json' or 'json' in request.args:
+            return jsonify(constraints)
         else:
-            template_file = "constraints.html"
-        return render_template(
-            template_file,
-            constraints=sorted(
-                constraints,
-                reverse=True,
-                key=lambda x: x.get("status").get("totalViolations") or -1
-                if x.get("status")
-                else -1,
-            ),
-            title="Constraints",
-            hide_sidebar=len(constraints) == 0,
-            current_context=context,
-            contexts=get_k8s_contexts(),
-            timestamp=datetime.now().strftime("%a, %x %X"),
-        )
+            # We pass to the template all the constraints sorted by amount of violations
+            if request.args.get("report"):
+                template_file = "constraints-report.html"
+            else:
+                template_file = "constraints.html"
+            return render_template(
+                template_file,
+                constraints=sorted(
+                    constraints,
+                    reverse=True,
+                    key=lambda x: x.get("status").get("totalViolations") or -1
+                    if x.get("status")
+                    else -1,
+                ),
+                title="Constraints",
+                hide_sidebar=len(constraints) == 0,
+                current_context=context,
+                contexts=get_k8s_contexts(),
+                timestamp=datetime.now().strftime("%a, %x %X"),
+            )
 
 
 @app.route("/constrainttemplates/")
@@ -375,15 +379,19 @@ def get_constrainttemplates(context=None):
             description=e,
         )
     else:
-        return render_template(
-            "constrainttemplates.html",
-            constrainttemplates=constrainttemplates,
-            constraints_by_constrainttemplates=constraints_by_constrainttemplates,
-            title="Constraint Templates",
-            current_context=context,
-            contexts=get_k8s_contexts(),
-            hide_sidebar=len(constrainttemplates["items"]) == 0,
-        )
+        # Return a JSON if we are asked nicely
+        if request.headers.environ.get('HTTP_ACCEPT') == 'application/json' or 'json' in request.args:
+            return jsonify(constrainttemplates)
+        else:
+            return render_template(
+                "constrainttemplates.html",
+                constrainttemplates=constrainttemplates,
+                constraints_by_constrainttemplates=constraints_by_constrainttemplates,
+                title="Constraint Templates",
+                current_context=context,
+                contexts=get_k8s_contexts(),
+                hide_sidebar=len(constrainttemplates["items"]) == 0,
+            )
 
 
 @app.route("/configs/")
