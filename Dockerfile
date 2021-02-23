@@ -12,10 +12,12 @@ RUN apk --update --no-cache add gcc=9.3.0-r0 linux-headers=4.19.36-r0 musl-dev=1
 ENV STATIC_URL /static
 ENV STATIC_PATH /app/static
 ENV LISTEN_PORT 8080
+# Let's disable Rust bindings for cryptography until we can upgrade alpine
+# because Alpine's Rust version is too old.
+# https://github.com/pyca/cryptography/issues/5776
+ENV CRYPTOGRAPHY_DONT_BUILD_RUST=1
 EXPOSE 8080
 COPY ./app/requirements.txt /var/www/requirements.txt
-# hadolint ignore=DL3013
-RUN pip install --upgrade pip
 RUN pip install -r /var/www/requirements.txt
 COPY ./app /app
 COPY --from=node /app/node_modules /app/static/node_modules
