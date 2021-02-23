@@ -14,6 +14,7 @@ ENV STATIC_PATH /app/static
 ENV LISTEN_PORT 8080
 EXPOSE 8080
 COPY ./app/requirements.txt /var/www/requirements.txt
+# hadolint ignore=DL3013
 RUN pip install --upgrade pip
 RUN pip install -r /var/www/requirements.txt
 COPY ./app /app
