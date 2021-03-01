@@ -156,7 +156,7 @@ def index():
 @app.route("/constraints/")
 @login_required_conditional
 def get_constraints():
-    """Contraints view"""
+    """Constraints view"""
     try:
         api = get_api()
         all_constraints = api.get_cluster_custom_object(
