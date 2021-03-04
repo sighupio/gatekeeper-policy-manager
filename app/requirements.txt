@@ -6,7 +6,7 @@ cffi==1.14.5
 chardet==4.0.0
 click==7.1.2
 cryptography==3.4.6
-defusedxml==0.6.0
+defusedxml==0.7.0
 Flask==1.1.2
 Flask-pyoidc==3.7.0
 future==0.18.2
