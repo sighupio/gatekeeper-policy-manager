@@ -13,7 +13,7 @@ future==0.18.2
 google-auth==1.27.1
 idna==2.10
 importlib-metadata==3.7.0
-importlib-resources==5.1.1
+importlib-resources==5.1.2
 isort==5.7.0
 itsdangerous==1.1.0
 Jinja2==2.11.3
