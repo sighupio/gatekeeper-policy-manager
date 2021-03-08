@@ -4,8 +4,8 @@
  * license that can be found in the LICENSE file.
  */
 
-/* PrismJS 1.21.0
-https://prismjs.com/download.html#themes=prism-tomorrow&languages=clike+ruby+yaml&plugins=line-numbers */
+/* PrismJS 1.23.0
+https://prismjs.com/download.html#themes=prism-tomorrow&languages=rego+yaml&plugins=line-numbers */
 /**
  * prism.js tomorrow night eighties for JavaScript, CoffeeScript, CSS and HTML
  * Based on https://github.com/chriskempson/tomorrow-theme
@@ -169,4 +169,3 @@ https://prismjs.com/download.html#themes=prism-tomorrow&languages=clike+ruby+yam
 			 padding-right: 0.8em;
 			 text-align: right;
 		 }
- 

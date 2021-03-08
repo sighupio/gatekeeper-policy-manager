@@ -38,7 +38,7 @@
           </div>
           {% for lib in t.libs %}
           <div class="content">
-            <pre class="line-numbers"><code class="language-ruby">{{ lib }}</code></pre>
+            <pre class="line-numbers"><code class="language-rego">{{ lib }}</code></pre>
           </div>
           {% endfor %}
           {% endif %}
@@ -48,7 +48,7 @@
             Rego definition
           </div>
           <div class="content">
-            <pre class="line-numbers"><code class="language-ruby">{{ t.rego }}</code></pre>
+            <pre class="line-numbers"><code class="language-rego">{{ t.rego }}</code></pre>
           </div>
         </div>
 
@@ -82,7 +82,7 @@
           Schema validation definition
         </div>
         <div class="content">
-          <pre class="line-numbers"><code class="language-json">{{ constrainttemplate.spec.crd.spec.validation.openAPIV3Schema.properties|pprint }}</code></pre>
+          <pre class="line-numbers"><code class="language-yaml">{{ constrainttemplate.spec.crd.spec.validation.openAPIV3Schema.properties|pprint }}</code></pre>
         </div>
       </div>
       #}
