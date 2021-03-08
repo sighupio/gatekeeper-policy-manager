@@ -21,3 +21,5 @@ COPY ./app/requirements.txt /var/www/requirements.txt
 RUN pip install -r /var/www/requirements.txt
 COPY ./app /app
 COPY --from=node /app/node_modules /app/static/node_modules
+
+LABEL maintainer="SIGHUP https://sighup.io"
