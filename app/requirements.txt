@@ -12,7 +12,7 @@ Flask-pyoidc==3.7.0
 future==0.18.2
 google-auth==1.28.0
 idna==2.10
-importlib-metadata==3.7.3
+importlib-metadata==3.9.0
 importlib-resources==5.1.2
 isort==5.8.0
 itsdangerous==1.1.0
