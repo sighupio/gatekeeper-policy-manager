@@ -87,7 +87,7 @@ GPM is a stateless application, but it can be configured using environment varia
 
 ## Development
 
-GPM is written in Python using the Flask framework for the backend and Fromantic-UI for the frontend. To develop GPM, you'll need to create a Python 3 virtual environment, install all the dependencies specified in the provided `requirements.txt` and you are good to start hacking.
+GPM is written in Python using the Flask framework for the backend and Fomantic-UI for the frontend. To develop GPM, you'll need to create a Python 3 virtual environment, install all the dependencies specified in the provided `requirements.txt` and you are good to start hacking.
 
 The following commands should get you up and running:
 
@@ -113,10 +113,10 @@ The following is a wishlist of features that we would like to add to GPM (in no 
 - List the constraints that are currently using a `ConstraintTemplate`
 - Polished OIDC authentication
 - LDAP authentication
-- Better syntax highlighting for the rego code snippets
+✅ Better syntax highlighting for the rego code snippets
 - Root-less docker image
 - Multi-cluster view
 - Minimal write capabilities?
 - Re-write app in Golang?
 
-Please, let us know if you are using GPM and what features would you like to have by creating an issue here in GitHub
+Please, let us know if you are using GPM and what features would you like to have by creating an issue here on GitHub

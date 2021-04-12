@@ -41,19 +41,6 @@ dictConfig(
     }
 )
 
-
-# We have to do this ugly thing in order to apply conditionally the login
-# decorator only when it is enabled from the oonfig.
-def login_required_conditional(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if app.config.get("AUTH_ENABLED") == "OIDC":
-            return auth.oidc_auth("oidc")(f)(*args, **kwargs)
-        return f(*args, **kwargs)
-
-    return decorated_function
-
-
 app = Flask(__name__)
 
 # Update app config with env vars
@@ -117,6 +104,18 @@ def dict_to_li(my_dict, html):
     return html
 
 
+# We have to do this ugly thing in order to apply conditionally the login
+# decorator only when it is enabled from the oonfig.
+def login_required_conditional(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if app.config.get("AUTH_ENABLED") == "OIDC":
+            return auth.oidc_auth("oidc")(f)(*args, **kwargs)
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
 @app.template_filter("dict_to_ul")
 def dict_to_ul(s):
     """
@@ -160,7 +159,10 @@ def get_constraints():
     try:
         api = get_api()
         all_constraints = api.get_cluster_custom_object(
-            group="constraints.gatekeeper.sh", version="v1beta1", plural="", name="",
+            group="constraints.gatekeeper.sh",
+            version="v1beta1",
+            plural="",
+            name="",
         )
     except NewConnectionError as e:
         return render_template(
