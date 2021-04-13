@@ -18,7 +18,7 @@ ENV LISTEN_PORT 8080
 ENV CRYPTOGRAPHY_DONT_BUILD_RUST=1
 EXPOSE 8080
 COPY ./app/requirements.txt /var/www/requirements.txt
-RUN pip install -r /var/www/requirements.txt
+RUN pip install --no-cache-dir -r /var/www/requirements.txt
 COPY ./app /app
 COPY --from=node /app/node_modules /app/static/node_modules
 
