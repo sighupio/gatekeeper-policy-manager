@@ -159,10 +159,7 @@ def get_constraints():
     try:
         api = get_api()
         all_constraints = api.get_cluster_custom_object(
-            group="constraints.gatekeeper.sh",
-            version="v1beta1",
-            plural="",
-            name="",
+            group="constraints.gatekeeper.sh", version="v1beta1", plural="", name="",
         )
     except NewConnectionError as e:
         return render_template(
