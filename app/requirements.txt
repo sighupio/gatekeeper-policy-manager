@@ -29,7 +29,7 @@ pyasn1-modules==0.2.8
 pycparser==2.20
 pycryptodomex==3.10.1
 pyjwkest==1.4.2
-pylint==2.7.4
+pylint==2.8.1
 python-dateutil==2.8.1
 PyYAML==5.4.1
 requests==2.25.1
