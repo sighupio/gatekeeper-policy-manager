@@ -15,7 +15,7 @@ idna==2.10
 importlib-metadata==4.0.1
 importlib-resources==5.1.2
 isort==5.8.0
-itsdangerous==1.1.0
+itsdangerous==2.0.0
 Jinja2==2.11.3
 kubernetes==12.0.1
 lazy-object-proxy==1.6.0
