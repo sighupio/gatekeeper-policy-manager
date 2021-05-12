@@ -40,6 +40,6 @@ typed-ast==1.4.3
 typing-extensions==3.10.0.0
 urllib3==1.26.4
 websocket-client==0.59.0
-Werkzeug==1.0.1
+Werkzeug==2.0.0
 wrapt==1.12.1
 zipp==3.4.1
