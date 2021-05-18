@@ -20,7 +20,7 @@ Jinja2==3.0.0
 kubernetes==17.17.0
 lazy-object-proxy==1.6.0
 Mako==1.1.4
-MarkupSafe==2.0.0
+MarkupSafe==2.0.1
 mccabe==0.6.1
 oauthlib==3.1.0
 oic==1.2.1
