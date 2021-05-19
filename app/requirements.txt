@@ -16,7 +16,7 @@ importlib-metadata==4.0.1
 importlib-resources==5.1.3
 isort==5.8.0
 itsdangerous==2.0.1
-Jinja2==3.0.0
+Jinja2==3.0.1
 kubernetes==17.17.0
 lazy-object-proxy==1.6.0
 Mako==1.1.4
