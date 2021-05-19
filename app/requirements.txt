@@ -4,7 +4,7 @@ cachetools==4.2.2
 certifi==2020.12.5
 cffi==1.14.5
 chardet==4.0.0
-click==8.0.0
+click==8.0.1
 cryptography==3.4.7
 defusedxml==0.7.1
 Flask==2.0.0
