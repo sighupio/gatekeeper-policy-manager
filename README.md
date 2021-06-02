@@ -53,21 +53,32 @@ GPM is a stateless application, but it can be configured using environment varia
 | `GPM_AUTH_ENABLED`                | Enable Authentication current options: "Anonymous", "OIDC"                                                        | Anonymous              |
 | `GPM_SECRET_KEY`                  | The secret key used to generate tokens. **Change this value in production**.                                      | `g8k1p3rp0l1c7m4n4g3r` |
 | `GPM_PREFERRED_URL_SCHEME`        | URL scheme to be used while generating links.                                                                     | `http`                 |
-| `GPM_OIDC_REDIRECT_DOMAIN`        | The server name under the app is being exposed. This is where the client will be redirected after authenticating  |
-| `GPM_OIDC_ISSUER`                 | OIDC Issuer hostname                                                                                              |
-| `GPM_OIDC_AUTHORIZATION_ENDPOINT` | OIDC Authorizatoin Endpoint                                                                                       |
-| `GPM_OIDC_JWKS_URI`               | OIDC JWKS URI                                                                                                     |
-| `GPM_OIDC_TOKEN_ENDPOINT`         | OIDC TOKEN Endpoint                                                                                               |
-| `GPM_OIDC_INTROSPECTION_ENDPOINT` | OIDC Introspection Enpoint                                                                                        |
-| `GPM_OIDC_USERINFO_ENDPOINT`      | OIDC Userinfo Endpoint                                                                                            |
-| `GPM_OIDC_END_SESSION_ENDPOINT`   | OIDC End Session Endpoint                                                                                         |
-| `GPM_OIDC_CLIENT_ID`              | The Client ID used to authenticate against the OIDC Provider                                                      |
-| `GPM_OIDC_CLIENT_SECRET`          | The Client Secret used to authenticate against the OIDC Provider                                                  |
+| `GPM_OIDC_REDIRECT_DOMAIN`        | The server name under the app is being exposed. This is where the client will be redirected after authenticating  |                        |
+| `GPM_OIDC_ISSUER`                 | OIDC Issuer hostname                                                                                              |                        |
+| `GPM_OIDC_AUTHORIZATION_ENDPOINT` | OIDC Authorizatoin Endpoint                                                                                       |                        |
+| `GPM_OIDC_JWKS_URI`               | OIDC JWKS URI                                                                                                     |                        |
+| `GPM_OIDC_TOKEN_ENDPOINT`         | OIDC TOKEN Endpoint                                                                                               |                        |
+| `GPM_OIDC_INTROSPECTION_ENDPOINT` | OIDC Introspection Enpoint                                                                                        |                        |
+| `GPM_OIDC_USERINFO_ENDPOINT`      | OIDC Userinfo Endpoint                                                                                            |                        |
+| `GPM_OIDC_END_SESSION_ENDPOINT`   | OIDC End Session Endpoint                                                                                         |                        |
+| `GPM_OIDC_CLIENT_ID`              | The Client ID used to authenticate against the OIDC Provider                                                      |                        |
+| `GPM_OIDC_CLIENT_SECRET`          | The Client Secret used to authenticate against the OIDC Provider                                                  |                        |
 | `GPM_LOG_LEVEL`                   | Log level (see [python logging docs](https://docs.python.org/2/library/logging.html#levels) for available levels) | `INFO`                 |
+| `KUBECONFIG`                      | Path to a [kubeconfig](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/) file, if provided while running inside a cluster this configuration file will be used instead of the cluster's API. |
 
 > ⚠️ Please notice that OIDC Authentication is in beta state. It has been tested to work with Keycloak as a provider.
 >
 > These environment variables are already provided and ready to be set in the [`manifests/enable-oidc.yaml`](manifests/enable-oidc.yaml) file.
+
+### Multi-cluster support
+
+Since v0.5.0 GPM has basic multi-cluster support when using a `kubeconfig` with more than one context, i.e. running in _local_ mode. GPM will let you chose the context right from the UI.
+
+If you want to run GPM in a cluster but with multi-cluster support, it's as easy as mounting a `kubeconfig` file with the right configuration and set the environment variable `KUBECONFIG` with the path to the mounted file.
+
+> Please remember that the user for the clusters should have the right permissions. You can use the [`manifests/rabc.yaml`](manifests/rbac.yaml) file as reference.
+
+When you run GPM locally, you are already using a `kubeconfig` file  to connect to the clusters, now you shuold see all your defined contexts and you can switch between them easily from the UI.
 
 ## Screenshots
 
@@ -115,7 +126,7 @@ The following is a wishlist of features that we would like to add to GPM (in no 
 - LDAP authentication
 ✅ Better syntax highlighting for the rego code snippets
 - Root-less docker image
-- Multi-cluster view
+✅ Multi-cluster view
 - Minimal write capabilities?
 - Re-write app in Golang?
 

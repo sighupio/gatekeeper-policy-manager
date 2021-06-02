@@ -89,9 +89,27 @@ if app.config.get("AUTH_ENABLED") == "OIDC":
 else:
     app.logger.info("RUNNING WITH AUTHENTICATION DISABLED")
 
+# This snippet tries to detect if the app is running on a K8S cluster or locally
+try:
+    app.logger.info("Attempting init with KUBECONFIG")
+    config.load_kube_config()
+    app.logger.info(f"KUBECONFIG '{config.kube_config.KUBE_CONFIG_DEFAULT_LOCATION}' successfuly loaded.")
+    app.config["MODE"] = "KUBECONFIG"
+except config.ConfigException as e:
+    if app.config.get("KUBERNETES"):
+        app.logger.debug(f"KUBECONFIG loading failed. Got error: {e}")
+        app.logger.info("KUBECONFIG loading failed but KUBERNETES_SERVICE_HOST environment variable found, assuming to be running inside a Kubernetes cluster")
+        config.load_incluster_config()
+        app.logger.info("In cluster configuration loaded successfully.")
+        app.config["MODE"] = "CLUSTER"
+    else:
+        app.logger.error(f"CRITICAL - KUBERNETES_SERVICE_HOST environment variable not found and loading KUBECONFIG from '{config.kube_config.KUBE_CONFIG_DEFAULT_LOCATION}' failed with error: {e}")
+        exit(1)
+
 
 def dict_to_li(my_dict, html):
     """Recursive function to convert dict items into <li> html tags"""
+    app.logger.debug(f"looping for {my_dict} and html is:\n{html}")
     if my_dict is None:
         return html
     for k, v in my_dict.items():
@@ -102,18 +120,6 @@ def dict_to_li(my_dict, html):
             html += "<li>%s: %s</li>" % (k, v)
     html += "</ul>"
     return html
-
-
-# We have to do this ugly thing in order to apply conditionally the login
-# decorator only when it is enabled from the oonfig.
-def login_required_conditional(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if app.config.get("AUTH_ENABLED") == "OIDC":
-            return auth.oidc_auth("oidc")(f)(*args, **kwargs)
-        return f(*args, **kwargs)
-
-    return decorated_function
 
 
 @app.template_filter("dict_to_ul")
@@ -128,36 +134,56 @@ def dict_to_ul(s):
     return str(result)
 
 
-def get_api():
+# We have to do this ugly thing in order to apply conditionally the login
+# decorator only when it is enabled from the oonfig.
+def login_required_conditional(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if app.config.get("AUTH_ENABLED") == "OIDC":
+            return auth.oidc_auth("oidc")(f)(*args, **kwargs)
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
+def get_api(context=None):
     """
     This function tries to detect if the app is running on a K8S cluster or locally
     and returns the corresponding API object to be used to query the API server.
     """
-    if app.config.get("KUBERNETES"):
-        app.logger.info(
-            "KUBERNETES_SERVICE_HOST found, assuming to be running inside Kubernetes cluster"
-        )
-        config.load_incluster_config()
+    if app.config.get('MODE') == 'KUBECONFIG':
+        return client.CustomObjectsApi(config.new_client_from_config(context=context))
+    elif app.config.get('MODE') == 'CLUSTER':
+        return client.CustomObjectsApi()
+
+
+def get_k8s_contexts():
+    """
+    Helper function to return a list of the available Kubernetes contexts
+    when using a kubeconfig file.
+    When running in a cluster returns None.
+    """
+    if app.config.get('MODE') == 'KUBECONFIG':
+        contexts = config.list_kube_config_contexts()
     else:
-        app.logger.info(
-            "KUBERNETES_SERVICE_HOST environment variable not found. Falling back to kubeconfig"
-        )
-        config.load_kube_config()
-    return client.CustomObjectsApi()
+        contexts = None
+    return contexts
 
 
 @app.route("/")
-def index():
+@app.route("/<context>")
+def index(context=None):
     """Welcome page view"""
-    return render_template("index.html", title="Welcome!")
+    return render_template("index.html", title="Welcome!", current_context=context, contexts=get_k8s_contexts())
 
 
 @app.route("/constraints/")
+@app.route("/constraints/<context>/")
 @login_required_conditional
-def get_constraints():
+def get_constraints(context=None):
     """Constraints view"""
     try:
-        api = get_api()
+        api = get_api(context)
         all_constraints = api.get_cluster_custom_object(
             group="constraints.gatekeeper.sh", version="v1beta1", plural="", name="",
         )
@@ -168,6 +194,8 @@ def get_constraints():
             title="Error",
             message="Could not connect to Kubernetes Cluster",
             action="Is the current Kubeconfig context valid?",
+            current_context=context,
+            contexts=get_k8s_contexts(),
             description=e,
         )
     except MaxRetryError as e:
@@ -177,6 +205,8 @@ def get_constraints():
             title="Error",
             message="Could not connect to Kubernetes Cluster",
             action="Is the current Kubeconfig context valid?",
+            current_context=context,
+            contexts=get_k8s_contexts(),
             description=e,
         )
     except ApiException as e:
@@ -185,6 +215,8 @@ def get_constraints():
                 "constraints.html",
                 constraints=[],
                 title="Constraints",
+                current_context=context,
+                contexts=get_k8s_contexts(),
                 hide_sidebar=True,
             )
         else:
@@ -194,6 +226,8 @@ def get_constraints():
                 title="Error",
                 message="We had a problem while asking the API for Gatekeeper objects",
                 action="Is Gatekeeper deployed in the cluster?",
+                current_context=context,
+                contexts=get_k8s_contexts(),
                 description=e,
             )
     except ConfigException as e:
@@ -203,6 +237,8 @@ def get_constraints():
             title="Error",
             message="Can't connect to cluster due to an invalid kubeconfig file",
             action="Please verify your kubeconfig file and location",
+            current_context=context,
+            contexts=get_k8s_contexts(),
             description=e,
         )
     else:
@@ -232,15 +268,18 @@ def get_constraints():
             ),
             title="Constraints",
             hide_sidebar=len(constraints) == 0,
+            current_context=context,
+            contexts=get_k8s_contexts(),
         )
 
 
 @app.route("/constrainttemplates/")
+@app.route("/constrainttemplates/<context>/")
 @login_required_conditional
-def get_constrainttemplates():
+def get_constrainttemplates(context=None):
     """Constraint Templates View"""
     try:
-        api = get_api()
+        api = get_api(context)
         constrainttemplates = api.get_cluster_custom_object(
             group="templates.gatekeeper.sh",
             version="v1beta1",
@@ -254,6 +293,8 @@ def get_constrainttemplates():
             title="Error",
             error="Could not connect to Kubernetes Cluster",
             action="Is the current Kubeconfig context valid?",
+            current_context=context,
+            contexts=get_k8s_contexts(),
             description=e,
         )
     except MaxRetryError as e:
@@ -263,6 +304,8 @@ def get_constrainttemplates():
             title="Error",
             error="Could not connect to Kubernetes Cluster",
             action="Is the current Kubeconfig context valid?",
+            current_context=context,
+            contexts=get_k8s_contexts(),
             description=e,
         )
     except ApiException as e:
@@ -271,6 +314,8 @@ def get_constrainttemplates():
                 "constrainttemplates.html",
                 constrainttemplates=[],
                 title="Constraints",
+                current_context=context,
+                contexts=get_k8s_contexts(),
                 hide_sidebar=True,
             )
         else:
@@ -280,6 +325,8 @@ def get_constrainttemplates():
                 title="Error",
                 message="We had a problem while asking the API for Gatekeeper Constraint Templates objects",
                 action="Is Gatekeeper deployed in the cluster?",
+                current_context=context,
+                contexts=get_k8s_contexts(),
                 description=e,
             )
     except ConfigException as e:
@@ -289,6 +336,8 @@ def get_constrainttemplates():
             title="Error",
             message="Can't connect to cluster due to an invalid kubeconfig file",
             action="Please verify your kubeconfig file and location",
+            current_context=context,
+            contexts=get_k8s_contexts(),
             description=e,
         )
     else:
@@ -296,18 +345,24 @@ def get_constrainttemplates():
             "constrainttemplates.html",
             constrainttemplates=constrainttemplates,
             title="Constraint Templates",
+            current_context=context,
+            contexts=get_k8s_contexts(),
             hide_sidebar=len(constrainttemplates["items"]) == 0,
         )
 
 
 @app.route("/configs/")
+@app.route("/configs/<context>")
 @login_required_conditional
-def get_gatekeeperconfigs():
+def get_gatekeeperconfigs(context=None):
     """Gatekeeper Configs View"""
     try:
-        api = get_api()
+        api = get_api(context)
         configs = api.get_cluster_custom_object(
-            group="config.gatekeeper.sh", version="v1alpha1", plural="configs", name="",
+            group="config.gatekeeper.sh",
+            version="v1alpha1",
+            plural="configs",
+            name="",
         )
     except NewConnectionError as e:
         return render_template(
@@ -316,6 +371,8 @@ def get_gatekeeperconfigs():
             title="Error",
             error="Could not connect to Kubernetes Cluster",
             action="Is the current Kubeconfig context valid?",
+            current_context=context,
+            contexts=get_k8s_contexts(),
             description=e,
         )
     except MaxRetryError as e:
@@ -325,6 +382,8 @@ def get_gatekeeperconfigs():
             title="Error",
             error="Could not connect to Kubernetes Cluster",
             action="Is the current Kubeconfig context valid?",
+            current_context=context,
+            contexts=get_k8s_contexts(),
             description=e,
         )
     except ApiException as e:
@@ -333,6 +392,8 @@ def get_gatekeeperconfigs():
                 "configs.html",
                 gatekeeper_configs=[],
                 title="Gatekeeper Configurations",
+                current_context=context,
+                contexts=get_k8s_contexts(),
                 hide_sidebar=True,
             )
         else:
@@ -342,6 +403,8 @@ def get_gatekeeperconfigs():
                 title="Error",
                 message="We had a problem while asking the API for Gatekeeper Config objects",
                 action="Is Gatekeeper deployed in the cluster?",
+                current_context=context,
+                contexts=get_k8s_contexts(),
                 description=e,
             )
     except ConfigException as e:
@@ -351,6 +414,8 @@ def get_gatekeeperconfigs():
             title="Error",
             message="Can't connect to cluster due to an invalid kubeconfig file",
             action="Please verify your kubeconfig file and location",
+            current_context=context,
+            contexts=get_k8s_contexts(),
             description=e,
         )
     else:
@@ -358,6 +423,8 @@ def get_gatekeeperconfigs():
             "configs.html",
             gatekeeper_configs=configs.get("items"),
             title="Gatekeeper Configurations",
+            current_context=context,
+            contexts=get_k8s_contexts(),
             hide_sidebar=len(configs["items"]) == 0,
         )
 

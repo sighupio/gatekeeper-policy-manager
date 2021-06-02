@@ -128,12 +128,12 @@
             <i class="sidebar icon"></i>
           </a>
           <a class="active item">Home</a>
-          <a href="/constrainttemplates" class="item"
+          <a href="{{ url_for('get_constrainttemplates', context=current_context) }}" class="item"
             title="See all the templates available for creating Constraints creation and their rego source code">Constraint
             Templates</a>
-          <a href="/constraints" class="item"
+          <a href="{{ url_for('get_constraints', context=current_context) }}" class="item"
             title="See all the Contratints defined and their violations">Constraints</a>
-          <a href="/configs" class="item"
+          <a href="{{ url_for('get_gatekeeperconfigs', context=current_context) }}" class="item"
             title="See all the CRDs that define Gatekeeper's configuration">Configurations</a>
         </div>
       </div>
@@ -144,7 +144,28 @@
         </h1>
         <h2>Gatekeeper Policy Manager is a simple to use web-based tool to see the policies deployed in your cluster and
           their status</h2>
-        <a href="/constraints" class="ui huge primary button">See Constraints status <i
+        {% if contexts %}
+        <div class="ui search dropdown huge secondary button">
+          <span class="text">Context: {{ current_context or contexts[1].name }}</span>
+          <i class="dropdown icon"></i>
+          <div class="menu">
+            <div class="ui icon search input">
+              <i class="search icon"></i>
+              <input type="text" placeholder="Filter...">
+            </div>
+            <div class="header">select a context</div>
+            <div class="divider"></div>
+            {% for c in contexts[0] %}
+            <a class="vertical item{% if c.name == current_context %} active selected{% endif %}"
+                href="{{ url_for(request.endpoint, context=c.name) }}">
+              <span class="description">{{c.context.user}}@{{c.context.cluster}}</span>
+              <span class="text">{{ c.name }}{% if c.name == contexts[1].name %} <i class="ui small grey thumbtack icon" title="default context"></i>{% endif %}</span>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        <a href="{{ url_for('get_constraints', context=current_context) }}" class="ui huge primary button">See Constraints status <i
             class="right arrow icon"></i></a>
         {% if config.AUTH_ENABLED == 'OIDC' %}
         <div class="ui hidden fitted divider"></div>
@@ -168,7 +189,13 @@
   
   <script src="{{ url_for('static', filename='node_modules/jquery/dist/jquery.min.js') }}"></script>
   <script src="{{ url_for('static', filename='node_modules/fomantic-ui-css/semantic.min.js') }}"></script>
-
+  <script>
+    // forcing the click event, otherwise presing Enter does nothing
+    $('.ui.dropdown').dropdown({action: function(text, value, $selectedItem) {
+      $selectedItem.click();
+    }});
+    highlight();
+  </script>
 </body>
 
 </html>
