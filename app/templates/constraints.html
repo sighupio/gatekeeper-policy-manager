@@ -11,8 +11,12 @@
     <i class="lock {% if constraint.spec %}{% if constraint.spec.enforcementAction == 'dryrun' %}open{% endif %}{% endif %} icon"></i>
     <div class="ui small {% if constraint.status.totalViolations is not defined %} grey {% else %}{% if constraint.status.totalViolations != 0 %} red {%else%} green {% endif %}{% endif %} label">{{ constraint.status.totalViolations|default('?') }}</div>
     {{ constraint.metadata.name }}
-    </a>
+  </a>
   {% endfor %}
+  <a class="item" href="?report=html">
+    <i class="file download primary icon"></i>
+    Download violations report
+  </a>
 {% endblock %}
 {% block content %}
 {% if constraints|length == 0 %}

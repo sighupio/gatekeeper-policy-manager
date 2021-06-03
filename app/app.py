@@ -6,7 +6,7 @@ import os
 from functools import wraps
 from logging.config import dictConfig
 
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from flask_pyoidc import OIDCAuthentication
 from flask_pyoidc.provider_configuration import (
     ClientMetadata,
@@ -19,6 +19,8 @@ from kubernetes.config.config_exception import ConfigException
 from urllib3.exceptions import MaxRetryError, NewConnectionError
 
 from urllib.parse import urljoin
+
+from datetime import datetime
 
 # Set up logging
 dictConfig(
@@ -256,9 +258,13 @@ def get_constraints(context=None):
                     )
                     for i in c["items"]:
                         constraints.append(i)
-        # We pass to the template all the constratins sorted by ammount of violations
+        # We pass to the template all the constraints sorted by amount of violations
+        if request.args.get('report'):
+            template_file = 'constraints-report.html'
+        else:
+            template_file = 'constraints.html'
         return render_template(
-            "constraints.html",
+            template_file,
             constraints=sorted(
                 constraints,
                 reverse=True,
@@ -270,6 +276,7 @@ def get_constraints(context=None):
             hide_sidebar=len(constraints) == 0,
             current_context=context,
             contexts=get_k8s_contexts(),
+            timestamp=datetime.now().strftime('%a, %x %X'),
         )
 
 
