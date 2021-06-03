@@ -95,17 +95,23 @@ else:
 try:
     app.logger.info("Attempting init with KUBECONFIG")
     config.load_kube_config()
-    app.logger.info(f"KUBECONFIG '{config.kube_config.KUBE_CONFIG_DEFAULT_LOCATION}' successfuly loaded.")
+    app.logger.info(
+        f"KUBECONFIG '{config.kube_config.KUBE_CONFIG_DEFAULT_LOCATION}' successfuly loaded."
+    )
     app.config["MODE"] = "KUBECONFIG"
 except config.ConfigException as e:
     if app.config.get("KUBERNETES"):
         app.logger.debug(f"KUBECONFIG loading failed. Got error: {e}")
-        app.logger.info("KUBECONFIG loading failed but KUBERNETES_SERVICE_HOST environment variable found, assuming to be running inside a Kubernetes cluster")
+        app.logger.info(
+            "KUBECONFIG loading failed but KUBERNETES_SERVICE_HOST environment variable found, assuming to be running inside a Kubernetes cluster"
+        )
         config.load_incluster_config()
         app.logger.info("In cluster configuration loaded successfully.")
         app.config["MODE"] = "CLUSTER"
     else:
-        app.logger.error(f"CRITICAL - KUBERNETES_SERVICE_HOST environment variable not found and loading KUBECONFIG from '{config.kube_config.KUBE_CONFIG_DEFAULT_LOCATION}' failed with error: {e}")
+        app.logger.error(
+            f"CRITICAL - KUBERNETES_SERVICE_HOST environment variable not found and loading KUBECONFIG from '{config.kube_config.KUBE_CONFIG_DEFAULT_LOCATION}' failed with error: {e}"
+        )
         exit(1)
 
 
@@ -153,9 +159,9 @@ def get_api(context=None):
     This function tries to detect if the app is running on a K8S cluster or locally
     and returns the corresponding API object to be used to query the API server.
     """
-    if app.config.get('MODE') == 'KUBECONFIG':
+    if app.config.get("MODE") == "KUBECONFIG":
         return client.CustomObjectsApi(config.new_client_from_config(context=context))
-    elif app.config.get('MODE') == 'CLUSTER':
+    elif app.config.get("MODE") == "CLUSTER":
         return client.CustomObjectsApi()
 
 
@@ -165,7 +171,7 @@ def get_k8s_contexts():
     when using a kubeconfig file.
     When running in a cluster returns None.
     """
-    if app.config.get('MODE') == 'KUBECONFIG':
+    if app.config.get("MODE") == "KUBECONFIG":
         contexts = config.list_kube_config_contexts()
     else:
         contexts = None
@@ -176,7 +182,12 @@ def get_k8s_contexts():
 @app.route("/<context>")
 def index(context=None):
     """Welcome page view"""
-    return render_template("index.html", title="Welcome!", current_context=context, contexts=get_k8s_contexts())
+    return render_template(
+        "index.html",
+        title="Welcome!",
+        current_context=context,
+        contexts=get_k8s_contexts(),
+    )
 
 
 @app.route("/constraints/")
@@ -259,10 +270,10 @@ def get_constraints(context=None):
                     for i in c["items"]:
                         constraints.append(i)
         # We pass to the template all the constraints sorted by amount of violations
-        if request.args.get('report'):
-            template_file = 'constraints-report.html'
+        if request.args.get("report"):
+            template_file = "constraints-report.html"
         else:
-            template_file = 'constraints.html'
+            template_file = "constraints.html"
         return render_template(
             template_file,
             constraints=sorted(
@@ -276,7 +287,7 @@ def get_constraints(context=None):
             hide_sidebar=len(constraints) == 0,
             current_context=context,
             contexts=get_k8s_contexts(),
-            timestamp=datetime.now().strftime('%a, %x %X'),
+            timestamp=datetime.now().strftime("%a, %x %X"),
         )
 
 
@@ -366,10 +377,7 @@ def get_gatekeeperconfigs(context=None):
     try:
         api = get_api(context)
         configs = api.get_cluster_custom_object(
-            group="config.gatekeeper.sh",
-            version="v1alpha1",
-            plural="configs",
-            name="",
+            group="config.gatekeeper.sh", version="v1alpha1", plural="configs", name="",
         )
     except NewConnectionError as e:
         return render_template(
