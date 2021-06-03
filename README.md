@@ -77,6 +77,7 @@ Since v0.5.0 GPM has basic multi-cluster support when using a `kubeconfig` with 
 If you want to run GPM in a cluster but with multi-cluster support, it's as easy as mounting a `kubeconfig` file with the right configuration and set the environment variable `KUBECONFIG` with the path to the mounted file.
 
 > Please remember that the user for the clusters should have the right permissions. You can use the [`manifests/rabc.yaml`](manifests/rbac.yaml) file as reference.
+> Also note that the cluster where GPM is running should be able to reach the other clusters.
 
 When you run GPM locally, you are already using a `kubeconfig` file  to connect to the clusters, now you shuold see all your defined contexts and you can switch between them easily from the UI.
 

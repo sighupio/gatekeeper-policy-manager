@@ -103,14 +103,16 @@ except config.ConfigException as e:
     if app.config.get("KUBERNETES"):
         app.logger.debug(f"KUBECONFIG loading failed. Got error: {e}")
         app.logger.info(
-            "KUBECONFIG loading failed but KUBERNETES_SERVICE_HOST environment variable found, assuming to be running inside a Kubernetes cluster"
+            "KUBECONFIG loading failed but KUBERNETES_SERVICE_HOST environment variable found, "
+            "assuming to be running inside a Kubernetes cluster"
         )
         config.load_incluster_config()
         app.logger.info("In cluster configuration loaded successfully.")
         app.config["MODE"] = "CLUSTER"
     else:
         app.logger.error(
-            f"CRITICAL - KUBERNETES_SERVICE_HOST environment variable not found and loading KUBECONFIG from '{config.kube_config.KUBE_CONFIG_DEFAULT_LOCATION}' failed with error: {e}"
+            "CRITICAL - KUBERNETES_SERVICE_HOST environment variable not found and loading KUBECONFIG from"
+            f"'{config.kube_config.KUBE_CONFIG_DEFAULT_LOCATION}' failed with error: {e}"
         )
         exit(1)
 
