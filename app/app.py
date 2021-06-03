@@ -95,17 +95,9 @@ def dict_to_li(my_dict, html):
     if my_dict is None:
         return html
     for k, v in my_dict.items():
-        app.logger.debug(
-            "Processing %s, %s of type %s and length %s" % (k, v, type(v), len(v))
-        )
-        if isinstance(v, dict) and len(v) > 1:
-            html += "<li>%s:</li> %s" % (k, dict_to_li(v, html))
-        elif isinstance(v, dict) and len(v) == 1:
-            for x, y in v.items():
-                html += (
-                    '<li>%s:</li><ul style="padding-left:2em"><li>%s: %s</li></ul>'
-                    % (k, x, y)
-                )
+        app.logger.debug("Processing %s, %s" % (k, v))
+        if isinstance(v, dict):
+            html += "<li>%s:</li>\n%s" % (k, dict_to_ul(v))
         else:
             html += "<li>%s: %s</li>" % (k, v)
     html += "</ul>"
