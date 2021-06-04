@@ -17,7 +17,7 @@
 - click 7.1.2 -> 8.0.1
 - Flask 1.1.2 -> 2.0.1
 - google-auth 1.30.0 -> 1.30.1
-- importlib-metadata 4.0.1 -> 4.4.0
+- importlib-metadata 4.0.1 -> 4.5.0
 - importlib-resources 5.1.2 -> 5.1.4
 - itsdangerous 1.1.0 -> 2.0.1
 - Jinja2 2.11.3 -> 3.0.1

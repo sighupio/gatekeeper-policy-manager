@@ -42,7 +42,7 @@ docker run -v ~/.kube/config:/root/.kube/config -p 8080:8080 quay.io/sighup/gate
 
 Then access it with your browser on: [http://127.0.0.1:8080](http://127.0.0.1:8080)
 
-> You can also run the flask app directly, see the development section for further information.
+> You can also run the flask app directly, see the [development section](#Development) for further information.
 
 ## Configuration
 
@@ -70,13 +70,14 @@ GPM is a stateless application, but it can be configured using environment varia
 >
 > These environment variables are already provided and ready to be set in the [`manifests/enable-oidc.yaml`](manifests/enable-oidc.yaml) file.
 
-### Multi-cluster support
+## Multi-cluster support
 
-Since v0.5.0 GPM has basic multi-cluster support when using a `kubeconfig` with more than one context, i.e. running in _local_ mode. GPM will let you chose the context right from the UI.
+Since v0.5.0 (unreleased yet) GPM has basic multi-cluster support when using a `kubeconfig` with more than one context, i.e. running in _local_ mode. GPM will let you chose the context right from the UI.
 
 If you want to run GPM in a cluster but with multi-cluster support, it's as easy as mounting a `kubeconfig` file with the right configuration and set the environment variable `KUBECONFIG` with the path to the mounted file.
 
 > Please remember that the user for the clusters should have the right permissions. You can use the [`manifests/rabc.yaml`](manifests/rbac.yaml) file as reference.
+>
 > Also note that the cluster where GPM is running should be able to reach the other clusters.
 
 When you run GPM locally, you are already using a `kubeconfig` file  to connect to the clusters, now you shuold see all your defined contexts and you can switch between them easily from the UI.
@@ -93,9 +94,11 @@ When you run GPM locally, you are already using a `kubeconfig` file  to connect 
 
 ![Constraint view 2](screenshots/05-constraints.png)
 
-![Constraint view 3](screenshots/06-constraints.png)
+![Constraint Report 3](screenshots/06-constraints.png)
 
 ![Configurations view 2](screenshots/07-configs.png)
+
+![Cluster Selector](screenshots/08-multicluster.png)
 
 ## Development
 
@@ -125,10 +128,10 @@ The following is a wishlist of features that we would like to add to GPM (in no 
 - List the constraints that are currently using a `ConstraintTemplate`
 - Polished OIDC authentication
 - LDAP authentication
-✅ Better syntax highlighting for the rego code snippets
+- Better syntax highlighting for the rego code snippets ✅
 - Root-less docker image
-✅ Multi-cluster view
+- Multi-cluster view ✅
 - Minimal write capabilities?
 - Re-write app in Golang?
 
-Please, let us know if you are using GPM and what features would you like to have by creating an issue here on GitHub
+Please, let us know if you are using GPM and what features would you like to have by creating an issue here on GitHub 💪🏻
