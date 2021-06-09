@@ -63,7 +63,7 @@
                         </tr>
                         {% endfor %}
                     {% elif constraint.status.totalViolations is not defined %}
-                    <div class="ui segment"><i class="ui grey icon circle question"></i> Violations for this Constraint are unkown. This probably means that the Constraint has not been processed by Gatekeeper yet. Please, try refreshing the page.</div>
+                    <div class="ui segment"><i class="ui grey icon circle question"></i> Violations for Constraint {{constraint.metadata.name}} are unkown. This probably means that the Constraint has not been processed by Gatekeeper yet. Please, try refreshing the page.</div>
                     {% endif %}
                 {% endfor %}
                 </tbody>
