@@ -12,11 +12,11 @@
 
 ## Updated dependencies
 
-- astroid 2.5.6 -> 2.5.7
+- astroid 2.5.6 -> 2.5.8
 - certifi 2020.12.5 -> 2021.5.30
 - click 7.1.2 -> 8.0.1
 - Flask 1.1.2 -> 2.0.1
-- google-auth 1.30.0 -> 1.30.1
+- google-auth 1.30.0 -> 1.30.2
 - importlib-metadata 4.0.1 -> 4.5.0
 - importlib-resources 5.1.2 -> 5.1.4
 - itsdangerous 1.1.0 -> 2.0.1
