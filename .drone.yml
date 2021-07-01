@@ -28,6 +28,8 @@ steps:
       # Identifies false positives like missing 'selector'.
       # Doing this is valid for Kustomize patches
       VALIDATE_KUBERNETES_KUBEVAL: "false"
+      # Some duplicated code is intended.
+      VALIDATE_JSCPD: "false"
     depends_on:
       - clone
 

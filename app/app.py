@@ -3,8 +3,10 @@
 # license that can be found in the LICENSE file.
 
 import os
+from datetime import datetime
 from functools import wraps
 from logging.config import dictConfig
+from urllib.parse import urljoin
 
 from flask import Flask, render_template, request
 from flask_pyoidc import OIDCAuthentication
@@ -17,10 +19,6 @@ from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from kubernetes.config.config_exception import ConfigException
 from urllib3.exceptions import MaxRetryError, NewConnectionError
-
-from urllib.parse import urljoin
-
-from datetime import datetime
 
 # Set up logging
 dictConfig(
@@ -54,7 +52,7 @@ app.config.update(
         "PREFERRED_URL_SCHEME": os.environ.get("GPM_PREFERRED_URL_SCHEME", "http"),
         "AUTH_ENABLED": os.environ.get("GPM_AUTH_ENABLED"),
         "OIDC_REDIRECT_URI": urljoin(
-            os.environ.get("GPM_OIDC_REDIRECT_DOMAIN"), "oidc-auth"
+            os.environ.get("GPM_OIDC_REDIRECT_DOMAIN", default=""), "oidc-auth"
         ),
     }
 )
@@ -200,7 +198,10 @@ def get_constraints(context=None):
     try:
         api = get_api(context)
         all_constraints = api.get_cluster_custom_object(
-            group="constraints.gatekeeper.sh", version="v1beta1", plural="", name="",
+            group="constraints.gatekeeper.sh",
+            version="v1beta1",
+            plural="",
+            name="",
         )
     except NewConnectionError as e:
         return render_template(
@@ -379,7 +380,10 @@ def get_gatekeeperconfigs(context=None):
     try:
         api = get_api(context)
         configs = api.get_cluster_custom_object(
-            group="config.gatekeeper.sh", version="v1alpha1", plural="configs", name="",
+            group="config.gatekeeper.sh",
+            version="v1alpha1",
+            plural="configs",
+            name="",
         )
     except NewConnectionError as e:
         return render_template(
