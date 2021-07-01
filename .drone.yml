@@ -25,6 +25,9 @@ steps:
     pull: always
     environment:
       FILTER_REGEX_EXCLUDE: app/static/prism.*
+      # Identifies false positives like missing 'selector'.
+      # Doing this is valid for Kustomize patches
+      VALIDATE_KUBERNETES_KUBEVAL: "false"
     depends_on:
       - clone
 

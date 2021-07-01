@@ -23,3 +23,6 @@ COPY ./app /app
 COPY --from=node /app/node_modules /app/static/node_modules
 
 LABEL maintainer="SIGHUP https://sighup.io"
+LABEL org.opencontainers.image.authors="Ramiro Algozino <ramiro@sighup.io>"
+LABEL org.opencontainers.vendor="SIGHUP.io"
+LABEL org.opencontainers.image.source="https://github.com/sighupio/gatekeeper-policy-manager"
