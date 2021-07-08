@@ -109,8 +109,8 @@ except config.ConfigException as e:
         app.config["MODE"] = "CLUSTER"
     else:
         app.logger.error(
-            "CRITICAL - KUBERNETES_SERVICE_HOST environment variable not found and loading KUBECONFIG from"
-            f"'{config.kube_config.KUBE_CONFIG_DEFAULT_LOCATION}' failed with error: {e}"
+            "CRITICAL - environment variable KUBERNETES_SERVICE_HOST was not found and loading KUBECONFIG from"
+            f" '{config.kube_config.KUBE_CONFIG_DEFAULT_LOCATION}' failed with error: {e}"
         )
         exit(1)
 
