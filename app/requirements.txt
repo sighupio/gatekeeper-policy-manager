@@ -14,7 +14,7 @@ google-auth==1.32.1
 idna==2.10
 importlib-metadata==4.6.1
 importlib-resources==5.2.0
-isort==5.9.1
+isort==5.9.2
 itsdangerous==2.0.1
 Jinja2==3.0.1
 kubernetes==17.17.0
