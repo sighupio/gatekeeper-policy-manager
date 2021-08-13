@@ -5,6 +5,7 @@
 - Added support for switching the current context from the UI, enabling basic multicluster support.
 - Added "report" view for constraints violations.
 - Improved code to make it more "flasky".
+- Changed base docker image to a simpler one that doesn't run as root.
 
 ### Bugfixes
 

@@ -40,3 +40,4 @@ spec:
           name: http
         securityContext:
           privileged: false
+          runAsNonRoot: true
