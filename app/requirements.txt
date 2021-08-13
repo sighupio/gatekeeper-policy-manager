@@ -39,7 +39,7 @@ six==1.16.0
 typed-ast==1.4.3
 typing-extensions==3.10.0.0
 urllib3==1.26.6
-websocket-client==1.2.0
+websocket-client==1.2.1
 Werkzeug==2.0.1
 wrapt==1.12.1
 zipp==3.5.0
