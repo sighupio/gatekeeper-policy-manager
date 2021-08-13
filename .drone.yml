@@ -99,6 +99,7 @@ trigger:
       - refs/tags/**
       - refs/heads/master
       - refs/heads/renovate/*
+      - refs/heads/gunicorn
 
 steps:
   - name: kind
