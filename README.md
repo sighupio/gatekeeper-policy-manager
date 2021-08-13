@@ -4,7 +4,11 @@
 
 Gatekeeper Policy Manager is a simple **read-only** web UI for viewing OPA Gatekeeper policies' status in a Kubernetes Cluster.
 
+The target Kubernetes Cluster can be the one where GPM is deployed or some [remote cluster(s) using a kubeconfig file](#Multi-cluster-support). You can also run GPM [locally in a client machine](#Running-locally) and connect to a remote cluster.
+
 It can display all the defined **Constraint Templates** with their rego code, and all the **Constraints** with its current status, violations, enforcement action, matches definitions, etc.
+
+[You can see some screenshots below](#Screenshots).
 
 ## Requirements
 
@@ -72,9 +76,9 @@ GPM is a stateless application, but it can be configured using environment varia
 
 ## Multi-cluster support
 
-Since v0.5.0 (unreleased yet) GPM has basic multi-cluster support when using a `kubeconfig` with more than one context, i.e. running in _local_ mode. GPM will let you chose the context right from the UI.
+Since `v0.5.0` GPM has basic multi-cluster support when using a `kubeconfig` with more than one context, i.e. running in _local_ mode. GPM will let you chose the context right from the UI.
 
-If you want to run GPM in a cluster but with multi-cluster support, it's as easy as mounting a `kubeconfig` file with the right configuration and set the environment variable `KUBECONFIG` with the path to the mounted file.
+If you want to run GPM in a cluster but with multi-cluster support, it's as easy as mounting a `kubeconfig` file with the right configuration on the and set the environment variable `KUBECONFIG` with the path to the mounted file. Or simply mount it in `/home/gpm/.kube/config`.
 
 > Please remember that the user for the clusters should have the right permissions. You can use the [`manifests/rabc.yaml`](manifests/rbac.yaml) file as reference.
 >
@@ -129,7 +133,7 @@ The following is a wishlist of features that we would like to add to GPM (in no 
 - Polished OIDC authentication
 - LDAP authentication
 - Better syntax highlighting for the rego code snippets ✅
-- Root-less docker image
+- Root-less docker image ✅
 - Multi-cluster view ✅
 - Minimal write capabilities?
 - Re-write app in Golang?
