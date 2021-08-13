@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gatekeeper-policy-manager
+spec:
+  template:
+    spec:
+      containers:
+      - name: gatekeeper-policy-manager
+        volumeMounts:
+          - mountPath: /home/gpm/.kube/config
+            name: kubeconfig
+            subPath: kubeconfig
+      volumes:
+        - name: kubeconfig
+          secret:
+            secretName: kubeconfig

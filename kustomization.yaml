@@ -12,10 +12,20 @@ resources:
   # the app to the outside. Remember to edit the file and set the host accordingly.
   # - manifests/ingress.yaml
 
+# Uncomment the following line if you are using some of the patches below.
+#patchesStrategicMerge:
+# Uncomment the following patch to enable multi-cluster support.
+#  - manifests/multi-cluster.yaml
 # Uncomment the following patch to enable OIDC authentication.
 # Remember to edit the file to set the right values.
-# patchesStrategicMerge:
 #   - manifests/enable-oidc.yaml
+
+# Example secretGenerator to create a secret with the kubeconfig:
+# secretGenerator:
+#   - name: kubeconfig
+#     namespace: gatekeeper-system
+#     files:
+#       - kubeconfig # or the path to your file.
 
 images:
   - name: quay.io/sighup/gatekeeper-policy-manager
