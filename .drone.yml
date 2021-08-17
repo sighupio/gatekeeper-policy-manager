@@ -72,6 +72,8 @@ steps:
       DOCKERFILE: Dockerfile
       BUILD_CONTEXT: "."
     volumes:
+      - name: dockerconfig
+        path: /root/.docker/config.json
       - name: dockersock
         path: /var/run/docker.sock
     commands:
@@ -83,6 +85,9 @@ steps:
         $${BUILD_CONTEXT}
 
 volumes:
+  - name: dockerconfig
+    host:
+      path: /root/.docker/config.json
   - name: dockersock
     host:
       path: /var/run/docker.sock
