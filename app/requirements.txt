@@ -10,7 +10,7 @@ defusedxml==0.7.1
 Flask==2.0.1
 Flask-pyoidc==3.7.0
 future==0.18.2
-google-auth==1.35.0
+google-auth==2.0.0
 gunicorn==20.1.0
 idna==2.10
 importlib-metadata==4.6.4
