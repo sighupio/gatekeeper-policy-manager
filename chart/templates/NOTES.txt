@@ -1,3 +1,7 @@
+Thank you for installing SIGHUP Gatekeeper Policy Manager. https://sighup.io
+This is an open source project: https://github.com/sighupio/gatekeeper-policy-manager
+Feel free to provide feedback there and report any possible issue. Contributions are always apreciated.
+
 1. Get the application URL by running these commands:
 {{- if .Values.ingress.enabled }}
 {{- range $host := .Values.ingress.hosts }}
