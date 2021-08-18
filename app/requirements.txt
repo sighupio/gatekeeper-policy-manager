@@ -1,4 +1,4 @@
-astroid==2.6.6
+astroid==2.7.1
 Beaker==1.11.0
 cachetools==4.2.2
 certifi==2021.5.30
