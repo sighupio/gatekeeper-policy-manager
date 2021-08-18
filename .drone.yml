@@ -104,8 +104,6 @@ trigger:
       - refs/tags/**
       - refs/heads/master
       - refs/heads/renovate/*
-      - refs/heads/gunicorn
-      - refs/heads/pipeline-improvements
 
 steps:
   - name: kind
