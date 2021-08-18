@@ -18,14 +18,14 @@
 - cffi 1.14.5 -> 1.14.6
 - click 7.1.2 -> 8.0.1
 - Flask 1.1.2 -> 2.0.1
-- google-auth 1.30.0 -> 1.34.0
+- google-auth 1.30.0 -> 2.0.0
 - gunicorn 20.1.0 (new)
-- importlib-metadata 4.0.1 -> 4.6.3
+- importlib-metadata 4.0.1 -> 4.6.4
 - importlib-resources 5.1.2 -> 5.2.2
 - isort 5.8.0 -> 5.9.3
 - itsdangerous 1.1.0 -> 2.0.1
 - Jinja2 2.11.3 -> 3.0.1
-- kubernetes 12.0.1 -> 17.17.0
+- kubernetes 12.0.1 -> 18.20.0
 - MarkupSafe 1.1.1 -> 2.0.1
 - oauthlib 3.1.0 -> 3.1.1
 - oic 1.2.1 -> 1.3.0
