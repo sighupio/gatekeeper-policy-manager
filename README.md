@@ -122,6 +122,10 @@ GPM is written in Python using the Flask framework for the backend and Fomantic-
 The following commands should get you up and running:
 
 ```bash
+# Download fronted dependencies with NPM
+$ pushd app/static
+$ npm install
+$ popd
 # Create a virtualenv
 $ python3 -m venv env
 # Activate it
