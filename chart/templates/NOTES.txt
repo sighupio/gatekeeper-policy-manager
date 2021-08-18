@@ -2,7 +2,7 @@
 Thank you for installing SIGHUP Gatekeeper Policy Manager, part of the Kubernetes Fury Distribution
 https://kubernetesfury.com | https://sighup.io
 
-This is open source software <3, check out the source code at:
+This is open source software <3 check out the source code at:
 https://github.com/sighupio/gatekeeper-policy-manager
 
 Feel free to send us feedback and report if you find any issue. Contributions are always apreciated.
