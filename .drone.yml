@@ -224,8 +224,6 @@ steps:
       container_image_name: gatekeeper-policy-manager
       container_image_tag: test-${DRONE_BUILD_NUMBER}
     volumes:
-      - name: dockerconfig
-        path: /root/.docker/config.json
       - name: dockersock
         path: /var/run/docker.sock
     commands:
@@ -253,8 +251,6 @@ steps:
       container_image_name: gatekeeper-policy-manager
       container_image_tag: test-${DRONE_BUILD_NUMBER}
     volumes:
-      - name: dockerconfig
-        path: /root/.docker/config.json
       - name: dockersock
         path: /var/run/docker.sock
     commands:
@@ -321,9 +317,6 @@ steps:
           - refs/tags/v**
 
 volumes:
-  - name: dockerconfig
-    host:
-      path: /root/.docker/config.json
   - name: dockersock
     host:
       path: /var/run/docker.sock
