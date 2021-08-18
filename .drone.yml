@@ -11,7 +11,7 @@ steps:
     pull: always
     commands:
       - go get -u github.com/google/addlicense
-      - addlicense -c "SIGHUP s.r.l" -v -l bsd --check .
+      - addlicense -c "SIGHUP s.r.l" -v -l bsd -check -ignore 'chart/**' .
 ---
 kind: pipeline
 name: policeman
