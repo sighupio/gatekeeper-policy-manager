@@ -41,3 +41,4 @@ spec:
         securityContext:
           privileged: false
           runAsNonRoot: true
+          allowPrivilegeEscalation: false
