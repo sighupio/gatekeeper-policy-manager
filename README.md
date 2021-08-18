@@ -36,12 +36,23 @@ kubectl -n gatekeeper-system port-forward  svc/gatekeeper-policy-manager 8080:80
 
 Then access it with your browser on: [http://127.0.0.1:8080](http://127.0.0.1:8080)
 
+### Deploy using Helm
+
+Since `v0.5.0` it's also possible to deploy GPM using the [provided Helm Chart](./chart). There's no Helm repo yet, but you can download the chart folder and use it locally:
+
+```bash
+git clone https://github.com/sighupio/gatekeeper-policy-manager.git
+helm upgrade --install gpm gatekeeper-policy-manager/chart --values my-values.yaml
+```
+
+Where `my-values.yaml` is your custom values for the release. See the [default values.yaml](./chart/values.yaml) for more information.
+
 ## Running locally
 
 GPM can also be run locally using docker and a `kubeconfig`, assuming that the `kubeconfig` file you want to use is located at `~/.kube/config` the command to run GPM locally would be:
 
 ```bash
-docker run -v ~/.kube/config:/root/.kube/config -p 8080:8080 quay.io/sighup/gatekeeper-policy-manager:v0.4.2
+docker run -v ~/.kube/config:/home/gpm/.kube/config -p 8080:8080 quay.io/sighup/gatekeeper-policy-manager:v0.4.2
 ```
 
 Then access it with your browser on: [http://127.0.0.1:8080](http://127.0.0.1:8080)
@@ -76,15 +87,15 @@ GPM is a stateless application, but it can be configured using environment varia
 
 ## Multi-cluster support
 
-Since `v0.5.0` GPM has basic multi-cluster support when using a `kubeconfig` with more than one context, i.e. running in _local_ mode. GPM will let you chose the context right from the UI.
+Since `v0.5.0` GPM has basic multi-cluster support when using a `kubeconfig` with more than one context. GPM will let you chose the context right from the UI.
 
-If you want to run GPM in a cluster but with multi-cluster support, it's as easy as mounting a `kubeconfig` file with the right configuration on the and set the environment variable `KUBECONFIG` with the path to the mounted file. Or simply mount it in `/home/gpm/.kube/config`.
+If you want to run GPM in a cluster but with multi-cluster support, it's as easy as mounting a `kubeconfig` file in GPM's pod(s) with the cluster access configuration and set the environment variable `KUBECONFIG` with the path to the mounted `kubeconfig` file. Or you can simply mount it in `/home/gpm/.kube/config` and GPM will detect it automatically.
 
 > Please remember that the user for the clusters should have the right permissions. You can use the [`manifests/rabc.yaml`](manifests/rbac.yaml) file as reference.
 >
 > Also note that the cluster where GPM is running should be able to reach the other clusters.
 
-When you run GPM locally, you are already using a `kubeconfig` file  to connect to the clusters, now you shuold see all your defined contexts and you can switch between them easily from the UI.
+When you run GPM locally, you are already using a `kubeconfig` file  to connect to the clusters, now you should see all your defined contexts and you can switch between them easily from the UI.
 
 ## Screenshots
 
@@ -116,7 +127,7 @@ $ python3 -m venv env
 # Activate it
 $ source ./env/bin/activate
 # Install all the dependencies
-$ pip install -r app/requirements.txt
+$ pip install -r app/requirements-dev.txt
 # Run the development server
 $ FLASK_APP=app/app.py flask run
 ```
