@@ -1,0 +1,4 @@
+Flask==2.0.1
+Flask-pyoidc==3.7.0
+gunicorn==20.1.0
+kubernetes==18.20.0
