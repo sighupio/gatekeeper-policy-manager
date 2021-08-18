@@ -1,0 +1,113 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gatekeeper-policy-manager.fullname" . }}
+  labels:
+    {{- include "gatekeeper-policy-manager.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "gatekeeper-policy-manager.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "gatekeeper-policy-manager.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "gatekeeper-policy-manager.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+          env:
+            - name: GPM_LOG_LEVEL
+              value: {{ .Values.config.logLevel | upper | quote }}
+            - name: GPM_PREFERRED_URL_SCHEME
+              value: {{ required "A valid .Values.config.preferredURLScheme entry required! Choose either http or https" .Values.config.preferredURLScheme | quote }}
+            - name: GPM_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "gatekeeper-policy-manager.fullname" . }}
+                  key: secretKey
+            {{- if and .Values.config.oidc.enabled}}
+            - name: GPM_AUTH_ENABLED
+              value: "OIDC"
+            - name: GPM_OIDC_REDIRECT_DOMAIN
+              value: {{ .Values.config.oidc.redirectDomain }}
+            - name: GPM_OIDC_CLIENT_ID
+              value: {{ .Values.config.oidc.clientID }}
+            {{- if and .Values.config.oidc.clientSecret}}
+            - name: GPM_OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "gatekeeper-policy-manager.fullname" . }}-oidc
+                  key: clientSecret
+            {{- end }}
+            - name: GPM_OIDC_ISSUER
+              value: {{ .Values.config.oidc.issuer }}
+            - name: GPM_OIDC_AUTHORIZATION_ENDPOINT
+              value: {{ .Values.config.oidc.authorizationEndpoint }}
+            - name: GPM_OIDC_JWKS_URI
+              value: {{ .Values.config.oidc.jwksURI }}
+            - name: GPM_OIDC_TOKEN_ENDPOINT
+              value: {{ .Values.config.oidc.tokenEndpoint }}
+            - name: GPM_OIDC_INTROSPECTION_ENDPOINT
+              value: {{ .Values.config.oidc.introspectionEndpoint }}
+            - name: GPM_OIDC_USERINFO_ENDPOINT
+              value: {{ .Values.config.oidc.userinfoEndpoint }}
+            - name: GPM_OIDC_END_SESSION_ENDPOINT
+              value: {{ .Values.config.oidc.endSessionEndpoint }}
+            {{- end }}
+            {{- if .Values.extraEnvs }}
+            {{ toYaml .Values.extraEnvs | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.config.multiCluster.enabled }}
+          volumeMounts:
+            - mountPath: /home/gpm/.kube/config
+              name: kubeconfig
+              subPath: kubeconfig
+      volumes:
+        - name: kubeconfig
+          secret:
+            secretName: kubeconfig
+          {{- end -}}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

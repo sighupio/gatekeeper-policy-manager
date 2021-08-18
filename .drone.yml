@@ -11,7 +11,7 @@ steps:
     pull: always
     commands:
       - go get -u github.com/google/addlicense
-      - addlicense -c "SIGHUP s.r.l" -v -l bsd --check .
+      - addlicense -c "SIGHUP s.r.l" -v -l bsd -check -ignore 'chart/**' .
 ---
 kind: pipeline
 name: policeman
@@ -24,7 +24,7 @@ steps:
     image: quay.io/sighup/policeman
     pull: always
     environment:
-      FILTER_REGEX_EXCLUDE: app/static/prism.*
+      FILTER_REGEX_EXCLUDE: (app/static/prism.*|chart/)
       # Identifies false positives like missing 'selector'.
       # Doing this is valid for Kustomize patches
       VALIDATE_KUBERNETES_KUBEVAL: "false"
