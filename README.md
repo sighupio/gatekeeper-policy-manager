@@ -52,7 +52,7 @@ Where `my-values.yaml` is your custom values for the release. See the [chart's r
 GPM can also be run locally using docker and a `kubeconfig`, assuming that the `kubeconfig` file you want to use is located at `~/.kube/config` the command to run GPM locally would be:
 
 ```bash
-docker run -v ~/.kube/config:/home/gpm/.kube/config -p 8080:8080 quay.io/sighup/gatekeeper-policy-manager:v0.4.2
+docker run -v ~/.kube/config:/home/gpm/.kube/config -p 8080:8080 quay.io/sighup/gatekeeper-policy-manager:v0.5.0
 ```
 
 Then access it with your browser on: [http://127.0.0.1:8080](http://127.0.0.1:8080)
