@@ -307,6 +307,13 @@ def get_constrainttemplates(context=None):
             plural="constrainttemplates",
             name="",
         )
+        constraints_by_constrainttemplates = {}
+        for ct in constrainttemplates.get('items'):
+            constraints_by_constrainttemplates[ct['metadata']['name']] = api.list_cluster_custom_object(
+                group="constraints.gatekeeper.sh",
+                version="v1beta1",
+                plural=ct['metadata']['name'],
+            ).get('items')
     except NewConnectionError as e:
         return render_template(
             "message.html",
@@ -365,6 +372,7 @@ def get_constrainttemplates(context=None):
         return render_template(
             "constrainttemplates.html",
             constrainttemplates=constrainttemplates,
+            constraints_by_constrainttemplates=constraints_by_constrainttemplates,
             title="Constraint Templates",
             current_context=context,
             contexts=get_k8s_contexts(),

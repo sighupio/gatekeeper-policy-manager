@@ -90,6 +90,15 @@
     </div>
     {% endif %}
 
+    {% if constraints_by_constrainttemplates[constrainttemplate.metadata.name] %}
+    <div class="ui segment">
+      <h5 class="header">Constraints using this template</h5>
+        {% for constraint in constraints_by_constrainttemplates[constrainttemplate.metadata.name] %}
+        <a class="ui basic label" href="{{ url_for('get_constraints', context=current_context, _anchor=constraint.metadata.name) }}"><i class="external alternate icon"></i>{{ constraint.metadata.name }}</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     {% if constrainttemplate.status %}
     <div class="ui segment">
       <h5>Status</h5>
