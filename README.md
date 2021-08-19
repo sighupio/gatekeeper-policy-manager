@@ -6,7 +6,7 @@ Gatekeeper Policy Manager is a simple **read-only** web UI for viewing OPA Gatek
 
 The target Kubernetes Cluster can be the one where GPM is deployed or some [remote cluster(s) using a kubeconfig file](#Multi-cluster-support). You can also run GPM [locally in a client machine](#Running-locally) and connect to a remote cluster.
 
-It can display all the defined **Constraint Templates** with their rego code, and all the **Constraints** with its current status, violations, enforcement action, matches definitions, etc.
+GPM can display all the defined **Constraint Templates** with their rego code, all the Gatekeeper Configuration CRDs, and all the **Constraints** with its current status, violations, enforcement action, matches definitions, etc.
 
 [You can see some screenshots below](#Screenshots).
 
@@ -42,10 +42,10 @@ Since `v0.5.0` it's also possible to deploy GPM using the [provided Helm Chart](
 
 ```bash
 git clone https://github.com/sighupio/gatekeeper-policy-manager.git
-helm upgrade --install gpm gatekeeper-policy-manager/chart --values my-values.yaml
+helm upgrade --install gpm gatekeeper-policy-manager/chart --values my-values.yaml --namespace gatekeeper-system
 ```
 
-Where `my-values.yaml` is your custom values for the release. See the [default values.yaml](./chart/values.yaml) for more information.
+Where `my-values.yaml` is your custom values for the release. See the [chart's readme](./chart/README.md) and the [default values.yaml](./chart/values.yaml) for more information.
 
 ## Running locally
 
@@ -85,7 +85,7 @@ GPM is a stateless application, but it can be configured using environment varia
 >
 > These environment variables are already provided and ready to be set in the [`manifests/enable-oidc.yaml`](manifests/enable-oidc.yaml) file.
 
-## Multi-cluster support
+### Multi-cluster support
 
 Since `v0.5.0` GPM has basic multi-cluster support when using a `kubeconfig` with more than one context. GPM will let you chose the context right from the UI.
 
@@ -144,7 +144,7 @@ $ FLASK_APP=app/app.py flask run
 
 The following is a wishlist of features that we would like to add to GPM (in no particular order):
 
-- List the constraints that are currently using a `ConstraintTemplate`
+- List the constraints that are currently using a `ConstraintTemplate` ✅
 - Polished OIDC authentication
 - LDAP authentication
 - Better syntax highlighting for the rego code snippets ✅
