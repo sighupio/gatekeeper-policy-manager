@@ -308,12 +308,16 @@ def get_constrainttemplates(context=None):
             name="",
         )
         constraints_by_constrainttemplates = {}
-        for ct in constrainttemplates.get('items'):
-            constraints_by_constrainttemplates[ct['metadata']['name']] = api.list_cluster_custom_object(
+        for ct in constrainttemplates.get("items"):
+            constraints_by_constrainttemplates[
+                ct["metadata"]["name"]
+            ] = api.list_cluster_custom_object(
                 group="constraints.gatekeeper.sh",
                 version="v1beta1",
-                plural=ct['metadata']['name'],
-            ).get('items')
+                plural=ct["metadata"]["name"],
+            ).get(
+                "items"
+            )
     except NewConnectionError as e:
         return render_template(
             "message.html",
