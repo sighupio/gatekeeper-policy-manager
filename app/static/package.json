@@ -4,7 +4,7 @@
   "description": "Gatekeeper Policy Manager Frontend",
   "main": "",
   "dependencies": {
-    "fomantic-ui-css": "^2.8.7"
+    "fomantic-ui-css": "^2.8.8"
   },
   "devDependencies": {},
   "scripts": {
