@@ -271,7 +271,7 @@ steps:
       - registry-tag
     settings:
       api_key:
-        from_secret: github_token
+        from_secret: c3p0
       file_exists: overwrite
       files:
         - gatekeeper-policy-manager-${DRONE_TAG}.tar.gz
@@ -296,7 +296,7 @@ steps:
       - registry-tag
     settings:
       api_key:
-        from_secret: github_token
+        from_secret: c3p0
       file_exists: overwrite
       files:
         - gatekeeper-policy-manager-${DRONE_TAG}.tar.gz
