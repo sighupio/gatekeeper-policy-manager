@@ -7,7 +7,7 @@ WORKDIR /static
 RUN npm install 
 
 
-FROM python:3.9-slim
+FROM python:3.10-slim
 LABEL org.opencontainers.vendor="SIGHUP.io"
 LABEL org.opencontainers.image.authors="SIGHUP https://sighup.io"
 LABEL org.opencontainers.image.source="https://github.com/sighupio/gatekeeper-policy-manager"
