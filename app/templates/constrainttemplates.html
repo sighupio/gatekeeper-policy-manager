@@ -75,29 +75,20 @@
         {% endfor %}
       </div>
     </div>
-      {#
-      <div class="ui styled fluid accordion">
-        <div class="title">
-          <i class="dropdown icon"></i>
-          Schema validation definition
-        </div>
-        <div class="content">
-          <pre class="line-numbers"><code class="language-yaml">{{ constrainttemplate.spec.crd.spec.validation.openAPIV3Schema.properties|pprint }}</code></pre>
-        </div>
-      </div>
-      #}
 
     </div>
     {% endif %}
 
-    {% if constraints_by_constrainttemplates[constrainttemplate.metadata.name] %}
     <div class="ui segment">
       <h5 class="header">Constraints using this template</h5>
-        {% for constraint in constraints_by_constrainttemplates[constrainttemplate.metadata.name] %}
-        <a class="ui basic label" href="{{ url_for('get_constraints', context=current_context, _anchor=constraint.metadata.name) }}"><i class="external alternate icon"></i>{{ constraint.metadata.name }}</a>
-        {% endfor %}
+        {% if constraints_by_constrainttemplates[constrainttemplate.metadata.name] %}
+          {% for constraint in constraints_by_constrainttemplates[constrainttemplate.metadata.name] %}
+          <a class="ui basic label" href="{{ url_for('get_constraints', context=current_context, _anchor=constraint.metadata.name) }}"><i class="external alternate icon"></i>{{ constraint.metadata.name }}</a>
+          {% endfor %}
+        {% else %}
+        <p><i class="ui primary icon info circle"></i> There are no Constraints using this Constraint Template</p>
+        {% endif %}
     </div>
-    {% endif %}
 
     {% if constrainttemplate.status %}
     <div class="ui segment">
