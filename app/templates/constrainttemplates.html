@@ -55,27 +55,27 @@
       </div>
     {% endfor %}
 
-    {% if constrainttemplate.spec.crd.spec.validation is defined %}
+    {% if constrainttemplate.spec.crd.spec.validation is defined and constrainttemplate.spec.crd.spec.validation.openAPIV3Schema.properties is defined %}
     <div class="ui segment">
       <h5 class="header">Parameters schema</h5>
-        <div class="ui styled fluid accordion">
-          <div class="title">
-            <i class="dropdown icon"></i>
-            Schema definition
-          </div>
-
-        <div class="ui horizontal very relaxed divided list content">
-        {% for property, value in constrainttemplate.spec.crd.spec.validation.openAPIV3Schema.properties.items() %}
-        <div class="top aligned item">
-          <div class="content">
-            <div class="header">{{ property }}</div>
-            {{ value|dict_to_ul|safe }}
-          </div>
+      <div class="ui styled fluid accordion">
+        <div class="title">
+          <i class="dropdown icon"></i>
+          Schema definition
         </div>
-        {% endfor %}
-      </div>
-    </div>
+        
+        <div class="ui horizontal very relaxed divided list content">
+          {% for property, value in constrainttemplate.spec.crd.spec.validation.openAPIV3Schema.properties.items() %}
+          <div class="top aligned item">
+            <div class="content">
+              <div class="header">{{ property }}</div>
+              {{ value|dict_to_ul|safe }}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
 
+      </div>
     </div>
     {% endif %}
 
