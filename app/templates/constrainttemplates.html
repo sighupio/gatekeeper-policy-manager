@@ -55,8 +55,7 @@
       </div>
     {% endfor %}
 
-    {% if 'openAPIV3Schema' in constrainttemplate.spec.crd.spec.validation %}
-    {% if constrainttemplate.spec.crd.spec.validation is defined and constrainttemplate.spec.crd.spec.validation.openAPIV3Schema.properties is defined %}
+    {% if constrainttemplate.spec.crd.spec.validation is defined and constrainttemplate.spec.crd.spec.validation.openAPIV3Schema is defined %}
     <div class="ui segment">
       <h5 class="header">Parameters schema</h5>
       <div class="ui styled fluid accordion">
@@ -78,7 +77,6 @@
 
       </div>
     </div>
-    {% endif %}
     {% endif %}
 
     <div class="ui segment">
