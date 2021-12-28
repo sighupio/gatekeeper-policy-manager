@@ -7,6 +7,7 @@ kind: Deployment
 metadata:
   name: gatekeeper-policy-manager
 spec:
+  replicas: 1
   selector:
     matchLabels:
       app: gatekeeper-policy-manager
