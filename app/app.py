@@ -91,7 +91,9 @@ else:
 
 # This snippet tries to detect if the app is running on a K8S cluster or locally
 try:
-    app.logger.info(f"Attempting init with KUBECONFIG from path '{config.kube_config.KUBE_CONFIG_DEFAULT_LOCATION}'")
+    app.logger.info(
+        f"Attempting init with KUBECONFIG from path '{config.kube_config.KUBE_CONFIG_DEFAULT_LOCATION}'"
+    )
     config.load_kube_config()
     app.logger.info(
         f"KUBECONFIG '{config.kube_config.KUBE_CONFIG_DEFAULT_LOCATION}' successfuly loaded."
