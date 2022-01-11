@@ -24,7 +24,7 @@ pycryptodomex==3.11.0
 pyjwkest==1.4.2
 python-dateutil==2.8.2
 PyYAML==6.0
-requests==2.26.0
+requests==2.27.1
 requests-oauthlib==1.3.0
 rsa==4.8
 six==1.16.0
