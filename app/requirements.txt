@@ -32,4 +32,4 @@ typing-extensions==4.0.1
 urllib3==1.26.8
 websocket-client==1.2.3
 Werkzeug==2.0.2
-zipp==3.6.0
+zipp==3.7.0
