@@ -1,6 +1,9 @@
 # Gatekeeper Policy Manager (GPM)
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/gatekeeper-policy-manager/status.svg)](https://ci.sighup.io/sighupio/gatekeeper-policy-manager)
+![Release](https://img.shields.io/github/v/release/sighupio/gatekeeper-policy-manager?label=GPM)
+![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
+![License](https://img.shields.io/github/license/sighupio/gatekeeper-policy-manager)
 
 Gatekeeper Policy Manager is a simple **read-only** web UI for viewing OPA Gatekeeper policies' status in a Kubernetes Cluster.
 
