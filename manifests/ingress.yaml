@@ -9,7 +9,7 @@ metadata:
     kubernetes.io/ingress.class: "nginx"
     forecastle.stakater.com/expose: "true"
     forecastle.stakater.com/appName: "Gatekeeper Policy Manager"
-    forecastle.stakater.com/icon: "https://raw.githubusercontent.com/sighupio/gatekeeper-policy-manager/master/app/static/user-tie.svg"
+    forecastle.stakater.com/icon: "https://raw.githubusercontent.com/sighupio/gatekeeper-policy-manager/master/app/static/logo.svg"
   name: gatekeeper-policy-manager
 spec:
   rules:

@@ -9,7 +9,7 @@
 
 <head>
   <title>Gatekeeper Policy Manager - {{ title }}</title>
-  <link rel="icon" type="image/png" href="{{ url_for('static', filename='user-tie.svg') }}" />
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.svg') }}" />
   <link rel="stylesheet" href="{{ url_for('static', filename='node_modules/fomantic-ui-css/semantic.min.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='prism.css') }}">
   <style>
@@ -23,7 +23,8 @@
 <body style="background-color: #f0f0f0;" onhashchange="highlight()">
   <div class="ui top secondary pointing menu">
     <a class="header item" href="{{ url_for('index') }}">
-      <i class="user tie icon"></i>
+      <!-- <img src="{{ url_for('static', filename='logo.svg') }}" height="14"/> -->
+      <i class="home icon"></i>
       GPM
     </a>
     <a class="{% if request.endpoint == 'get_constrainttemplates' %}active{% endif %} item" href="{{ url_for('get_constrainttemplates', context=current_context) }}"

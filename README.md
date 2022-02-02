@@ -1,13 +1,16 @@
-# Gatekeeper Policy Manager (GPM)
+<h1>
+    <img src="app/static/logo.svg" align="left" width="90" style="margin-right: 15px"/>
+    Gatekeeper Policy Manager (GPM)
+</h1>
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/gatekeeper-policy-manager/status.svg)](https://ci.sighup.io/sighupio/gatekeeper-policy-manager)
 ![Release](https://img.shields.io/github/v/release/sighupio/gatekeeper-policy-manager?label=GPM)
 ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/gatekeeper-policy-manager)
 
-Gatekeeper Policy Manager is a simple **read-only** web UI for viewing OPA Gatekeeper policies' status in a Kubernetes Cluster.
+**Gatekeeper Policy Manager** is a simple *read-only* web UI for viewing OPA Gatekeeper policies' status in a Kubernetes Cluster.
 
-The target Kubernetes Cluster can be the one where GPM is deployed or some [remote cluster(s) using a kubeconfig file](#Multi-cluster-support). You can also run GPM [locally in a client machine](#Running-locally) and connect to a remote cluster.
+The target Kubernetes Cluster can be the same where GPM is running or some other [remote cluster(s) using a `kubeconfig` file](#Multi-cluster-support). You can also run GPM [locally in a client machine](#Running-locally) and connect to a remote cluster.
 
 GPM can display all the defined **Constraint Templates** with their rego code, all the Gatekeeper Configuration CRDs, and all the **Constraints** with its current status, violations, enforcement action, matches definitions, etc.
 

@@ -6,7 +6,7 @@ description: A Helm chart for Gatekeeper Policy Manager which is a simple read-o
 home: https://sighup.io
 sources:
   - https://github.com/sighupio/gatekeeper-policy-manager/
-icon: https://raw.githubusercontent.com/sighupio/gatekeeper-policy-manager/master/app/static/user-tie.svg
+icon: https://raw.githubusercontent.com/sighupio/gatekeeper-policy-manager/master/app/static/logo.svg
 maintainers:
   - name: Ramiro Algozino
     email: ramiro@sighup.io
