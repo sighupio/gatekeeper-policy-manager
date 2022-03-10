@@ -11,7 +11,7 @@ future==0.18.2
 google-auth==2.6.0
 idna==3.3
 importlib-resources==5.4.0
-itsdangerous==2.1.0
+itsdangerous==2.1.1
 Jinja2==3.0.3
 Mako==1.1.6
 MarkupSafe==2.1.0
