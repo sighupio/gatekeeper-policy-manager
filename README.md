@@ -150,13 +150,13 @@ $ FLASK_APP=app/app.py flask run
 
 The following is a wishlist of features that we would like to add to GPM (in no particular order):
 
-- List the constraints that are currently using a `ConstraintTemplate` ✅
-- Polished OIDC authentication
-- LDAP authentication
-- Better syntax highlighting for the rego code snippets ✅
-- Root-less docker image ✅
-- Multi-cluster view ✅
-- Minimal write capabilities?
-- Re-write app in Golang?
+- [x] List the constraints that are currently using a `ConstraintTemplate`
+- [ ] Polished OIDC authentication
+- [ ] LDAP authentication
+- [x] Better syntax highlighting for the rego code snippets
+- [x] Root-less docker image
+- [x] Multi-cluster view
+- [ ] Minimal write capabilities?
+- [ ] Re-write app in Golang?
 
 Please, let us know if you are using GPM and what features would you like to have by creating an issue here on GitHub 💪🏻
