@@ -8,7 +8,7 @@ from functools import wraps
 from logging.config import dictConfig
 from urllib.parse import urljoin
 
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, jsonify, render_template, request
 from flask_pyoidc import OIDCAuthentication
 from flask_pyoidc.provider_configuration import (
     ClientMetadata,
@@ -275,7 +275,10 @@ def get_constraints(context=None):
                     for i in c["items"]:
                         constraints.append(i)
         # Return a JSON if we are asked nicely
-        if request.headers.environ.get('HTTP_ACCEPT') == 'application/json' or 'json' in request.args:
+        if (
+            request.headers.environ.get("HTTP_ACCEPT") == "application/json"
+            or "json" in request.args
+        ):
             return jsonify(constraints)
         else:
             # We pass to the template all the constraints sorted by amount of violations
@@ -380,7 +383,10 @@ def get_constrainttemplates(context=None):
         )
     else:
         # Return a JSON if we are asked nicely
-        if request.headers.environ.get('HTTP_ACCEPT') == 'application/json' or 'json' in request.args:
+        if (
+            request.headers.environ.get("HTTP_ACCEPT") == "application/json"
+            or "json" in request.args
+        ):
             return jsonify(constrainttemplates)
         else:
             return render_template(
