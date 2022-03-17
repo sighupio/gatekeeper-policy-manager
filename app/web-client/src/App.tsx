@@ -22,7 +22,7 @@ import "fury-design-system/dist/eui_theme_fury_community.css";
 function App() {
 
   const applicationContext = {
-    apiUrl: process.env.NODE_ENV !== 'production' ? "http://localhost:5558/" : "",
+    apiUrl: process.env.NODE_ENV !== 'production' ? "http://localhost:5000/" : "",
   };
 
   return (

@@ -15,6 +15,7 @@ from flask_pyoidc.provider_configuration import (
     ProviderConfiguration,
     ProviderMetadata,
 )
+from flask_cors import CORS
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from kubernetes.config.config_exception import ConfigException
@@ -54,8 +55,12 @@ app.config.update(
         "OIDC_REDIRECT_URI": urljoin(
             os.environ.get("GPM_OIDC_REDIRECT_DOMAIN", ""), "oidc-auth"
         ),
+        "APP_ENV": os.environ.get("FLASK_ENV")
     }
 )
+
+if app.config.get("APP_ENV") == "development":
+    CORS(app)
 
 if app.config.get("AUTH_ENABLED") == "OIDC":
     app.logger.info("AUTHENTICATION ENABLED WITH %s" % app.config.get("AUTH_ENABLED"))
@@ -303,8 +308,8 @@ def get_constraints(context=None):
             )
 
 
-@app.route("/constrainttemplates/")
-@app.route("/constrainttemplates/<context>/")
+@app.route("/api/v1/constrainttemplates/")
+@app.route("/api/v1/constrainttemplates/<context>/")
 @login_required_conditional
 def get_constrainttemplates(context=None):
     """Constraint Templates View"""
@@ -383,21 +388,17 @@ def get_constrainttemplates(context=None):
         )
     else:
         # Return a JSON if we are asked nicely
-        if (
-            request.headers.environ.get("HTTP_ACCEPT") == "application/json"
-            or "json" in request.args
-        ):
-            return jsonify(constrainttemplates)
-        else:
-            return render_template(
-                "constrainttemplates.html",
-                constrainttemplates=constrainttemplates,
-                constraints_by_constrainttemplates=constraints_by_constrainttemplates,
-                title="Constraint Templates",
-                current_context=context,
-                contexts=get_k8s_contexts(),
-                hide_sidebar=len(constrainttemplates["items"]) == 0,
-            )
+        return jsonify(constrainttemplates)
+        # else:
+        #     return render_template(
+        #         "constrainttemplates.html",
+        #         constrainttemplates=constrainttemplates,
+        #         constraints_by_constrainttemplates=constraints_by_constrainttemplates,
+        #         title="Constraint Templates",
+        #         current_context=context,
+        #         contexts=get_k8s_contexts(),
+        #         hide_sidebar=len(constrainttemplates["items"]) == 0,
+        #     )
 
 
 @app.route("/configs/")
