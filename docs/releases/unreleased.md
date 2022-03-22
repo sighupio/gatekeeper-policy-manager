@@ -17,7 +17,7 @@ Backend:
 - cryptography from 36.0.1 to 36.0.2
 - flask from 2.0.1 to 2.0.3
 - flask-pyoidc from 3.8.0 to 3.10.0
-- google-auth from 2.3.3 to 2.6.0
+- google-auth from 2.3.3 to 2.6.2
 - itsdangerous from 2.0.1 to 2.1.1
 - kubernetes from 18.20.0 to 22.6.0
 - mako from 1.1.6 to 1.2.0
