@@ -44,7 +44,7 @@ Then access it with your browser on: [http://127.0.0.1:8080](http://127.0.0.1:80
 
 ### Deploy using Helm
 
-Since `v0.5.1` it's also possible to deploy GPM using the [provided Helm Chart](./chart). There's no Helm repo yet, but you can download the chart folder and use it locally:
+Since `v0.5.1` it's also possible to deploy GPM using the [provided Helm Chart](./chart). There's no Helm repository yet, but you can download the chart folder and use it locally:
 
 ```bash
 git clone https://github.com/sighupio/gatekeeper-policy-manager.git
@@ -157,6 +157,6 @@ The following is a wishlist of features that we would like to add to GPM (in no 
 - [x] Root-less docker image
 - [x] Multi-cluster view
 - [ ] Minimal write capabilities?
-- [ ] Re-write app in Golang?
+- [ ] Rewrite app in Golang?
 
 Please, let us know if you are using GPM and what features would you like to have by creating an issue here on GitHub 💪🏻

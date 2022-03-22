@@ -52,7 +52,7 @@ app.config.update(
         "PREFERRED_URL_SCHEME": os.environ.get("GPM_PREFERRED_URL_SCHEME", "http"),
         "AUTH_ENABLED": os.environ.get("GPM_AUTH_ENABLED"),
         "OIDC_REDIRECT_URI": urljoin(
-            os.environ.get("GPM_OIDC_REDIRECT_DOMAIN", default=""), "oidc-auth"
+            os.environ.get("GPM_OIDC_REDIRECT_DOMAIN", ""), "oidc-auth"
         ),
     }
 )
