@@ -8,7 +8,7 @@ click==8.0.4
 cryptography==36.0.2
 defusedxml==0.7.1
 future==0.18.2
-google-auth==2.6.0
+google-auth==2.6.2
 idna==3.3
 importlib-resources==5.4.0
 itsdangerous==2.1.1
