@@ -5,7 +5,12 @@
  */
 
 import {
+  EuiAccordion,
+  EuiBadge,
+  EuiCodeBlock,
   EuiFlexGroup,
+  EuiFlexItem,
+  EuiHorizontalRule,
   EuiPage,
   EuiPageBody,
   EuiPageContent,
@@ -22,6 +27,7 @@ import {ApplicationContext} from "../../AppContext";
 
 interface IConstraintTemplateSpecTarget {
   rego: string;
+  libs?: string;
   target: string;
 }
 
@@ -93,16 +99,151 @@ function generateSideNav(list: IConstraintTemplateList): ISideNav[] {
   }]
 }
 
+function SingleConstraintTemplate(item: IConstraintTemplate) {
+  return (
+    <EuiPanel grow={true} style={{marginBottom: "24px"}}>
+      <EuiFlexGroup gutterSize="s" alignItems="center">
+        <EuiFlexItem>
+          <EuiFlexGroup justifyContent="spaceBetween" style={{padding: 2}} alignItems="flexStart">
+            <EuiFlexItem grow={false}>
+              <EuiText>
+                <h4 style={{textTransform: "uppercase"}}>
+                  {item.spec.crd.spec.names.kind}
+                </h4>
+              </EuiText>
+            </EuiFlexItem>
+            <EuiFlexItem grow={false}>
+              <EuiFlexGroup direction="row" gutterSize="s" alignItems="center">
+                <EuiFlexItem grow={false}>
+                  <EuiBadge
+                    color="success"
+                    style={{textTransform: "uppercase"}}
+                  >
+                    <p>created</p>
+                  </EuiBadge>
+                </EuiFlexItem>
+              </EuiFlexGroup>
+            </EuiFlexItem>
+          </EuiFlexGroup>
+        </EuiFlexItem>
+      </EuiFlexGroup>
+      <EuiSpacer size="s"/>
+      <EuiHorizontalRule margin="none"/>
+      <EuiSpacer size="s"/>
+      <EuiFlexGroup direction="column">
+        <EuiFlexItem grow={false}>
+          <EuiText size="s">
+            <p style={{fontWeight: "bold"}}>
+              {`Target ${item.spec.targets[0].target}`}
+            </p>
+          </EuiText>
+        </EuiFlexItem>
+        <EuiFlexItem>
+          {item.spec.targets[0].libs
+            ?
+            <>
+              <EuiAccordion
+                id="accordion-1"
+                buttonContent="Libs definition"
+                paddingSize="l">
+                <EuiCodeBlock language="rego">
+                  {item.spec.targets[0].libs}
+                </EuiCodeBlock>
+              </EuiAccordion>
+              <EuiSpacer size="s"/>
+            </>
+            :
+            <></>
+          }
+          <EuiAccordion
+            id="accordion-2"
+            buttonContent="Rego definition"
+            paddingSize="l">
+            <EuiCodeBlock language="rego">
+              {item.spec.targets[0].rego}
+            </EuiCodeBlock>
+          </EuiAccordion>
+        </EuiFlexItem>
+      </EuiFlexGroup>
+      <EuiSpacer size="s"/>
+      <EuiHorizontalRule margin="none"/>
+      <EuiSpacer size="s"/>
+      {item.spec.crd.spec?.validation?.openAPIV3Schema?.properties ?
+        <>
+          <EuiFlexGroup direction="column">
+            <EuiFlexItem grow={false}>
+              <EuiText size="s">
+                <p style={{fontWeight: "bold"}}>
+                  {`Parameters schema`}
+                </p>
+              </EuiText>
+            </EuiFlexItem>
+            <EuiFlexItem>
+              <EuiAccordion
+                id="accordion-3"
+                buttonContent="Schema definition"
+                paddingSize="l">
+                <EuiCodeBlock language="json">
+                  {JSON.stringify(item.spec.crd.spec?.validation?.openAPIV3Schema?.properties)}
+                </EuiCodeBlock>
+              </EuiAccordion>
+            </EuiFlexItem>
+          </EuiFlexGroup>
+          <EuiSpacer size="s"/>
+          <EuiHorizontalRule margin="none"/>
+          <EuiSpacer size="s"/>
+        </> :
+        <></>
+      }
+      <EuiFlexGroup direction="column">
+        <EuiFlexItem grow={false}>
+          <EuiText size="s">
+            <p style={{fontWeight: "bold"}}>
+              {`Status`}
+            </p>
+          </EuiText>
+        </EuiFlexItem>
+        <EuiFlexItem>
+          <EuiFlexGroup direction="row" wrap={true}>
+            <EuiFlexItem grow={false}>
+              <EuiBadge style={
+                {
+                  paddingRight: 0,
+                  borderRight: 0,
+                  fontSize: 10
+                }
+              }>
+                gatekeeper-audit-579b655559-sbbq5
+                <EuiBadge color="#666" style={
+                  {
+                    marginLeft: "8px",
+                    borderBottomLeftRadius: 0,
+                    borderTopLeftRadius: 0
+                  }
+                }>
+                  GENERATION 1
+                </EuiBadge>
+              </EuiBadge>
+            </EuiFlexItem>
+          </EuiFlexGroup>
+        </EuiFlexItem>
+      </EuiFlexGroup>
+    </EuiPanel>
+  )
+}
+
 function ConstraintTemplatesComponent() {
   const [sideNav, setSideNav] = useState<ISideNav[]>([]);
+  const [items, setItems] = useState<IConstraintTemplate[]>([]);
   const appContextData = useContext(ApplicationContext);
 
   useEffect(() => {
-   fetch(`${appContextData.apiUrl}api/v1/constrainttemplates`)
-     .then<IConstraintTemplateList>(res => res.json())
-     .then(body => {
-       setSideNav(generateSideNav(body))
-     })
+    fetch(`${appContextData.apiUrl}api/v1/constrainttemplates`)
+      .then<IConstraintTemplateList>(res => res.json())
+      .then(body => {
+        setSideNav(generateSideNav(body))
+        setItems(body.items);
+      })
   }, [])
 
   return (
@@ -111,14 +252,15 @@ function ConstraintTemplatesComponent() {
       gutterSize="none"
       direction="column"
     >
-      <EuiSpacer size="xxl" />
+      <EuiSpacer size="xxl"/>
       <EuiPage
         paddingSize="s"
         restrictWidth={1000}
         grow={true}
+        style={{position: "relative"}}
         className="gpm-page"
       >
-        <EuiPageSideBar paddingSize="l" sticky >
+        <EuiPageSideBar paddingSize="l" sticky>
           <EuiSideNav
             items={sideNav}
           />
@@ -131,11 +273,13 @@ function ConstraintTemplatesComponent() {
             borderRadius="none"
           >
             <EuiPageContentBody restrictWidth>
-              <EuiPanel grow={true}>
-                <EuiText>
-                  <p>I am some panel content... whose content will grow</p>
-                </EuiText>
-              </EuiPanel>
+              {items && items.length > 0 ?
+                items.map(item => {
+                  return SingleConstraintTemplate(item)
+                })
+                :
+                <></>
+              }
             </EuiPageContentBody>
           </EuiPageContent>
         </EuiPageBody>
