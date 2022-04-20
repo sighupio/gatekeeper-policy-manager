@@ -17,7 +17,7 @@ function HeaderComponent() {
   return (
     <div className="gpm-header">
       <EuiHideFor sizes={["xs", "s"]}>
-        <EuiHeader position="fixed" className="gpm-header--desktop">
+        <EuiHeader className="gpm-header--desktop">
           <EuiHeaderSection side="left">
             <EuiHeaderSectionItem>
               <EuiButtonEmpty href="/">

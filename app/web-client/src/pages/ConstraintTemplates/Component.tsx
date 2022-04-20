@@ -24,6 +24,7 @@ import {
 } from "fury-design-system";
 import {useContext, useEffect, useState} from "react";
 import {ApplicationContext} from "../../AppContext";
+import {ISideNav, ISideNavItem} from "../types";
 
 interface IConstraintTemplateSpecTarget {
   rego: string;
@@ -69,21 +70,6 @@ interface IConstraintTemplateList {
   }
 }
 
-interface ISideNavItem {
-  name: string;
-  id: string;
-  href?: string;
-  disabled?: boolean;
-  isSelected?: boolean;
-  onClick?: () => void;
-}
-
-interface ISideNav {
-  name: string;
-  id: string;
-  items: ISideNavItem[];
-}
-
 function generateSideNav(list: IConstraintTemplateList): ISideNav[] {
   const sideBarItems = list.items.map(item => {
     return {
@@ -107,7 +93,7 @@ function SingleConstraintTemplate(item: IConstraintTemplate) {
           <EuiFlexGroup justifyContent="spaceBetween" style={{padding: 2}} alignItems="flexStart">
             <EuiFlexItem grow={false}>
               <EuiText>
-                <h4 style={{textTransform: "uppercase"}}>
+                <h4>
                   {item.spec.crd.spec.names.kind}
                 </h4>
               </EuiText>
@@ -205,26 +191,32 @@ function SingleConstraintTemplate(item: IConstraintTemplate) {
         </EuiFlexItem>
         <EuiFlexItem>
           <EuiFlexGroup direction="row" wrap={true}>
-            <EuiFlexItem grow={false}>
-              <EuiBadge style={
-                {
-                  paddingRight: 0,
-                  borderRight: 0,
-                  fontSize: 10
-                }
-              }>
-                gatekeeper-audit-579b655559-sbbq5
-                <EuiBadge color="#666" style={
-                  {
-                    marginLeft: "8px",
-                    borderBottomLeftRadius: 0,
-                    borderTopLeftRadius: 0
-                  }
-                }>
-                  GENERATION 1
-                </EuiBadge>
-              </EuiBadge>
-            </EuiFlexItem>
+            {item.status.byPod.map(pod => {
+              return (
+                <EuiFlexItem grow={false}>
+                  <EuiBadge style={
+                    {
+                      paddingRight: 0,
+                      borderRight: 0,
+                      fontSize: 10,
+                      position: "relative"
+                    }
+                  }>
+                    {pod.id}
+                    <EuiBadge color="#666" style={
+                      {
+                        marginLeft: "8px",
+                        borderBottomLeftRadius: 0,
+                        borderTopLeftRadius: 0,
+                        verticalAlign: "baseline"
+                      }
+                    }>
+                      {`GENERATION ${pod.observedGeneration}`}
+                    </EuiBadge>
+                  </EuiBadge>
+                </EuiFlexItem>
+              )
+            })}
           </EuiFlexGroup>
         </EuiFlexItem>
       </EuiFlexGroup>
@@ -252,10 +244,9 @@ function ConstraintTemplatesComponent() {
       gutterSize="none"
       direction="column"
     >
-      <EuiSpacer size="xxl"/>
       <EuiPage
-        paddingSize="s"
-        restrictWidth={1000}
+        paddingSize="none"
+        restrictWidth={1100}
         grow={true}
         style={{position: "relative"}}
         className="gpm-page"

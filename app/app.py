@@ -197,8 +197,8 @@ def index(context=None):
     )
 
 
-@app.route("/constraints/")
-@app.route("/constraints/<context>/")
+@app.route("/api/v1/constraints/")
+@app.route("/api/v1/constraints/<context>/")
 @login_required_conditional
 def get_constraints(context=None):
     """Constraints view"""
@@ -279,33 +279,35 @@ def get_constraints(context=None):
                     )
                     for i in c["items"]:
                         constraints.append(i)
-        # Return a JSON if we are asked nicely
-        if (
-            request.headers.environ.get("HTTP_ACCEPT") == "application/json"
-            or "json" in request.args
-        ):
-            return jsonify(constraints)
-        else:
-            # We pass to the template all the constraints sorted by amount of violations
-            if request.args.get("report"):
-                template_file = "constraints-report.html"
-            else:
-                template_file = "constraints.html"
-            return render_template(
-                template_file,
-                constraints=sorted(
-                    constraints,
-                    reverse=True,
-                    key=lambda x: x.get("status").get("totalViolations") or -1
-                    if x.get("status")
-                    else -1,
-                ),
-                title="Constraints",
-                hide_sidebar=len(constraints) == 0,
-                current_context=context,
-                contexts=get_k8s_contexts(),
-                timestamp=datetime.now().strftime("%a, %x %X"),
-            )
+        constraints = sorted(
+            constraints,
+            key=lambda x: x.get("status").get("totalViolations") or -1
+            if x.get("status")
+            else -1,
+            reverse=True,
+        )
+        return jsonify(constraints)
+        # else:
+        #     # We pass to the template all the constraints sorted by amount of violations
+        #     if request.args.get("report"):
+        #         template_file = "constraints-report.html"
+        #     else:
+        #         template_file = "constraints.html"
+        #     return render_template(
+        #         template_file,
+        #         constraints=sorted(
+        #             constraints,
+        #             reverse=True,
+        #             key=lambda x: x.get("status").get("totalViolations") or -1
+        #             if x.get("status")
+        #             else -1,
+        #         ),
+        #         title="Constraints",
+        #         hide_sidebar=len(constraints) == 0,
+        #         current_context=context,
+        #         contexts=get_k8s_contexts(),
+        #         timestamp=datetime.now().strftime("%a, %x %X"),
+        #     )
 
 
 @app.route("/api/v1/constrainttemplates/")
