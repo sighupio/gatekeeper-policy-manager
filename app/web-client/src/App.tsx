@@ -6,7 +6,6 @@
 
 import React from 'react';
 import './App.css';
-import {ApplicationContext} from "./AppContext";
 import {
     Routes,
     Route,
@@ -18,27 +17,21 @@ import {ConstraintTemplates} from "./pages/ConstraintTemplates";
 import {Constraints} from "./pages/Constraints";
 import {Configurations} from "./pages/Configurations";
 import "fury-design-system/dist/eui_theme_fury_community.css";
+import ContextProvider from "./AppContextProvider";
 
 function App() {
-
-  const applicationContext = {
-    apiUrl: process.env.NODE_ENV !== 'production' ? "http://localhost:5000/" : "",
-  };
-
   return (
-    <>
-      <Header />
-      <ApplicationContext.Provider value={applicationContext}>
-        <Routes>
-          <Route path={`/`} element={<Home />} />
-          <Route path={`/constrainttemplates`} element={<ConstraintTemplates />} />
-          <Route path={`/constraints`} element={<Constraints />} />
-          <Route path={`/configurations`} element={<Configurations />} />
-          <Route path="*" element={<></>} />
-        </Routes>
-      </ApplicationContext.Provider>
-      <Footer />
-    </>
+    <ContextProvider>
+      <Header/>
+      <Routes>
+        <Route path={`/`} element={<Home/>}/>
+        <Route path={`/constrainttemplates`} element={<ConstraintTemplates/>}/>
+        <Route path={`/constraints`} element={<Constraints/>}/>
+        <Route path={`/configurations`} element={<Configurations/>}/>
+        <Route path="*" element={<></>}/>
+      </Routes>
+      <Footer/>
+    </ContextProvider>
   );
 }
 

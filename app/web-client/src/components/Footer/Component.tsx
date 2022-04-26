@@ -6,7 +6,7 @@
 
 import {
   EuiFlexGroup,
-  EuiFlexItem, EuiIcon, EuiLink, EuiText,
+  EuiFlexItem, EuiIcon, EuiLink, EuiSpacer, EuiText,
 } from "fury-design-system";
 import githubLogo from '../../assets/github-logo.svg';
 import "./Style.css";
@@ -54,6 +54,7 @@ function FooterComponent() {
           </EuiFlexGroup>
         </EuiFlexItem>
       </EuiFlexGroup>
+      <EuiSpacer size="l" />
     </footer>
   )
 }

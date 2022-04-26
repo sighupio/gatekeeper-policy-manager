@@ -5,10 +5,11 @@
 import os
 from datetime import datetime
 from functools import wraps
+from io import BytesIO
 from logging.config import dictConfig
 from urllib.parse import urljoin
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_file
 from flask_pyoidc import OIDCAuthentication
 from flask_pyoidc.provider_configuration import (
     ClientMetadata,
@@ -196,6 +197,14 @@ def index(context=None):
         contexts=get_k8s_contexts(),
     )
 
+@app.route("/api/v1/contexts/")
+@login_required_conditional
+def get_contexts():
+    """
+    Returns a list of the available Kubernetes contexts
+    """
+    return jsonify(get_k8s_contexts())
+
 
 @app.route("/api/v1/constraints/")
 @app.route("/api/v1/constraints/<context>/")
@@ -286,7 +295,27 @@ def get_constraints(context=None):
             else -1,
             reverse=True,
         )
-        return jsonify(constraints)
+        if request.args.get("report"):
+            buffer = BytesIO()
+            report_file = render_template(
+                "constraints-report.html",
+                constraints=constraints,
+                title="Constraints",
+                hide_sidebar=len(constraints) == 0,
+                current_context=context,
+                contexts=get_k8s_contexts(),
+                timestamp=datetime.now().strftime("%a, %x %X"),
+            )
+            buffer.write(report_file.encode("utf-8"))
+            buffer.seek(0)
+            return send_file(
+                buffer,
+                as_attachment=True,
+                attachment_filename="constraints-report.html",
+                mimetype="text/html",
+            )
+        else:
+            return jsonify(constraints)
         # else:
         #     # We pass to the template all the constraints sorted by amount of violations
         #     if request.args.get("report"):
@@ -335,76 +364,43 @@ def get_constrainttemplates(context=None):
                 "items"
             )
     except NewConnectionError as e:
-        return render_template(
-            "message.html",
-            type="error",
-            title="Error",
-            error="Could not connect to Kubernetes Cluster",
-            action="Is the current Kubeconfig context valid?",
-            current_context=context,
-            contexts=get_k8s_contexts(),
-            description=e,
-        )
+        return {
+            "error": "Could not connect to Kubernetes Cluster",
+            "action": "Is the current Kubeconfig context valid?",
+            "description": e,
+        }, 500
     except MaxRetryError as e:
-        return render_template(
-            "message.html",
-            type="error",
-            title="Error",
-            error="Could not connect to Kubernetes Cluster",
-            action="Is the current Kubeconfig context valid?",
-            current_context=context,
-            contexts=get_k8s_contexts(),
-            description=e,
-        )
+        return {
+            "error": "Could not connect to Kubernetes Cluster",
+            "action": "Is the current Kubeconfig context valid?",
+            "description": e,
+        }, 500
     except ApiException as e:
         if e.status == 404:
-            return render_template(
-                "constrainttemplates.html",
-                constrainttemplates=[],
-                title="Constraints",
-                current_context=context,
-                contexts=get_k8s_contexts(),
-                hide_sidebar=True,
-            )
+            return {
+                "constrainttemplates": [],
+                "constraints_by_constrainttemplates":{},
+            }
         else:
-            return render_template(
-                "message.html",
-                type="error",
-                title="Error",
-                message="We had a problem while asking the API for Gatekeeper Constraint Templates objects",
-                action="Is Gatekeeper deployed in the cluster?",
-                current_context=context,
-                contexts=get_k8s_contexts(),
-                description=e,
-            )
+            return {
+                "error": "We had a problem while asking the API for Gatekeeper Constraint Templates objects",
+                "action": "Is Gatekeeper deployed in the cluster?",
+                "description": e,
+            }, 500
     except ConfigException as e:
-        return render_template(
-            "message.html",
-            type="error",
-            title="Error",
-            message="Can't connect to cluster due to an invalid kubeconfig file",
-            action="Please verify your kubeconfig file and location",
-            current_context=context,
-            contexts=get_k8s_contexts(),
-            description=e,
-        )
+        return {
+            "error": "Can't connect to cluster due to an invalid kubeconfig file",
+            "action": "Please verify your kubeconfig file and location",
+            "description": e,
+        }, 500
     else:
-        # Return a JSON if we are asked nicely
-        return jsonify(constrainttemplates)
-        # else:
-        #     return render_template(
-        #         "constrainttemplates.html",
-        #         constrainttemplates=constrainttemplates,
-        #         constraints_by_constrainttemplates=constraints_by_constrainttemplates,
-        #         title="Constraint Templates",
-        #         current_context=context,
-        #         contexts=get_k8s_contexts(),
-        #         hide_sidebar=len(constrainttemplates["items"]) == 0,
-        #     )
+        return {
+            "constrainttemplates": constrainttemplates,
+            "constraints_by_constrainttemplates": constraints_by_constrainttemplates,
+        }
 
-
-@app.route("/configs/")
-@app.route("/configs/<context>")
+@app.route("/api/v1/configs/")
+@app.route("/api/v1/configs/<context>")
 @login_required_conditional
 def get_gatekeeperconfigs(context=None):
     """Gatekeeper Configs View"""
@@ -471,14 +467,16 @@ def get_gatekeeperconfigs(context=None):
             description=e,
         )
     else:
-        return render_template(
-            "configs.html",
-            gatekeeper_configs=configs.get("items"),
-            title="Gatekeeper Configurations",
-            current_context=context,
-            contexts=get_k8s_contexts(),
-            hide_sidebar=len(configs["items"]) == 0,
-        )
+        # Return a JSON if we are asked nicely
+        return jsonify(configs.get("items"))
+        # return render_template(
+        #     "configs.html",
+        #     gatekeeper_configs=configs.get("items"),
+        #     title="Gatekeeper Configurations",
+        #     current_context=context,
+        #     contexts=get_k8s_contexts(),
+        #     hide_sidebar=len(configs["items"]) == 0,
+        # )
 
 
 @app.route("/health")

@@ -15,18 +15,16 @@ import {
 
 function HomeComponent() {
   return (
-    <EuiFlexGroup
-      style={{minHeight: "calc(100vh - 100px)"}}
-      gutterSize="none"
-    >
       <EuiPage
         paddingSize="s"
         direction="column"
         restrictWidth={600}
+        style={{
+          height: "85vh"
+        }}
         grow={true}
         className="gpm-page"
       >
-        <EuiSpacer size="xxl" />
         <EuiFlexGroup
           justifyContent="center"
           alignItems="center"
@@ -51,8 +49,8 @@ function HomeComponent() {
             </EuiButton>
           </EuiFlexItem>
         </EuiFlexGroup>
+        <EuiSpacer size="xxl" />
       </EuiPage>
-    </EuiFlexGroup>
   )
 }
 

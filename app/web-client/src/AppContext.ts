@@ -6,12 +6,21 @@
 
 import {createContext} from "react";
 
-interface IApplicationContext {
-   apiUrl: string;
+export interface IApplicationContextData {
+  apiUrl: string;
+  k8sContexts: string[];
+  currentK8sContext: string;
+}
+
+export interface IApplicationContext {
+  context: IApplicationContextData;
+  setContext?: (context: Partial<IApplicationContextData>) => void;
 }
 
 export const ApplicationContext = createContext<IApplicationContext>({
-    apiUrl: ""
+  context: {
+    apiUrl: "",
+    k8sContexts: [],
+    currentK8sContext: "",
+  },
 });
-
-

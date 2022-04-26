@@ -10,7 +10,7 @@ import {
   EuiCodeBlock,
   EuiFlexGroup,
   EuiFlexItem,
-  EuiHorizontalRule,
+  EuiHorizontalRule, EuiIcon, EuiLink,
   EuiPage,
   EuiPageBody,
   EuiPageContent,
@@ -25,6 +25,8 @@ import {
 import {useContext, useEffect, useState} from "react";
 import {ApplicationContext} from "../../AppContext";
 import {ISideNav, ISideNavItem} from "../types";
+import {useLocation} from "react-router-dom";
+import {IConstraint} from "../Constraints/Component";
 
 interface IConstraintTemplateSpecTarget {
   rego: string;
@@ -42,7 +44,17 @@ interface IConstraintTemplateSpecStatusPod {
 interface IConstraintTemplate {
   apiVersion: string;
   kind: string;
-  metadata: any;
+  metadata: {
+    name: string;
+    namespace: string;
+    creationTimestamp: string;
+    labels: {
+      [key: string]: string;
+    };
+    annotations: {
+      [key: string]: string;
+    };
+  };
   spec: {
     crd: {
       spec: {
@@ -70,6 +82,15 @@ interface IConstraintTemplateList {
   }
 }
 
+interface IRelatedConstraints {
+  [key: string]: IConstraint[];
+}
+
+interface IConstraintTemplateResponse {
+  constrainttemplates: IConstraintTemplateList;
+  constraints_by_constrainttemplates: IRelatedConstraints;
+}
+
 function generateSideNav(list: IConstraintTemplateList): ISideNav[] {
   const sideBarItems = list.items.map(item => {
     return {
@@ -85,9 +106,9 @@ function generateSideNav(list: IConstraintTemplateList): ISideNav[] {
   }]
 }
 
-function SingleConstraintTemplate(item: IConstraintTemplate) {
+function SingleConstraintTemplate(item: IConstraintTemplate, relatedConstraints: IConstraint[]) {
   return (
-    <EuiPanel grow={true} style={{marginBottom: "24px"}}>
+    <EuiPanel grow={true} style={{marginBottom: "24px"}} id={item.spec.crd.spec.names.kind}>
       <EuiFlexGroup gutterSize="s" alignItems="center">
         <EuiFlexItem>
           <EuiFlexGroup justifyContent="spaceBetween" style={{padding: 2}} alignItems="flexStart">
@@ -102,10 +123,11 @@ function SingleConstraintTemplate(item: IConstraintTemplate) {
               <EuiFlexGroup direction="row" gutterSize="s" alignItems="center">
                 <EuiFlexItem grow={false}>
                   <EuiBadge
-                    color="success"
+                    color={item.status?.created ? "success" : "warning"}
                     style={{textTransform: "uppercase"}}
+                    title={item.status?.created ? "Created" : "Status field is not set, is Gatekeeper healthy?"}
                   >
-                    <p>created</p>
+                    <p>{item.status?.created ? "created" : "unknown state"}</p>
                   </EuiBadge>
                 </EuiFlexItem>
               </EuiFlexGroup>
@@ -116,7 +138,7 @@ function SingleConstraintTemplate(item: IConstraintTemplate) {
       <EuiSpacer size="s"/>
       <EuiHorizontalRule margin="none"/>
       <EuiSpacer size="s"/>
-      <EuiFlexGroup direction="column">
+      <EuiFlexGroup direction="column" gutterSize="s">
         <EuiFlexItem grow={false}>
           <EuiText size="s">
             <p style={{fontWeight: "bold"}}>
@@ -136,7 +158,6 @@ function SingleConstraintTemplate(item: IConstraintTemplate) {
                   {item.spec.targets[0].libs}
                 </EuiCodeBlock>
               </EuiAccordion>
-              <EuiSpacer size="s"/>
             </>
             :
             <></>
@@ -156,7 +177,7 @@ function SingleConstraintTemplate(item: IConstraintTemplate) {
       <EuiSpacer size="s"/>
       {item.spec.crd.spec?.validation?.openAPIV3Schema?.properties ?
         <>
-          <EuiFlexGroup direction="column">
+          <EuiFlexGroup direction="column" gutterSize="s">
             <EuiFlexItem grow={false}>
               <EuiText size="s">
                 <p style={{fontWeight: "bold"}}>
@@ -170,7 +191,7 @@ function SingleConstraintTemplate(item: IConstraintTemplate) {
                 buttonContent="Schema definition"
                 paddingSize="l">
                 <EuiCodeBlock language="json">
-                  {JSON.stringify(item.spec.crd.spec?.validation?.openAPIV3Schema?.properties)}
+                  {JSON.stringify(item.spec.crd.spec?.validation?.openAPIV3Schema?.properties, null, 2)}
                 </EuiCodeBlock>
               </EuiAccordion>
             </EuiFlexItem>
@@ -181,16 +202,46 @@ function SingleConstraintTemplate(item: IConstraintTemplate) {
         </> :
         <></>
       }
-      <EuiFlexGroup direction="column">
+      { relatedConstraints.length > 0 &&
+        <>
+          <EuiFlexGroup direction="column" gutterSize="s">
+            <EuiFlexItem grow={false}>
+              <EuiText size="s">
+                <p style={{fontWeight: "bold"}}>
+                  Constraints using this template
+                </p>
+              </EuiText>
+            </EuiFlexItem>
+            {
+              relatedConstraints.map((constraint, index) => (
+                <EuiFlexItem key={index}>
+                  <EuiLink
+                    href={`/constraints#${constraint.metadata.name}`}
+                  >
+                    <EuiText size="s">
+                      <span>{constraint.metadata.name}</span>
+                      <EuiIcon type="popout" size="s" style={{marginLeft: 5}}/>
+                    </EuiText>
+                  </EuiLink>
+                </EuiFlexItem>
+              ))
+            }
+          </EuiFlexGroup>
+          <EuiSpacer size="s"/>
+          <EuiHorizontalRule margin="none"/>
+          <EuiSpacer size="s"/>
+        </>
+      }
+      <EuiFlexGroup direction="column" gutterSize="s">
         <EuiFlexItem grow={false}>
           <EuiText size="s">
             <p style={{fontWeight: "bold"}}>
-              {`Status`}
+              Status
             </p>
           </EuiText>
         </EuiFlexItem>
         <EuiFlexItem>
-          <EuiFlexGroup direction="row" wrap={true}>
+          <EuiFlexGroup direction="row" wrap={true} gutterSize="xs">
             {item.status.byPod.map(pod => {
               return (
                 <EuiFlexItem grow={false}>
@@ -227,16 +278,30 @@ function SingleConstraintTemplate(item: IConstraintTemplate) {
 function ConstraintTemplatesComponent() {
   const [sideNav, setSideNav] = useState<ISideNav[]>([]);
   const [items, setItems] = useState<IConstraintTemplate[]>([]);
+  const [relatedConstraints, setRelatedConstraints] = useState<IRelatedConstraints>({});
   const appContextData = useContext(ApplicationContext);
+  const { hash } = useLocation();
 
   useEffect(() => {
-    fetch(`${appContextData.apiUrl}api/v1/constrainttemplates`)
-      .then<IConstraintTemplateList>(res => res.json())
+    fetch(`${appContextData.context.apiUrl}api/v1/constrainttemplates`)
+      .then<IConstraintTemplateResponse>(res => res.json())
       .then(body => {
-        setSideNav(generateSideNav(body))
-        setItems(body.items);
+        setSideNav(generateSideNav(body.constrainttemplates));
+        setRelatedConstraints(body.constraints_by_constrainttemplates);
+        setItems(body.constrainttemplates.items);
       })
   }, [])
+
+  useEffect(() => {
+    if (hash) {
+      let element = document.querySelector(hash);
+      if (element) {
+        element.scrollIntoView();
+      }
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }, [items])
 
   return (
     <EuiFlexGroup
@@ -266,7 +331,8 @@ function ConstraintTemplatesComponent() {
             <EuiPageContentBody restrictWidth>
               {items && items.length > 0 ?
                 items.map(item => {
-                  return SingleConstraintTemplate(item)
+                  const relatedConstraintsForItem = relatedConstraints[item.metadata.name] ?? [];
+                  return SingleConstraintTemplate(item, relatedConstraintsForItem)
                 })
                 :
                 <></>

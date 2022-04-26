@@ -6,8 +6,8 @@
 
 import {
   EuiAccordion,
-  EuiBadge, EuiBasicTable, EuiCallOut, EuiCodeBlock,
-  EuiFlexGroup, EuiFlexItem, EuiHorizontalRule, EuiIcon, EuiNotificationBadge,
+  EuiBadge, EuiBasicTable, EuiButton, EuiCallOut, EuiCodeBlock,
+  EuiFlexGroup, EuiFlexItem, EuiHorizontalRule, EuiIcon, EuiLink, EuiNotificationBadge,
   EuiPage, EuiPageBody, EuiPageContent, EuiPageContentBody, EuiPageSideBar, EuiPanel, EuiSideNav,
   EuiSpacer, EuiTable, EuiText, EuiTitle, htmlIdGenerator,
 } from "fury-design-system";
@@ -15,6 +15,7 @@ import {useContext, useEffect, useState} from "react";
 import {ApplicationContext} from "../../AppContext";
 import {ISideNav, ISideNavItem} from "../types";
 import "./Style.css";
+import {useLocation} from "react-router-dom";
 
 interface IConstraintStatusPod {
   id: string;
@@ -44,7 +45,7 @@ interface IConstraintSpec {
   };
 }
 
-interface IConstraint {
+export interface IConstraint {
   apiVersion: string;
   kind: string;
   metadata: {
@@ -77,7 +78,7 @@ function generateSideNav(list: IConstraint[]): ISideNav[] {
 
 function SingleConstraint(item: IConstraint) {
   return (
-    <EuiPanel grow={true} style={{marginBottom: "24px"}}>
+    <EuiPanel grow={true} style={{marginBottom: "24px"}} id={item.metadata.name}>
       <EuiFlexGroup gutterSize="s" alignItems="center">
         <EuiFlexItem>
           <EuiFlexGroup justifyContent="flexStart" style={{padding: 2}} alignItems="center">
@@ -97,23 +98,15 @@ function SingleConstraint(item: IConstraint) {
                 mode {item.spec ? item.spec?.enforcementAction ?? "deny" : "?"}
               </EuiBadge>
             </EuiFlexItem>
-            <EuiFlexItem grow={false}>
-              <EuiBadge
-                color="hollow"
-                iconType="link"
-                style={{fontSize: "10px"}}
+            <EuiFlexItem grow={false} style={{marginLeft: "auto"}}>
+              <EuiLink
                 href={`/constrainttemplates#${item.kind}`}
               >
-                <span style={{textTransform: "uppercase"}}>template</span> {item.kind}
-              </EuiBadge>
-            </EuiFlexItem>
-            <EuiFlexItem grow={false}>
-              <EuiBadge
-                color="default"
-                style={{fontSize: "10px", textTransform: "uppercase"}}
-              >
-                created on {item.metadata.creationTimestamp}
-              </EuiBadge>
+                <EuiText size="xs">
+                  <span>TEMPLATE: {item.kind}</span>
+                  <EuiIcon type="popout" size="s" style={{marginLeft: 5}}/>
+                </EuiText>
+              </EuiLink>
             </EuiFlexItem>
           </EuiFlexGroup>
         </EuiFlexItem>
@@ -121,10 +114,23 @@ function SingleConstraint(item: IConstraint) {
       <EuiSpacer size="s"/>
       <EuiHorizontalRule margin="none"/>
       <EuiSpacer size="s"/>
-      <EuiFlexGroup direction="column">
+      <EuiFlexGroup direction="column" gutterSize="s">
         <EuiFlexItem grow={false}>
-          {(item.status?.totalViolations ?? 0) === 0 ?
-              <EuiFlexGroup alignItems="center">
+          {item.status?.totalViolations === undefined ?
+            <EuiFlexGroup alignItems="center" gutterSize="s">
+              <EuiFlexItem grow={false}>
+                <EuiIcon type="alert" size="l" color="warning" />
+              </EuiFlexItem>
+              <EuiFlexItem grow={false}>
+                <EuiText size="s">
+                  <h5>
+                    Violations for this Constraint are unknown. This probably means that the Constraint has not been processed by Gatekeeper yet. Please, try refreshing the page.
+                  </h5>
+                </EuiText>
+              </EuiFlexItem>
+            </EuiFlexGroup>
+          : item.status?.totalViolations === 0 ?
+              <EuiFlexGroup alignItems="center" gutterSize="s">
                 <EuiFlexItem grow={false}>
                   <EuiIcon type="check" size="l" color="success"/>
                 </EuiFlexItem>
@@ -136,7 +142,7 @@ function SingleConstraint(item: IConstraint) {
                   </EuiText>
                 </EuiFlexItem>
               </EuiFlexGroup> :
-              <EuiFlexGroup direction="column">
+              <EuiFlexGroup direction="column" gutterSize="s">
                 <EuiFlexItem>
                   <EuiAccordion
                     id="violations-1"
@@ -158,57 +164,59 @@ function SingleConstraint(item: IConstraint) {
                       </EuiFlexGroup>
                     }
                     paddingSize="l">
-                      <EuiBasicTable
-                        items={item.status.violations}
-                        columns={[
-                          {
-                            field: "enforcementAction",
-                            name: "Action",
-                            truncateText: true,
-                            width: "8%"
-                          },
-                          {
-                            field: "kind",
-                            name: "Kind",
-                            truncateText: true,
-                            width: "10%"
-                          },
-                          {
-                            field: "namespace",
-                            name: "Namespace",
-                            truncateText: true,
-                            width: "10%"
-                          },
-                          {
-                            field: "name",
-                            name: "Name",
-                            truncateText: true,
-                            width: "15%"
-                          },
-                          {
-                            field: "message",
-                            name: "Message",
-                            truncateText: false,
-                            width: "60%"
-                          },
-                        ]}
-                      />
+                      <EuiFlexGroup direction="column" gutterSize="s">
+                        <EuiFlexItem>
+                          <EuiBasicTable
+                            items={item.status.violations}
+                            columns={[
+                              {
+                                field: "enforcementAction",
+                                name: "Action",
+                                truncateText: true,
+                                width: "8%"
+                              },
+                              {
+                                field: "kind",
+                                name: "Kind",
+                                truncateText: true,
+                                width: "10%"
+                              },
+                              {
+                                field: "namespace",
+                                name: "Namespace",
+                                truncateText: true,
+                                width: "10%"
+                              },
+                              {
+                                field: "name",
+                                name: "Name",
+                                truncateText: true,
+                                width: "15%"
+                              },
+                              {
+                                field: "message",
+                                name: "Message",
+                                truncateText: false,
+                                width: "60%"
+                              },
+                            ]}
+                          />
+                        </EuiFlexItem>
+                        <EuiFlexItem>
+                          {(item.status?.totalViolations ?? 0) > item.status.violations.length &&
+                              <EuiCallOut title="Not all violations can be shown" color="warning" iconType="alert">
+                                  <p>
+                                      Gatekeeper's configuration is limiting the audit violations per constraint to {item.status.violations.length}. See
+                                      Gatekeeper's --constraint-violations-limit audit configuration flag.
+                                  </p>
+                              </EuiCallOut>
+                          }
+                        </EuiFlexItem>
+                      </EuiFlexGroup>
                   </EuiAccordion>
-                </EuiFlexItem>
-                <EuiFlexItem>
-                  {(item.status?.totalViolations ?? 0) > item.status.violations.length &&
-                    <EuiCallOut title="Not all violations can be shown" color="warning" iconType="alert">
-                      <p>
-                        Gatekeeper's configuration is limiting the audit violations per constraint to {item.status.violations.length}. See
-                        Gatekeeper's --constraint-violations-limit audit configuration flag.
-                      </p>
-                    </EuiCallOut>
-                  }
                 </EuiFlexItem>
               </EuiFlexGroup>
           }
-        </EuiFlexItem>
-        <EuiFlexItem>
         </EuiFlexItem>
       </EuiFlexGroup>
       <EuiSpacer size="s"/>
@@ -216,7 +224,7 @@ function SingleConstraint(item: IConstraint) {
       <EuiSpacer size="s"/>
       {!item?.spec ?
         <>
-          <EuiFlexGroup alignItems="center">
+          <EuiFlexGroup alignItems="center" gutterSize="s">
             <EuiFlexItem grow={false}>
               <EuiIcon type="cross" size="l" color="danger"/>
             </EuiFlexItem>
@@ -233,9 +241,9 @@ function SingleConstraint(item: IConstraint) {
           <EuiSpacer size="s"/>
         </> :
         <>
-          { item?.spec?.match ?
+          { item?.spec?.match &&
             <>
-              <EuiFlexGroup direction="column">
+              <EuiFlexGroup direction="column" gutterSize="s">
                 <EuiFlexItem grow={false}>
                   <EuiText size="s">
                     <p style={{fontWeight: "bold"}}>
@@ -249,7 +257,7 @@ function SingleConstraint(item: IConstraint) {
                     buttonContent="Schema definition"
                     paddingSize="l">
                     <EuiCodeBlock language="json">
-                      {JSON.stringify(item.spec.match)}
+                      {JSON.stringify(item.spec.match, null, 2)}
                     </EuiCodeBlock>
                   </EuiAccordion>
                 </EuiFlexItem>
@@ -257,12 +265,11 @@ function SingleConstraint(item: IConstraint) {
               <EuiSpacer size="s"/>
               <EuiHorizontalRule margin="none"/>
               <EuiSpacer size="s"/>
-            </> :
-            <></>
+            </>
           }
-          { item?.spec?.parameters ?
+          { item?.spec?.parameters &&
             <>
-              <EuiFlexGroup direction="column">
+              <EuiFlexGroup direction="column" gutterSize="s">
                 <EuiFlexItem grow={false}>
                   <EuiText size="s">
                     <p style={{fontWeight: "bold"}}>
@@ -276,7 +283,7 @@ function SingleConstraint(item: IConstraint) {
                     buttonContent="Schema definition"
                     paddingSize="l">
                     <EuiCodeBlock language="json">
-                      {JSON.stringify(item.spec.parameters)}
+                      {JSON.stringify(item.spec.parameters, null, 2)}
                     </EuiCodeBlock>
                   </EuiAccordion>
                 </EuiFlexItem>
@@ -284,12 +291,11 @@ function SingleConstraint(item: IConstraint) {
               <EuiSpacer size="s"/>
               <EuiHorizontalRule margin="none"/>
               <EuiSpacer size="s"/>
-            </> :
-            <></>
+            </>
           }
         </>
       }
-      <EuiFlexGroup direction="column">
+      <EuiFlexGroup direction="column" gutterSize="s">
         <EuiFlexItem grow={false}>
           <EuiText size="s">
             <p style={{fontWeight: "bold"}}>
@@ -298,7 +304,7 @@ function SingleConstraint(item: IConstraint) {
           </EuiText>
         </EuiFlexItem>
         <EuiFlexItem>
-          <EuiFlexGroup direction="row" wrap={true}>
+          <EuiFlexGroup direction="row" gutterSize="xs" wrap={true}>
             {item.status.byPod.map(pod => {
               return (
                 <EuiFlexItem grow={false}>
@@ -332,6 +338,18 @@ function SingleConstraint(item: IConstraint) {
           </EuiFlexGroup>
         </EuiFlexItem>
       </EuiFlexGroup>
+      <EuiSpacer size="s"/>
+      <EuiHorizontalRule margin="none"/>
+      <EuiSpacer size="s"/>
+      <EuiFlexGroup justifyContent="flexEnd" gutterSize="s">
+        <EuiFlexItem grow={false}>
+          <EuiText size="xs"
+                   style={{textTransform: "uppercase"}}
+          >
+            created on {item.metadata.creationTimestamp}
+          </EuiText>
+        </EuiFlexItem>
+      </EuiFlexGroup>
     </EuiPanel>
   )
 }
@@ -340,15 +358,31 @@ function ConstraintsComponent() {
   const [sideNav, setSideNav] = useState<ISideNav[]>([]);
   const [items, setItems] = useState<IConstraint[]>([]);
   const appContextData = useContext(ApplicationContext);
+  const { hash } = useLocation();
 
   useEffect(() => {
-    fetch(`${appContextData.apiUrl}api/v1/constraints`)
+    fetch(`${appContextData.context.apiUrl}api/v1/constraints/${appContextData.context.currentK8sContext}`)
       .then<IConstraint[]>(res => res.json())
       .then(body => {
         setSideNav(generateSideNav(body))
         setItems(body);
       })
-  }, [])
+      .catch(err => {
+        setItems([]);
+        console.error(err);
+      });
+  }, [appContextData.context.currentK8sContext])
+
+  useEffect(() => {
+    if (hash) {
+      let element = document.querySelector(hash);
+      if (element) {
+        element.scrollIntoView();
+      }
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }, [items])
 
   return (
     <EuiFlexGroup
@@ -363,10 +397,27 @@ function ConstraintsComponent() {
         style={{position: "relative"}}
         className="gpm-page"
       >
-        <EuiPageSideBar paddingSize="l" sticky>
+        <EuiPageSideBar
+          paddingSize="l"
+          style={{
+            minWidth: "270px",
+          }}
+          sticky
+        >
           <EuiSideNav
             items={sideNav}
           />
+          <EuiButton
+            iconSide="right"
+            iconSize="s"
+            iconType="popout"
+            href={`${appContextData.context.apiUrl}api/v1/constraints?report=html`}
+            download
+          >
+            <EuiText size="xs">
+              Download violations report
+            </EuiText>
+          </EuiButton>
         </EuiPageSideBar>
         <EuiPageBody>
           <EuiPageContent
