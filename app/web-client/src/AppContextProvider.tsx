@@ -21,45 +21,64 @@ interface IK8sContext {
 
 type K8sContextsResponse = IK8sContext[][] | IK8sContext[];
 
-const ContextProvider = ({children}: ContextProviderProps) => {
-  const [appContext, setAppContext] = useState<IApplicationContextData>({
+const getDefaultContext = (): IApplicationContextData => {
+  return {
     apiUrl: process.env.NODE_ENV !== 'production' ? "http://localhost:5000/" : "",
-    currentK8sContext: "",
-    k8sContexts: [],
-  });
+    currentK8sContext: localStorage.getItem("currentK8sContext") || "",
+    k8sContexts: localStorage.getItem("k8sContexts") ?
+      JSON.parse(localStorage.getItem("k8sContexts") || "[]") : [],
+  };
+};
 
-  const setCurrentContext = useCallback((updates: any) => {
+const ContextProvider = ({children}: ContextProviderProps) => {
+  const [appContext, setAppContext] = useState<IApplicationContextData>(getDefaultContext());
+
+  const setCurrentContext = useCallback((updates: Partial<IApplicationContextData>) => {
     setAppContext({
       ...appContext,
       ...updates,
     });
+
+    if (updates.currentK8sContext) {
+      localStorage.setItem("currentK8sContext", updates.currentK8sContext);
+    }
+
+    if (updates.k8sContexts) {
+      localStorage.setItem("k8sContexts", JSON.stringify(updates.k8sContexts));
+    }
   }, [appContext, setAppContext]);
+
+  const contextValue = useMemo(() => ({
+    context: appContext,
+    setContext: setCurrentContext
+  }), [appContext, setCurrentContext])
 
   useEffect(() => {
     fetch(`${appContext.apiUrl}api/v1/contexts`)
       .then<K8sContextsResponse>(res => res.json())
       .then(body => {
         if (body.length > 1) {
+          const newContexts = (body[0] as IK8sContext[]).map(c => c.name);
+          const newCurrentContext = localStorage.getItem("currentK8sContext") || (body[1] as IK8sContext).name;
+
+          localStorage.setItem("k8sContexts", JSON.stringify(newContexts))
+          localStorage.setItem("currentK8sContext", newCurrentContext);
+
           setAppContext({
             ...appContext,
-            k8sContexts: (body[0] as IK8sContext[]).map(c => c.name),
-            currentK8sContext: (body[1] as IK8sContext).name,
+            k8sContexts: newContexts,
+            currentK8sContext: newCurrentContext,
           });
         }
       })
       .catch(err => {
+        localStorage.removeItem("k8sContexts");
+        localStorage.removeItem("currentK8sContext");
         console.error(err);
       })
   }, []);
 
-  // memoize the full context value
-  const contextValue = useMemo(() => ({
-    context: appContext,
-    setContext: setCurrentContext
-  }), [appContext, setCurrentContext])
-
   return (
-    // the Provider gives access to the context to its children
     <ApplicationContext.Provider value={contextValue}>
       {children}
     </ApplicationContext.Provider>

@@ -9,7 +9,7 @@ import {
   EuiBadge,
   EuiButton, EuiCodeBlock,
   EuiFlexGroup,
-  EuiFlexItem, EuiHorizontalRule, EuiIcon,
+  EuiFlexItem, EuiHorizontalRule, EuiIcon, EuiLink,
   EuiPage, EuiPageBody, EuiPageContent, EuiPageContentBody, EuiPageSideBar, EuiPanel, EuiSideNav,
   EuiSpacer,
   EuiText, htmlIdGenerator
@@ -90,26 +90,15 @@ function SingleConfig(item: IConfig) {
           <EuiFlexGroup justifyContent="flexStart" style={{padding: 2}} alignItems="center">
             <EuiFlexItem grow={false}>
               <EuiText>
-                <h4>
+                <h4 style={{textTransform: "capitalize"}}>
                   {item.metadata.name}
                 </h4>
               </EuiText>
             </EuiFlexItem>
-            <EuiFlexItem grow={false}>
-              <EuiBadge
-                color="hollow"
-                style={{fontSize: "10px"}}
-              >
-                <span style={{textTransform: "uppercase"}}>namespace</span> {item.metadata.namespace}
-              </EuiBadge>
-            </EuiFlexItem>
-            <EuiFlexItem grow={false}>
-              <EuiBadge
-                color="default"
-                style={{fontSize: "10px", textTransform: "uppercase"}}
-              >
-                created on {item.metadata.creationTimestamp}
-              </EuiBadge>
+            <EuiFlexItem grow={false} style={{marginLeft: "10px"}}>
+              <EuiText size="xs">
+                <span style={{textTransform: "uppercase", fontWeight: "bold"}}>NAMESPACE: </span> {item.metadata.namespace}
+              </EuiText>
             </EuiFlexItem>
           </EuiFlexGroup>
         </EuiFlexItem>
@@ -168,13 +157,36 @@ function SingleConfig(item: IConfig) {
                 </EuiText>
               </EuiFlexItem>
             </EuiFlexGroup>
+            <EuiSpacer size="s"/>
+            <EuiSpacer size="s"/>
           </>
           }
-          {item.spec?.match ?
-          <></> :
-          <></>
+          {item.spec?.match &&
+          <>
+            <EuiFlexGroup direction="column" gutterSize="s">
+              <EuiFlexItem grow={false}>
+                <EuiText size="s">
+                  <p style={{fontWeight: "bold"}}>
+                    Match criteria
+                  </p>
+                </EuiText>
+              </EuiFlexItem>
+              <EuiFlexItem>
+                <EuiAccordion
+                  id="accordion-3"
+                  buttonContent="Schema definition"
+                  paddingSize="l">
+                  <EuiCodeBlock language="json">
+                    {JSON.stringify(item.spec.match, null, 2)}
+                  </EuiCodeBlock>
+                </EuiAccordion>
+              </EuiFlexItem>
+            </EuiFlexGroup>
+            <EuiSpacer size="s"/>
+            <EuiSpacer size="s"/>
+          </>
           }
-          {item.spec?.readiness ?
+          {item.spec?.readiness &&
             <>
               <EuiFlexGroup>
                 <EuiFlexItem>
@@ -192,19 +204,69 @@ function SingleConfig(item: IConfig) {
                   </EuiText>
                 </EuiFlexItem>
               </EuiFlexGroup>
-            </> :
-            <></>
+              <EuiSpacer size="s"/>
+              <EuiSpacer size="s"/>
+            </>
           }
-          {item.spec?.sync ?
-            <></> :
-            <></>
+          {item.spec?.sync &&
+            <>
+              <EuiFlexGroup direction="column" gutterSize="s">
+                <EuiFlexItem grow={false}>
+                  <EuiText size="s">
+                    <p style={{fontWeight: "bold"}}>
+                      Sync
+                    </p>
+                  </EuiText>
+                </EuiFlexItem>
+                <EuiFlexItem>
+                  <EuiAccordion
+                    id="accordion-3"
+                    buttonContent="Schema definition"
+                    paddingSize="l">
+                    <EuiCodeBlock language="json">
+                      {JSON.stringify(item.spec.sync, null, 2)}
+                    </EuiCodeBlock>
+                  </EuiAccordion>
+                </EuiFlexItem>
+              </EuiFlexGroup>
+              <EuiSpacer size="s"/>
+              <EuiSpacer size="s"/>
+            </>
           }
-          {item.spec?.validation ?
-            <></> :
-            <></>
+          {item.spec?.validation &&
+            <>
+              <EuiFlexGroup direction="column" gutterSize="s">
+                <EuiFlexItem grow={false}>
+                  <EuiText size="s">
+                    <p style={{fontWeight: "bold"}}>
+                      Validation
+                    </p>
+                  </EuiText>
+                </EuiFlexItem>
+                <EuiFlexItem>
+                  <EuiAccordion
+                    id="accordion-3"
+                    buttonContent="Schema definition"
+                    paddingSize="l">
+                    <EuiCodeBlock language="json">
+                      {JSON.stringify(item.spec.validation, null, 2)}
+                    </EuiCodeBlock>
+                  </EuiAccordion>
+                </EuiFlexItem>
+              </EuiFlexGroup>
+            </>
           }
-          <EuiFlexItem>
-          </EuiFlexItem>
+        </EuiFlexItem>
+      </EuiFlexGroup>
+      <EuiHorizontalRule margin="none"/>
+      <EuiSpacer size="s"/>
+      <EuiFlexGroup justifyContent="flexEnd" gutterSize="s">
+        <EuiFlexItem grow={false}>
+          <EuiText size="xs"
+                   style={{textTransform: "uppercase"}}
+          >
+            created on {item.metadata.creationTimestamp}
+          </EuiText>
         </EuiFlexItem>
       </EuiFlexGroup>
     </EuiPanel>
@@ -217,13 +279,17 @@ function ConfigurationsComponent() {
   const appContextData = useContext(ApplicationContext);
 
   useEffect(() => {
-    fetch(`${appContextData.context.apiUrl}api/v1/configs`)
+    fetch(`${appContextData.context.apiUrl}api/v1/configs/${appContextData.context.currentK8sContext}`)
       .then<IConfig[]>(res => res.json())
       .then(body => {
         setSideNav(generateSideNav(body))
         setItems(body);
       })
-  }, [])
+      .catch(err => {
+        setItems([]);
+        console.error(err);
+      });
+  }, [appContextData.context.currentK8sContext])
 
   return (
     <EuiFlexGroup

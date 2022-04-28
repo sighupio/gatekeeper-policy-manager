@@ -6,8 +6,8 @@
 
 import {
   EuiAccordion,
-  EuiBadge, EuiBasicTable, EuiButton, EuiCallOut, EuiCodeBlock,
-  EuiFlexGroup, EuiFlexItem, EuiHorizontalRule, EuiIcon, EuiLink, EuiNotificationBadge,
+  EuiBadge, EuiBasicTable, EuiButton, EuiCallOut, EuiCodeBlock, EuiDescriptionList,
+  EuiFlexGroup, EuiFlexItem, EuiHorizontalRule, EuiIcon, EuiLink, EuiListGroup, EuiListGroupItem, EuiNotificationBadge,
   EuiPage, EuiPageBody, EuiPageContent, EuiPageContentBody, EuiPageSideBar, EuiPanel, EuiSideNav,
   EuiSpacer, EuiTable, EuiText, EuiTitle, htmlIdGenerator,
 } from "fury-design-system";
@@ -33,15 +33,36 @@ interface IConstraintStatusViolation {
   namespace: string;
 }
 
+interface IConstraintSpecMatchKinds {
+  apiGroups: string[];
+  kinds: string[];
+}
+
+interface IConstraintSpecMatchLabelSelector {
+  matchExpressions?: {
+    key: string;
+    operator: string;
+    values: string[];
+  }[];
+  matchLabels?: {
+    [key: string]: string;
+  };
+}
+
+
 interface IConstraintSpec {
   enforcementAction: string;
-  match: {
-    kinds: {
-      [key: string]: string
-    }[];
+  match?: {
+    kinds?: IConstraintSpecMatchKinds[];
+    scope?: string;
+    namespaces?: string[];
+    excludedNamespaces?: string[];
+    labelSelector?: IConstraintSpecMatchLabelSelector;
+    namespaceSelector?: IConstraintSpecMatchLabelSelector;
+    name?: string;
   };
   parameters: {
-    [key: string]: string
+    [key: string]: any
   };
 }
 
@@ -104,7 +125,7 @@ function SingleConstraint(item: IConstraint) {
               >
                 <EuiText size="xs">
                   <span>TEMPLATE: {item.kind}</span>
-                  <EuiIcon type="popout" size="s" style={{marginLeft: 5}}/>
+                  <EuiIcon type="link" size="s" style={{marginLeft: 5}}/>
                 </EuiText>
               </EuiLink>
             </EuiFlexItem>
@@ -241,7 +262,8 @@ function SingleConstraint(item: IConstraint) {
           <EuiSpacer size="s"/>
         </> :
         <>
-          { item?.spec?.match &&
+          {
+            item?.spec?.match &&
             <>
               <EuiFlexGroup direction="column" gutterSize="s">
                 <EuiFlexItem grow={false}>
@@ -251,16 +273,235 @@ function SingleConstraint(item: IConstraint) {
                     </p>
                   </EuiText>
                 </EuiFlexItem>
-                <EuiFlexItem>
-                  <EuiAccordion
-                    id="accordion-3"
-                    buttonContent="Schema definition"
-                    paddingSize="l">
-                    <EuiCodeBlock language="json">
-                      {JSON.stringify(item.spec.match, null, 2)}
-                    </EuiCodeBlock>
-                  </EuiAccordion>
-                </EuiFlexItem>
+                {
+                  item?.spec?.match?.kinds &&
+                  <EuiFlexItem>
+                    <EuiSpacer />
+                    <EuiTitle size="xxs">
+                      <p>
+                        Kinds
+                      </p>
+                    </EuiTitle>
+                    <EuiSpacer />
+                    <EuiFlexGroup wrap={true}>
+                    {item?.spec?.match?.kinds.map(kind => {
+                      return (
+                        <EuiFlexItem grow={false}>
+                          <EuiDescriptionList
+                            compressed={true}
+                            type="responsiveColumn"
+                            listItems={Object.entries(kind).map(k => {
+                              return {
+                                title: k[0],
+                                description: k[1].length > 0 ? k[1][0] === '' ? "empty (core)" : k[1].join(", ") : "empty (core)",
+                              };
+                            })}
+                            style={{ maxWidth: '200px' }}
+                          />
+                        </EuiFlexItem>
+                      )
+                    })}
+                    </EuiFlexGroup>
+                  </EuiFlexItem>
+                }
+                {
+                  item?.spec?.match?.scope &&
+                  <EuiFlexItem>
+                    <EuiSpacer />
+                    <EuiTitle size="xxs">
+                      <p>
+                        Scope
+                      </p>
+                    </EuiTitle>
+                    <EuiSpacer />
+                    <EuiText size="s">
+                      <p>
+                        {item?.spec?.match?.scope}
+                      </p>
+                    </EuiText>
+                  </EuiFlexItem>
+                }
+                {
+                  item?.spec?.match?.name &&
+                  <EuiFlexItem>
+                    <EuiSpacer />
+                    <EuiTitle size="xxs">
+                      <p>
+                        Name
+                      </p>
+                    </EuiTitle>
+                    <EuiSpacer />
+                    <EuiText size="s">
+                      <p>
+                        {item?.spec?.match?.name}
+                      </p>
+                    </EuiText>
+                  </EuiFlexItem>
+                }
+                {
+                  item?.spec?.match?.namespaces &&
+                  <EuiFlexItem>
+                    <EuiSpacer />
+                    <EuiTitle size="xxs">
+                      <p>
+                        Namespaces
+                      </p>
+                    </EuiTitle>
+                    <EuiSpacer />
+                    <EuiText size="s">
+                      <p>
+                        {item?.spec?.match?.namespaces.join(", ")}
+                      </p>
+                    </EuiText>
+                  </EuiFlexItem>
+                }
+                {
+                  item?.spec?.match?.excludedNamespaces &&
+                  <EuiFlexItem>
+                    <EuiSpacer />
+                    <EuiTitle size="xxs">
+                      <p>
+                        Excluded Namespaces
+                      </p>
+                    </EuiTitle>
+                    <EuiSpacer />
+                    <EuiText size="s">
+                      <p>
+                        {item?.spec?.match?.excludedNamespaces.join(", ")}
+                      </p>
+                    </EuiText>
+                  </EuiFlexItem>
+                }
+                {
+                  item?.spec?.match?.labelSelector &&
+                  <EuiFlexItem>
+                    <EuiSpacer />
+                    <EuiTitle size="xxs">
+                      <p>
+                        Label Selector
+                      </p>
+                    </EuiTitle>
+                    <EuiSpacer />
+                    {
+                      item?.spec?.match?.labelSelector?.matchExpressions &&
+                      <>
+                        <EuiTitle size="xxs">
+                          <p>
+                            Match Expressions
+                          </p>
+                        </EuiTitle>
+                        <EuiSpacer />
+                        <EuiFlexGroup wrap={true}>
+                          {item?.spec?.match?.labelSelector.matchExpressions.map(expr => {
+                            return (
+                              <EuiFlexItem grow={false}>
+                                <EuiDescriptionList
+                                  compressed={true}
+                                  type="responsiveColumn"
+                                  listItems={Object.entries(expr).map(k => {
+                                    return {
+                                      title: k[0],
+                                      description: Array.isArray(k[1]) ? k[1].join(", ") : k[1],
+                                    };
+                                  })}
+                                  style={{ maxWidth: '200px' }}
+                                />
+                              </EuiFlexItem>
+                            )
+                          })}
+                        </EuiFlexGroup>
+                      </>
+                    }
+                    {
+                      item?.spec?.match?.labelSelector?.matchLabels &&
+                      <>
+                        <EuiSpacer />
+                        <EuiTitle size="xxs">
+                          <p>
+                            Match Labels
+                          </p>
+                        </EuiTitle>
+                        <EuiSpacer />
+                        <EuiDescriptionList
+                          compressed={true}
+                          type="responsiveColumn"
+                          listItems={Object.entries(item?.spec?.match?.labelSelector?.matchLabels).map(k => {
+                            return {
+                              title: k[0],
+                              description: k[1],
+                            };
+                          })}
+                          style={{ maxWidth: '200px' }}
+                        />
+                      </>
+                    }
+                  </EuiFlexItem>
+                }
+                {
+                  item?.spec?.match?.namespaceSelector &&
+                    <EuiFlexItem>
+                      <EuiSpacer />
+                      <EuiTitle size="xxs">
+                        <p>
+                          Namespace Selector
+                        </p>
+                      </EuiTitle>
+                      <EuiSpacer />
+                      {
+                        item?.spec?.match?.namespaceSelector?.matchExpressions &&
+                          <>
+                            <EuiTitle size="xxs">
+                              <p>
+                                Match Expressions
+                              </p>
+                            </EuiTitle>
+                            <EuiSpacer />
+                            <EuiFlexGroup wrap={true}>
+                              {item?.spec?.match?.namespaceSelector.matchExpressions.map(expr => {
+                                return (
+                                  <EuiFlexItem grow={false}>
+                                    <EuiDescriptionList
+                                      compressed={true}
+                                      type="responsiveColumn"
+                                      listItems={Object.entries(expr).map(k => {
+                                        return {
+                                          title: k[0],
+                                          description: Array.isArray(k[1]) ? k[1].join(", ") : k[1],
+                                        };
+                                      })}
+                                      style={{ maxWidth: '200px' }}
+                                    />
+                                  </EuiFlexItem>
+                                )
+                              })}
+                            </EuiFlexGroup>
+                          </>
+                      }
+                      {
+                        item?.spec?.match?.namespaceSelector?.matchLabels &&
+                          <>
+                            <EuiSpacer />
+                            <EuiTitle size="xxs">
+                              <p>
+                                Match Labels
+                              </p>
+                            </EuiTitle>
+                            <EuiSpacer />
+                            <EuiDescriptionList
+                              compressed={true}
+                              type="responsiveColumn"
+                              listItems={Object.entries(item?.spec?.match?.namespaceSelector?.matchLabels).map(k => {
+                                return {
+                                  title: k[0],
+                                  description: k[1],
+                                };
+                              })}
+                              style={{ maxWidth: '200px' }}
+                            />
+                          </>
+                      }
+                    </EuiFlexItem>
+                }
               </EuiFlexGroup>
               <EuiSpacer size="s"/>
               <EuiHorizontalRule margin="none"/>
@@ -343,9 +584,7 @@ function SingleConstraint(item: IConstraint) {
       <EuiSpacer size="s"/>
       <EuiFlexGroup justifyContent="flexEnd" gutterSize="s">
         <EuiFlexItem grow={false}>
-          <EuiText size="xs"
-                   style={{textTransform: "uppercase"}}
-          >
+          <EuiText size="xs" style={{textTransform: "uppercase"}}>
             created on {item.metadata.creationTimestamp}
           </EuiText>
         </EuiFlexItem>

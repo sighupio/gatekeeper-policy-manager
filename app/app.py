@@ -220,59 +220,32 @@ def get_constraints(context=None):
             name="",
         )
     except NewConnectionError as e:
-        return render_template(
-            "message.html",
-            type="error",
-            title="Error",
-            message="Could not connect to Kubernetes Cluster",
-            action="Is the current Kubeconfig context valid?",
-            current_context=context,
-            contexts=get_k8s_contexts(),
-            description=e,
-        )
+        return {
+            "error": "Could not connect to Kubernetes Cluster",
+            "action": "Is the current Kubeconfig context valid?",
+            "description": str(e),
+        }, 500
     except MaxRetryError as e:
-        return render_template(
-            "message.html",
-            type="error",
-            title="Error",
-            message="Could not connect to Kubernetes Cluster",
-            action="Is the current Kubeconfig context valid?",
-            current_context=context,
-            contexts=get_k8s_contexts(),
-            description=e,
-        )
+        return {
+            "error": "Could not connect to Kubernetes Cluster",
+            "action": "Is the current Kubeconfig context valid?",
+            "description": str(e),
+        }, 500
     except ApiException as e:
         if e.status == 404:
-            return render_template(
-                "constraints.html",
-                constraints=[],
-                title="Constraints",
-                current_context=context,
-                contexts=get_k8s_contexts(),
-                hide_sidebar=True,
-            )
+            return []
         else:
-            return render_template(
-                "message.html",
-                type="error",
-                title="Error",
-                message="We had a problem while asking the API for Gatekeeper objects",
-                action="Is Gatekeeper deployed in the cluster?",
-                current_context=context,
-                contexts=get_k8s_contexts(),
-                description=e,
-            )
+            return {
+                "error": "We had a problem while asking the API for Gatekeeper Constraint Templates objects",
+                "action": "Is Gatekeeper deployed in the cluster?",
+                "description": str(e),
+            }, 500
     except ConfigException as e:
-        return render_template(
-            "message.html",
-            type="error",
-            title="Error",
-            message="Can't connect to cluster due to an invalid kubeconfig file",
-            action="Please verify your kubeconfig file and location",
-            current_context=context,
-            contexts=get_k8s_contexts(),
-            description=e,
-        )
+        return {
+            "error": "Can't connect to cluster due to an invalid kubeconfig file",
+            "action": "Please verify your kubeconfig file and location",
+            "description": str(e),
+        }, 500
     else:
         # For some reason, the previous query returns a lot of objects that we
         # are not interested. We need to filter the ones that we do care about.
@@ -316,27 +289,6 @@ def get_constraints(context=None):
             )
         else:
             return jsonify(constraints)
-        # else:
-        #     # We pass to the template all the constraints sorted by amount of violations
-        #     if request.args.get("report"):
-        #         template_file = "constraints-report.html"
-        #     else:
-        #         template_file = "constraints.html"
-        #     return render_template(
-        #         template_file,
-        #         constraints=sorted(
-        #             constraints,
-        #             reverse=True,
-        #             key=lambda x: x.get("status").get("totalViolations") or -1
-        #             if x.get("status")
-        #             else -1,
-        #         ),
-        #         title="Constraints",
-        #         hide_sidebar=len(constraints) == 0,
-        #         current_context=context,
-        #         contexts=get_k8s_contexts(),
-        #         timestamp=datetime.now().strftime("%a, %x %X"),
-        #     )
 
 
 @app.route("/api/v1/constrainttemplates/")
@@ -367,13 +319,13 @@ def get_constrainttemplates(context=None):
         return {
             "error": "Could not connect to Kubernetes Cluster",
             "action": "Is the current Kubeconfig context valid?",
-            "description": e,
+            "description": str(e),
         }, 500
     except MaxRetryError as e:
         return {
             "error": "Could not connect to Kubernetes Cluster",
             "action": "Is the current Kubeconfig context valid?",
-            "description": e,
+            "description": str(e),
         }, 500
     except ApiException as e:
         if e.status == 404:
@@ -385,13 +337,13 @@ def get_constrainttemplates(context=None):
             return {
                 "error": "We had a problem while asking the API for Gatekeeper Constraint Templates objects",
                 "action": "Is Gatekeeper deployed in the cluster?",
-                "description": e,
+                "description": str(e),
             }, 500
     except ConfigException as e:
         return {
             "error": "Can't connect to cluster due to an invalid kubeconfig file",
             "action": "Please verify your kubeconfig file and location",
-            "description": e,
+            "description": str(e),
         }, 500
     else:
         return {
@@ -413,70 +365,34 @@ def get_gatekeeperconfigs(context=None):
             name="",
         )
     except NewConnectionError as e:
-        return render_template(
-            "message.html",
-            type="error",
-            title="Error",
-            error="Could not connect to Kubernetes Cluster",
-            action="Is the current Kubeconfig context valid?",
-            current_context=context,
-            contexts=get_k8s_contexts(),
-            description=e,
-        )
+        return {
+            "error": "Could not connect to Kubernetes Cluster",
+            "action": "Is the current Kubeconfig context valid?",
+            "description": str(e),
+        }, 500
     except MaxRetryError as e:
-        return render_template(
-            "message.html",
-            type="error",
-            title="Error",
-            error="Could not connect to Kubernetes Cluster",
-            action="Is the current Kubeconfig context valid?",
-            current_context=context,
-            contexts=get_k8s_contexts(),
-            description=e,
-        )
+        return {
+            "error": "Could not connect to Kubernetes Cluster",
+            "action": "Is the current Kubeconfig context valid?",
+            "description": str(e),
+        }, 500
     except ApiException as e:
         if e.status == 404:
-            return render_template(
-                "configs.html",
-                gatekeeper_configs=[],
-                title="Gatekeeper Configurations",
-                current_context=context,
-                contexts=get_k8s_contexts(),
-                hide_sidebar=True,
-            )
+            return jsonify([])
         else:
-            return render_template(
-                "message.html",
-                type="error",
-                title="Error",
-                message="We had a problem while asking the API for Gatekeeper Config objects",
-                action="Is Gatekeeper deployed in the cluster?",
-                current_context=context,
-                contexts=get_k8s_contexts(),
-                description=e,
-            )
+            return {
+                "error": "We had a problem while asking the API for Gatekeeper Constraint Templates objects",
+                "action": "Is Gatekeeper deployed in the cluster?",
+                "description": str(e),
+            }, 500
     except ConfigException as e:
-        return render_template(
-            "message.html",
-            type="error",
-            title="Error",
-            message="Can't connect to cluster due to an invalid kubeconfig file",
-            action="Please verify your kubeconfig file and location",
-            current_context=context,
-            contexts=get_k8s_contexts(),
-            description=e,
-        )
+        return {
+            "error": "Can't connect to cluster due to an invalid kubeconfig file",
+            "action": "Please verify your kubeconfig file and location",
+            "description": str(e),
+        }, 500
     else:
-        # Return a JSON if we are asked nicely
-        return jsonify(configs.get("items"))
-        # return render_template(
-        #     "configs.html",
-        #     gatekeeper_configs=configs.get("items"),
-        #     title="Gatekeeper Configurations",
-        #     current_context=context,
-        #     contexts=get_k8s_contexts(),
-        #     hide_sidebar=len(configs["items"]) == 0,
-        # )
+        return configs.get("items")
 
 
 @app.route("/health")
@@ -492,20 +408,13 @@ if app.config.get("AUTH_ENABLED") == "OIDC":
     @auth.oidc_logout
     def logout():
         """End session locally"""
-        return render_template(
-            "message.html",
-            type="success",
-            message="Logout successful",
-            action="",  # noqa: E501
-        )
+        return {}
 
     @auth.error_view
     def error(error=None, error_description=None):
         """View to handle OIDC errors and show them properly"""
-        return render_template(
-            "message.html",
-            type="error",
-            message="OIDC Error: " + error,
-            action='Something is wrong with your OIDC session. Please try to <a href="/logout">logout</a> and login again',  # noqa: E501
-            description=error_description,
-        )
+        return {
+            "error": "OIDC Error: " + error,
+            "action": "Something is wrong with your OIDC session. Please try to logout and login again",
+            "description": error_description,
+        }, 401

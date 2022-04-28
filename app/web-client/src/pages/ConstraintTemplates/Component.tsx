@@ -220,7 +220,7 @@ function SingleConstraintTemplate(item: IConstraintTemplate, relatedConstraints:
                   >
                     <EuiText size="s">
                       <span>{constraint.metadata.name}</span>
-                      <EuiIcon type="popout" size="s" style={{marginLeft: 5}}/>
+                      <EuiIcon type="link" size="s" style={{marginLeft: 5}}/>
                     </EuiText>
                   </EuiLink>
                 </EuiFlexItem>
@@ -283,14 +283,18 @@ function ConstraintTemplatesComponent() {
   const { hash } = useLocation();
 
   useEffect(() => {
-    fetch(`${appContextData.context.apiUrl}api/v1/constrainttemplates`)
+    fetch(`${appContextData.context.apiUrl}api/v1/constrainttemplates/${appContextData.context.currentK8sContext}`)
       .then<IConstraintTemplateResponse>(res => res.json())
       .then(body => {
         setSideNav(generateSideNav(body.constrainttemplates));
         setRelatedConstraints(body.constraints_by_constrainttemplates);
         setItems(body.constrainttemplates.items);
       })
-  }, [])
+      .catch(err => {
+        setItems([]);
+        console.error(err);
+      });
+  }, [appContextData.context.currentK8sContext])
 
   useEffect(() => {
     if (hash) {

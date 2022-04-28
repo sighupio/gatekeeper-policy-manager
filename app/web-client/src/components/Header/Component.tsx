@@ -10,7 +10,7 @@ import {
   EuiHeaderSection,
   EuiHeaderSectionItem,
   EuiHideFor,
-  EuiSuperSelect
+  EuiSuperSelect, EuiText
 } from "fury-design-system";
 import "./Style.css";
 import {useContext, useEffect, useState} from "react";
@@ -29,7 +29,17 @@ function HeaderComponent() {
       return {
         value: k8sContext,
         inputDisplay: k8sContext,
-        dropdownDisplay: k8sContext
+        dropdownDisplay: <EuiText
+          size="s"
+          style={
+            {
+            maxWidth: "200px",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap"
+            }
+          }
+        >{k8sContext}</EuiText>,
       };
     });
     setOptionsFromContexts(optionsFromContexts);
@@ -72,7 +82,13 @@ function HeaderComponent() {
           { optionsFromContexts.length > 0 &&
             <EuiHeaderSection side="right">
               <EuiHeaderSectionItem>
+                <EuiText style={{marginRight: "5px"}} size="s">
+                  <p>
+                    <strong>Context:</strong>
+                  </p>
+                </EuiText>
                 <EuiSuperSelect
+                    style={{"width": "200px"}}
                     options={optionsFromContexts}
                     valueOfSelected={context.currentK8sContext}
                     onChange={(value) => onChangeContext(value)}
