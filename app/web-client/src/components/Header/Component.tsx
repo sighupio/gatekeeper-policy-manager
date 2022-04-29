@@ -60,7 +60,7 @@ function HeaderComponent() {
           <EuiHeaderSection side="left">
             <EuiHeaderSectionItem>
               <EuiButtonEmpty href="/">
-                GPM
+                Home
               </EuiButtonEmpty>
             </EuiHeaderSectionItem>
             <EuiHeaderSectionItem>

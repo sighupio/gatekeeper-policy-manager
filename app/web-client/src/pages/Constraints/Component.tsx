@@ -11,7 +11,7 @@ import {
   EuiPage, EuiPageBody, EuiPageContent, EuiPageContentBody, EuiPageSideBar, EuiPanel, EuiSideNav,
   EuiSpacer, EuiTable, EuiText, EuiTitle, htmlIdGenerator,
 } from "fury-design-system";
-import {useContext, useEffect, useState} from "react";
+import {useContext, useEffect, useRef, useState} from "react";
 import {ApplicationContext} from "../../AppContext";
 import {ISideNav, ISideNavItem} from "../types";
 import "./Style.css";
@@ -82,11 +82,28 @@ export interface IConstraint {
   }
 }
 
+function scrollToElement(hash: string, smooth: boolean = false) {
+  let element = document.querySelector(hash);
+
+  if (!element) {
+    return;
+  }
+
+  if (smooth) {
+    element.scrollIntoView({behavior: 'smooth'});
+  } else {
+    element.scrollIntoView();
+  }
+}
+
 function generateSideNav(list: IConstraint[]): ISideNav[] {
   const sideBarItems = list.map(item => {
     return {
       name: item.metadata.name,
       id: htmlIdGenerator('constraints')(),
+      onClick: () => {
+        scrollToElement(`#${item.metadata.name}`, true);
+      }
     } as ISideNavItem;
   });
 
@@ -99,7 +116,7 @@ function generateSideNav(list: IConstraint[]): ISideNav[] {
 
 function SingleConstraint(item: IConstraint) {
   return (
-    <EuiPanel grow={true} style={{marginBottom: "24px"}} id={item.metadata.name}>
+    <EuiPanel grow={true} style={{marginBottom: "24px"}}>
       <EuiFlexGroup gutterSize="s" alignItems="center">
         <EuiFlexItem>
           <EuiFlexGroup justifyContent="flexStart" style={{padding: 2}} alignItems="center">
@@ -519,14 +536,17 @@ function SingleConstraint(item: IConstraint) {
                   </EuiText>
                 </EuiFlexItem>
                 <EuiFlexItem>
-                  <EuiAccordion
-                    id="accordion-3"
-                    buttonContent="Schema definition"
-                    paddingSize="l">
-                    <EuiCodeBlock language="json">
-                      {JSON.stringify(item.spec.parameters, null, 2)}
-                    </EuiCodeBlock>
-                  </EuiAccordion>
+                  <EuiSpacer />
+                  <EuiDescriptionList
+                    compressed={true}
+                    type="responsiveColumn"
+                    listItems={Object.entries(item?.spec?.parameters).map(k => {
+                      return {
+                        title: k[0],
+                        description: JSON.stringify(k[1], null, 2),
+                      };
+                    })}
+                  />
                 </EuiFlexItem>
               </EuiFlexGroup>
               <EuiSpacer size="s"/>
@@ -596,8 +616,28 @@ function SingleConstraint(item: IConstraint) {
 function ConstraintsComponent() {
   const [sideNav, setSideNav] = useState<ISideNav[]>([]);
   const [items, setItems] = useState<IConstraint[]>([]);
+  const [currentElementInView, setCurrentElementInView] = useState<string>("");
+  const panelsRef = useRef<HTMLDivElement[]>([]);
   const appContextData = useContext(ApplicationContext);
+  const offset = 50;
   const { hash } = useLocation();
+
+  const onScroll = () => {
+    const elementVisible = panelsRef.current.filter(element => {
+      const top = element.getBoundingClientRect().top;
+
+      return top + offset >= 0 && top - offset <= window.innerHeight
+    });
+
+    if (elementVisible.length > 0) {
+      setCurrentElementInView(elementVisible[0].id);
+    }
+  }
+
+  useEffect(() => {
+    document.addEventListener('scroll', onScroll, true)
+    return () => document.removeEventListener('scroll', onScroll, true)
+  }, [])
 
   useEffect(() => {
     fetch(`${appContextData.context.apiUrl}api/v1/constraints/${appContextData.context.currentK8sContext}`)
@@ -614,14 +654,26 @@ function ConstraintsComponent() {
 
   useEffect(() => {
     if (hash) {
-      let element = document.querySelector(hash);
-      if (element) {
-        element.scrollIntoView();
-      }
+      scrollToElement(hash);
     } else {
       window.scrollTo(0, 0);
     }
   }, [items])
+
+  useEffect(() => {
+    if (currentElementInView) {
+      const newItems = sideNav[0].items.map(item => {
+        if (item.name === currentElementInView) {
+          item.isSelected = true;
+        } else {
+          item.isSelected = false;
+        }
+
+        return item;
+      })
+      setSideNav([{ ...sideNav[0], items: newItems }]);
+    }
+  }, [currentElementInView])
 
   return (
     <EuiFlexGroup
@@ -665,13 +717,28 @@ function ConstraintsComponent() {
             color="transparent"
             borderRadius="none"
           >
-            <EuiPageContentBody restrictWidth>
+            <EuiPageContentBody
+              restrictWidth
+              style={{marginBottom: 350}}
+            >
               {items && items.length > 0 ?
-                items.map(item => {
-                  return SingleConstraint(item)
+                items.map((item, index) => {
+                  return (
+                    <div
+                      id={item.metadata.name}
+                      key={item.metadata.name}
+                      ref={ref => {
+                        if (ref) {
+                          panelsRef.current[index] = ref;
+                        }
+                      }}
+                    >
+                      {SingleConstraint(item)}
+                    </div>
+                  )
                 })
                 :
-                <></>
+                <>No Constraint found</>
               }
             </EuiPageContentBody>
           </EuiPageContent>

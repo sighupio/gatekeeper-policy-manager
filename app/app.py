@@ -392,7 +392,7 @@ def get_gatekeeperconfigs(context=None):
             "description": str(e),
         }, 500
     else:
-        return configs.get("items")
+        return jsonify(configs.get("items"))
 
 
 @app.route("/health")

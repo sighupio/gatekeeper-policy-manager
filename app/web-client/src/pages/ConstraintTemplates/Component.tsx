@@ -22,7 +22,7 @@ import {
   EuiText,
   htmlIdGenerator,
 } from "fury-design-system";
-import {useContext, useEffect, useState} from "react";
+import {useContext, useEffect, useRef, useState} from "react";
 import {ApplicationContext} from "../../AppContext";
 import {ISideNav, ISideNavItem} from "../types";
 import {useLocation} from "react-router-dom";
@@ -91,11 +91,28 @@ interface IConstraintTemplateResponse {
   constraints_by_constrainttemplates: IRelatedConstraints;
 }
 
+function scrollToElement(hash: string, smooth: boolean = false) {
+  let element = document.querySelector(hash);
+
+  if (!element) {
+    return;
+  }
+
+  if (smooth) {
+    element.scrollIntoView({behavior: 'smooth'});
+  } else {
+    element.scrollIntoView();
+  }
+}
+
 function generateSideNav(list: IConstraintTemplateList): ISideNav[] {
   const sideBarItems = list.items.map(item => {
     return {
       name: item.spec.crd.spec.names.kind,
       id: htmlIdGenerator('constraint-templates')(),
+      onClick: () => {
+        scrollToElement(`#${item.spec.crd.spec.names.kind}`, true);
+      }
     } as ISideNavItem;
   });
 
@@ -108,7 +125,10 @@ function generateSideNav(list: IConstraintTemplateList): ISideNav[] {
 
 function SingleConstraintTemplate(item: IConstraintTemplate, relatedConstraints: IConstraint[]) {
   return (
-    <EuiPanel grow={true} style={{marginBottom: "24px"}} id={item.spec.crd.spec.names.kind}>
+    <EuiPanel
+      grow={true}
+      style={{marginBottom: "24px"}}
+    >
       <EuiFlexGroup gutterSize="s" alignItems="center">
         <EuiFlexItem>
           <EuiFlexGroup justifyContent="spaceBetween" style={{padding: 2}} alignItems="flexStart">
@@ -279,8 +299,28 @@ function ConstraintTemplatesComponent() {
   const [sideNav, setSideNav] = useState<ISideNav[]>([]);
   const [items, setItems] = useState<IConstraintTemplate[]>([]);
   const [relatedConstraints, setRelatedConstraints] = useState<IRelatedConstraints>({});
+  const [currentElementInView, setCurrentElementInView] = useState<string>("");
+  const panelsRef = useRef<HTMLDivElement[]>([]);
   const appContextData = useContext(ApplicationContext);
+  const offset = 50;
   const { hash } = useLocation();
+
+  const onScroll = () => {
+    const elementVisible = panelsRef.current.filter(element => {
+      const top = element.getBoundingClientRect().top;
+
+      return top + offset >= 0 && top - offset <= window.innerHeight
+    });
+
+    if (elementVisible.length > 0) {
+      setCurrentElementInView(elementVisible[0].id);
+    }
+  }
+
+  useEffect(() => {
+    document.addEventListener('scroll', onScroll, true)
+    return () => document.removeEventListener('scroll', onScroll, true)
+  }, [])
 
   useEffect(() => {
     fetch(`${appContextData.context.apiUrl}api/v1/constrainttemplates/${appContextData.context.currentK8sContext}`)
@@ -298,14 +338,26 @@ function ConstraintTemplatesComponent() {
 
   useEffect(() => {
     if (hash) {
-      let element = document.querySelector(hash);
-      if (element) {
-        element.scrollIntoView();
-      }
+      scrollToElement(hash);
     } else {
       window.scrollTo(0, 0);
     }
   }, [items])
+
+  useEffect(() => {
+    if (currentElementInView) {
+      const newItems = sideNav[0].items.map(item => {
+        if (item.name === currentElementInView) {
+          item.isSelected = true;
+        } else {
+          item.isSelected = false;
+        }
+
+        return item;
+      })
+      setSideNav([{ ...sideNav[0], items: newItems }]);
+    }
+  }, [currentElementInView])
 
   return (
     <EuiFlexGroup
@@ -332,14 +384,29 @@ function ConstraintTemplatesComponent() {
             color="transparent"
             borderRadius="none"
           >
-            <EuiPageContentBody restrictWidth>
+            <EuiPageContentBody
+              restrictWidth
+              style={{marginBottom: 350}}
+            >
               {items && items.length > 0 ?
-                items.map(item => {
+                items.map((item, index) => {
                   const relatedConstraintsForItem = relatedConstraints[item.metadata.name] ?? [];
-                  return SingleConstraintTemplate(item, relatedConstraintsForItem)
+                  return (
+                    <div
+                      id={item.spec.crd.spec.names.kind}
+                      key={item.spec.crd.spec.names.kind}
+                      ref={ref => {
+                        if (ref) {
+                          panelsRef.current[index] = ref;
+                        }
+                      }}
+                    >
+                      {SingleConstraintTemplate(item, relatedConstraintsForItem)}
+                    </div>
+                  );
                 })
                 :
-                <></>
+                <>No Constraint Template found</>
               }
             </EuiPageContentBody>
           </EuiPageContent>
