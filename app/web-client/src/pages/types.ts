@@ -4,11 +4,16 @@
  * license that can be found in the LICENSE file.
  */
 
+import {RenderItem} from "fury-design-system/src/components/side_nav/side_nav_item";
+import {ReactElement} from "react";
+
 export interface ISideNavItem {
   name: string;
   id: string;
   href?: string;
   disabled?: boolean;
+  renderItem?: RenderItem<any>;
+  icon?: ReactElement;
   isSelected?: boolean;
   onClick?: () => void;
 }
@@ -17,4 +22,10 @@ export interface ISideNav {
   name: string;
   id: string;
   items: ISideNavItem[];
+}
+
+export interface BackendError {
+  action: string;
+  description: string;
+  error: string;
 }

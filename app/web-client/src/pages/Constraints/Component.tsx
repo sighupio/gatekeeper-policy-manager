@@ -6,16 +6,39 @@
 
 import {
   EuiAccordion,
-  EuiBadge, EuiBasicTable, EuiButton, EuiCallOut, EuiCodeBlock, EuiDescriptionList,
-  EuiFlexGroup, EuiFlexItem, EuiHorizontalRule, EuiIcon, EuiLink, EuiListGroup, EuiListGroupItem, EuiNotificationBadge,
-  EuiPage, EuiPageBody, EuiPageContent, EuiPageContentBody, EuiPageSideBar, EuiPanel, EuiSideNav,
-  EuiSpacer, EuiTable, EuiText, EuiTitle, htmlIdGenerator,
+  EuiBadge,
+  EuiBasicTable,
+  EuiButton,
+  EuiCallOut,
+  EuiCodeBlock,
+  EuiDescriptionList, EuiEmptyPrompt,
+  EuiFlexGroup,
+  EuiFlexItem,
+  EuiHorizontalRule,
+  EuiIcon,
+  EuiLink,
+  EuiListGroup,
+  EuiListGroupItem,
+  EuiLoadingSpinner,
+  EuiNotificationBadge,
+  EuiPage,
+  EuiPageBody,
+  EuiPageContent,
+  EuiPageContentBody,
+  EuiPageSideBar,
+  EuiPanel,
+  EuiSideNav,
+  EuiSpacer,
+  EuiTable,
+  EuiText,
+  EuiTitle,
+  htmlIdGenerator,
 } from "fury-design-system";
 import {useContext, useEffect, useRef, useState} from "react";
 import {ApplicationContext} from "../../AppContext";
-import {ISideNav, ISideNavItem} from "../types";
+import {BackendError, ISideNav, ISideNavItem} from "../types";
 import "./Style.css";
-import {useLocation} from "react-router-dom";
+import {useLocation, useNavigate} from "react-router-dom";
 
 interface IConstraintStatusPod {
   id: string;
@@ -97,13 +120,17 @@ function scrollToElement(hash: string, smooth: boolean = false) {
 }
 
 function generateSideNav(list: IConstraint[]): ISideNav[] {
-  const sideBarItems = list.map(item => {
+  const sideBarItems = (list ?? []).map((item, index) => {
     return {
       name: item.metadata.name,
       id: htmlIdGenerator('constraints')(),
       onClick: () => {
         scrollToElement(`#${item.metadata.name}`, true);
-      }
+      },
+      isSelected: index === 0,
+      icon: <EuiBadge color={item.status?.totalViolations ?? 0 > 0 ? "danger" : "success"}>
+        {item.status.totalViolations}
+      </EuiBadge>,
     } as ISideNavItem;
   });
 
@@ -615,12 +642,14 @@ function SingleConstraint(item: IConstraint) {
 
 function ConstraintsComponent() {
   const [sideNav, setSideNav] = useState<ISideNav[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [items, setItems] = useState<IConstraint[]>([]);
   const [currentElementInView, setCurrentElementInView] = useState<string>("");
   const panelsRef = useRef<HTMLDivElement[]>([]);
   const appContextData = useContext(ApplicationContext);
   const offset = 50;
   const { hash } = useLocation();
+  const navigate = useNavigate();
 
   const onScroll = () => {
     const elementVisible = panelsRef.current.filter(element => {
@@ -640,16 +669,32 @@ function ConstraintsComponent() {
   }, [])
 
   useEffect(() => {
+    setIsLoading(true);
     fetch(`${appContextData.context.apiUrl}api/v1/constraints/${appContextData.context.currentK8sContext}`)
-      .then<IConstraint[]>(res => res.json())
-      .then(body => {
+      .then(async res => {
+        const body: IConstraint[] = await res.json();
+
+        if (!res.ok) {
+          throw new Error(JSON.stringify(body));
+        }
+
         setSideNav(generateSideNav(body))
         setItems(body);
       })
       .catch(err => {
-        setItems([]);
-        console.error(err);
-      });
+        let error: BackendError
+        try {
+          error = JSON.parse(err.message);
+        } catch (e) {
+          error = {
+            description: err.message,
+            error: "An error occurred while fetching the constraints",
+            action: "Please try again later",
+          }
+        }
+        navigate(`/error`, {state: {error: error, entity: "constraints"}});
+      })
+      .finally(() => setIsLoading(false));
   }, [appContextData.context.currentK8sContext])
 
   useEffect(() => {
@@ -676,75 +721,107 @@ function ConstraintsComponent() {
   }, [currentElementInView])
 
   return (
-    <EuiFlexGroup
-      style={{minHeight: "calc(100vh - 100px)"}}
-      gutterSize="none"
-      direction="column"
-    >
-      <EuiPage
-        paddingSize="none"
-        restrictWidth={1100}
-        grow={true}
-        style={{position: "relative"}}
-        className="gpm-page"
-      >
-        <EuiPageSideBar
-          paddingSize="l"
-          style={{
-            minWidth: "270px",
-          }}
-          sticky
-        >
-          <EuiSideNav
-            items={sideNav}
-          />
-          <EuiButton
-            iconSide="right"
-            iconSize="s"
-            iconType="popout"
-            href={`${appContextData.context.apiUrl}api/v1/constraints?report=html`}
-            download
+    <>
+      {
+        isLoading ?
+          <EuiFlexGroup
+            justifyContent="center"
+            alignItems="center"
+            direction="column"
+            style={{height: "86vh"}}
+            gutterSize="none"
           >
-            <EuiText size="xs">
-              Download violations report
-            </EuiText>
-          </EuiButton>
-        </EuiPageSideBar>
-        <EuiPageBody>
-          <EuiPageContent
-            hasBorder={false}
-            hasShadow={false}
-            color="transparent"
-            borderRadius="none"
+            <EuiFlexItem grow={false}>
+              <EuiTitle size="l">
+                <h1>Loading...</h1>
+              </EuiTitle>
+              <EuiSpacer size="m"/>
+            </EuiFlexItem>
+            <EuiFlexItem grow={false}>
+              <EuiLoadingSpinner style={{width: "75px", height: "75px"}}/>
+            </EuiFlexItem>
+          </EuiFlexGroup> :
+          <EuiFlexGroup
+            style={{minHeight: "calc(100vh - 100px)"}}
+            gutterSize="none"
+            direction="column"
           >
-            <EuiPageContentBody
-              restrictWidth
-              style={{marginBottom: 350}}
+            <EuiPage
+              paddingSize="none"
+              restrictWidth={1100}
+              grow={true}
+              style={{position: "relative"}}
+              className="gpm-page"
             >
-              {items && items.length > 0 ?
-                items.map((item, index) => {
-                  return (
-                    <div
-                      id={item.metadata.name}
-                      key={item.metadata.name}
-                      ref={ref => {
-                        if (ref) {
-                          panelsRef.current[index] = ref;
+              <EuiPageSideBar
+                paddingSize="l"
+                style={{
+                  minWidth: "270px",
+                }}
+                sticky
+              >
+                <EuiSideNav
+                  items={sideNav}
+                />
+                {
+                  items.length > 0 &&
+                  <EuiButton
+                    iconSide="right"
+                    iconSize="s"
+                    iconType="popout"
+                    href={`${appContextData.context.apiUrl}api/v1/constraints?report=html`}
+                    download
+                  >
+                    <EuiText size="xs">
+                      Download violations report
+                    </EuiText>
+                  </EuiButton>
+                }
+              </EuiPageSideBar>
+              <EuiPageBody>
+                <EuiPageContent
+                  hasBorder={false}
+                  hasShadow={false}
+                  color="transparent"
+                  borderRadius="none"
+                >
+                  <EuiPageContentBody
+                    restrictWidth
+                    style={{marginBottom: 350}}
+                  >
+                    {items && items.length > 0 ?
+                      items.map((item, index) => {
+                        return (
+                          <div
+                            id={item.metadata.name}
+                            key={item.metadata.name}
+                            ref={ref => {
+                              if (ref) {
+                                panelsRef.current[index] = ref;
+                              }
+                            }}
+                          >
+                            {SingleConstraint(item)}
+                          </div>
+                        )
+                      })
+                      :
+                      <EuiEmptyPrompt
+                        iconType="alert"
+                        body={
+                          <p>
+                            No Constraint found
+                          </p>
                         }
-                      }}
-                    >
-                      {SingleConstraint(item)}
-                    </div>
-                  )
-                })
-                :
-                <>No Constraint found</>
-              }
-            </EuiPageContentBody>
-          </EuiPageContent>
-        </EuiPageBody>
-      </EuiPage>
-    </EuiFlexGroup>
+                      />
+                    }
+                  </EuiPageContentBody>
+                </EuiPageContent>
+              </EuiPageBody>
+            </EuiPage>
+          </EuiFlexGroup>
+      }
+    </>
   )
 }
 

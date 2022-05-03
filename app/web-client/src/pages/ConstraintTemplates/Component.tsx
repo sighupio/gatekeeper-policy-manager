@@ -7,10 +7,10 @@
 import {
   EuiAccordion,
   EuiBadge,
-  EuiCodeBlock,
+  EuiCodeBlock, EuiEmptyPrompt,
   EuiFlexGroup,
   EuiFlexItem,
-  EuiHorizontalRule, EuiIcon, EuiLink,
+  EuiHorizontalRule, EuiIcon, EuiLink, EuiLoadingSpinner,
   EuiPage,
   EuiPageBody,
   EuiPageContent,
@@ -19,13 +19,13 @@ import {
   EuiPanel,
   EuiSideNav,
   EuiSpacer,
-  EuiText,
+  EuiText, EuiTitle,
   htmlIdGenerator,
 } from "fury-design-system";
 import {useContext, useEffect, useRef, useState} from "react";
 import {ApplicationContext} from "../../AppContext";
-import {ISideNav, ISideNavItem} from "../types";
-import {useLocation} from "react-router-dom";
+import {BackendError, ISideNav, ISideNavItem} from "../types";
+import {useLocation, useNavigate} from "react-router-dom";
 import {IConstraint} from "../Constraints/Component";
 
 interface IConstraintTemplateSpecTarget {
@@ -106,13 +106,14 @@ function scrollToElement(hash: string, smooth: boolean = false) {
 }
 
 function generateSideNav(list: IConstraintTemplateList): ISideNav[] {
-  const sideBarItems = list.items.map(item => {
+  const sideBarItems = (list.items ?? []).map((item, index) => {
     return {
       name: item.spec.crd.spec.names.kind,
       id: htmlIdGenerator('constraint-templates')(),
       onClick: () => {
         scrollToElement(`#${item.spec.crd.spec.names.kind}`, true);
-      }
+      },
+      isSelected: index === 0,
     } as ISideNavItem;
   });
 
@@ -297,6 +298,7 @@ function SingleConstraintTemplate(item: IConstraintTemplate, relatedConstraints:
 
 function ConstraintTemplatesComponent() {
   const [sideNav, setSideNav] = useState<ISideNav[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [items, setItems] = useState<IConstraintTemplate[]>([]);
   const [relatedConstraints, setRelatedConstraints] = useState<IRelatedConstraints>({});
   const [currentElementInView, setCurrentElementInView] = useState<string>("");
@@ -304,6 +306,7 @@ function ConstraintTemplatesComponent() {
   const appContextData = useContext(ApplicationContext);
   const offset = 50;
   const { hash } = useLocation();
+  const navigate = useNavigate();
 
   const onScroll = () => {
     const elementVisible = panelsRef.current.filter(element => {
@@ -323,17 +326,48 @@ function ConstraintTemplatesComponent() {
   }, [])
 
   useEffect(() => {
+    setIsLoading(true);
     fetch(`${appContextData.context.apiUrl}api/v1/constrainttemplates/${appContextData.context.currentK8sContext}`)
-      .then<IConstraintTemplateResponse>(res => res.json())
-      .then(body => {
-        setSideNav(generateSideNav(body.constrainttemplates));
+      .then(async res => {
+        const body: IConstraintTemplateResponse = await res.json();
+        let constraintTemplates: IConstraintTemplateList;
+
+        if (!res.ok) {
+          throw new Error(JSON.stringify(body));
+        }
+
+        if ((body?.constrainttemplates?.items?.length ?? 0) === 0) {
+          constraintTemplates = {
+            apiVersion: "",
+            kind: "",
+            metadata: {
+              resourceVersion: "",
+              continue: "",
+            },
+            items: [],
+          };
+        } else {
+          constraintTemplates = body.constrainttemplates;
+        }
+
+        setSideNav(generateSideNav(constraintTemplates));
         setRelatedConstraints(body.constraints_by_constrainttemplates);
-        setItems(body.constrainttemplates.items);
+        setItems(constraintTemplates.items);
       })
       .catch(err => {
-        setItems([]);
-        console.error(err);
-      });
+        let error: BackendError
+        try {
+          error = JSON.parse(err.message);
+        } catch (e) {
+          error = {
+            description: err.message,
+            error: "An error occurred while fetching the constraint templates",
+            action: "Please try again later",
+          }
+        }
+        navigate(`/error`, {state: {error: error, entity: "constrainttemplates"}});
+      })
+      .finally(() => setIsLoading(false));
   }, [appContextData.context.currentK8sContext])
 
   useEffect(() => {
@@ -360,59 +394,88 @@ function ConstraintTemplatesComponent() {
   }, [currentElementInView])
 
   return (
-    <EuiFlexGroup
-      style={{minHeight: "calc(100vh - 100px)"}}
-      gutterSize="none"
-      direction="column"
-    >
-      <EuiPage
-        paddingSize="none"
-        restrictWidth={1100}
-        grow={true}
-        style={{position: "relative"}}
-        className="gpm-page"
-      >
-        <EuiPageSideBar paddingSize="l" sticky>
-          <EuiSideNav
-            items={sideNav}
-          />
-        </EuiPageSideBar>
-        <EuiPageBody>
-          <EuiPageContent
-            hasBorder={false}
-            hasShadow={false}
-            color="transparent"
-            borderRadius="none"
+    <>
+      {
+        isLoading ?
+          <EuiFlexGroup
+            justifyContent="center"
+            alignItems="center"
+            direction="column"
+            style={{height: "86vh"}}
+            gutterSize="none"
           >
-            <EuiPageContentBody
-              restrictWidth
-              style={{marginBottom: 350}}
+            <EuiFlexItem grow={false}>
+              <EuiTitle size="l">
+                <h1>Loading...</h1>
+              </EuiTitle>
+              <EuiSpacer size="m"/>
+            </EuiFlexItem>
+            <EuiFlexItem grow={false}>
+              <EuiLoadingSpinner style={{width: "75px", height: "75px"}}/>
+            </EuiFlexItem>
+          </EuiFlexGroup> :
+          <EuiFlexGroup
+            style={{minHeight: "calc(100vh - 100px)"}}
+            gutterSize="none"
+            direction="column"
+          >
+            <EuiPage
+              paddingSize="none"
+              restrictWidth={1100}
+              grow={true}
+              style={{position: "relative"}}
+              className="gpm-page"
             >
-              {items && items.length > 0 ?
-                items.map((item, index) => {
-                  const relatedConstraintsForItem = relatedConstraints[item.metadata.name] ?? [];
-                  return (
-                    <div
-                      id={item.spec.crd.spec.names.kind}
-                      key={item.spec.crd.spec.names.kind}
-                      ref={ref => {
-                        if (ref) {
-                          panelsRef.current[index] = ref;
+              <EuiPageSideBar paddingSize="l" sticky>
+                <EuiSideNav
+                  items={sideNav}
+                />
+              </EuiPageSideBar>
+              <EuiPageBody>
+                <EuiPageContent
+                  hasBorder={false}
+                  hasShadow={false}
+                  color="transparent"
+                  borderRadius="none"
+                >
+                  <EuiPageContentBody
+                    restrictWidth
+                    style={{marginBottom: 350}}
+                  >
+                    {items && items.length > 0 ?
+                      items.map((item, index) => {
+                        const relatedConstraintsForItem = relatedConstraints[item.metadata.name] ?? [];
+                        return (
+                          <div
+                            id={item.spec.crd.spec.names.kind}
+                            key={item.spec.crd.spec.names.kind}
+                            ref={ref => {
+                              if (ref) {
+                                panelsRef.current[index] = ref;
+                              }
+                            }}
+                          >
+                            {SingleConstraintTemplate(item, relatedConstraintsForItem)}
+                          </div>
+                        );
+                      })
+                      :
+                      <EuiEmptyPrompt
+                        iconType="alert"
+                        body={
+                          <p>
+                            No Constraint Template found
+                          </p>
                         }
-                      }}
-                    >
-                      {SingleConstraintTemplate(item, relatedConstraintsForItem)}
-                    </div>
-                  );
-                })
-                :
-                <>No Constraint Template found</>
-              }
-            </EuiPageContentBody>
-          </EuiPageContent>
-        </EuiPageBody>
-      </EuiPage>
-    </EuiFlexGroup>
+                      />
+                    }
+                  </EuiPageContentBody>
+                </EuiPageContent>
+              </EuiPageBody>
+            </EuiPage>
+          </EuiFlexGroup>
+      }
+    </>
   )
 }
 

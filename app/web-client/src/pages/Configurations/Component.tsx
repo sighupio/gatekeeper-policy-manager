@@ -7,17 +7,18 @@
 import {
   EuiAccordion,
   EuiBadge,
-  EuiButton, EuiCodeBlock,
+  EuiButton, EuiCodeBlock, EuiDescriptionList, EuiEmptyPrompt,
   EuiFlexGroup,
-  EuiFlexItem, EuiHorizontalRule, EuiIcon, EuiLink,
+  EuiFlexItem, EuiHorizontalRule, EuiIcon, EuiLink, EuiLoadingSpinner,
   EuiPage, EuiPageBody, EuiPageContent, EuiPageContentBody, EuiPageSideBar, EuiPanel, EuiSideNav,
   EuiSpacer,
-  EuiText, htmlIdGenerator
+  EuiText, EuiTitle, htmlIdGenerator
 } from "fury-design-system";
-import {useContext, useEffect, useState} from "react";
-import {ISideNav, ISideNavItem} from "../types";
+import {useContext, useEffect, useRef, useState} from "react";
+import {BackendError, ISideNav, ISideNavItem} from "../types";
 import {ApplicationContext} from "../../AppContext";
-import {json} from "stream/consumers";
+import "./Style.css";
+import {useLocation, useNavigate} from "react-router-dom";
 
 interface IGVK {
   group: string;
@@ -67,11 +68,29 @@ interface IConfig {
   status?: any;
 }
 
+function scrollToElement(hash: string, smooth: boolean = false) {
+  let element = document.querySelector(hash);
+
+  if (!element) {
+    return;
+  }
+
+  if (smooth) {
+    element.scrollIntoView({behavior: 'smooth'});
+  } else {
+    element.scrollIntoView();
+  }
+}
+
 function generateSideNav(list: IConfig[]): ISideNav[] {
-  const sideBarItems = list.map(item => {
+  const sideBarItems = (list ?? []).map((item, index) => {
     return {
       name: item.metadata.name,
       id: htmlIdGenerator('constraints')(),
+      onClick: () => {
+        scrollToElement(`#${item.metadata.name}`, true);
+      },
+      isSelected: index === 0,
     } as ISideNavItem;
   });
 
@@ -157,113 +176,139 @@ function SingleConfig(item: IConfig) {
                 </EuiText>
               </EuiFlexItem>
             </EuiFlexGroup>
-            <EuiSpacer size="s"/>
-            <EuiSpacer size="s"/>
           </>
           }
           {item.spec?.match &&
           <>
-            <EuiFlexGroup direction="column" gutterSize="s">
-              <EuiFlexItem grow={false}>
-                <EuiText size="s">
-                  <p style={{fontWeight: "bold"}}>
-                    Match criteria
-                  </p>
-                </EuiText>
-              </EuiFlexItem>
-              <EuiFlexItem>
-                <EuiAccordion
-                  id="accordion-3"
-                  buttonContent="Schema definition"
-                  paddingSize="l">
-                  <EuiCodeBlock language="json">
-                    {JSON.stringify(item.spec.match, null, 2)}
-                  </EuiCodeBlock>
-                </EuiAccordion>
-              </EuiFlexItem>
+            <EuiSpacer />
+            <EuiTitle size="xxs">
+              <p>
+                Match criteria
+              </p>
+            </EuiTitle>
+            <EuiSpacer />
+            <EuiFlexGroup wrap={true}>
+              {item.spec.match.map(trace => {
+                return (
+                  <EuiFlexItem grow={false}>
+                    <EuiDescriptionList
+                      compressed={true}
+                      type="responsiveColumn"
+                      listItems={Object.entries(trace).map(k => {
+                        return {
+                          title: k[0],
+                          description: Array.isArray(k[1]) ? k[1].join(", ") : k[1],
+                        };
+                      })}
+                    />
+                  </EuiFlexItem>
+                )
+              })}
             </EuiFlexGroup>
-            <EuiSpacer size="s"/>
-            <EuiSpacer size="s"/>
           </>
           }
           {item.spec?.readiness &&
-            <>
-              <EuiFlexGroup>
-                <EuiFlexItem>
-                  <EuiText size="s">
-                    <p style={{fontWeight: "bold"}}>
-                      Readiness
-                    </p>
-                  </EuiText>
-                </EuiFlexItem>
-                <EuiFlexItem>
-                  <EuiText size="s">
-                    <p>
-                      Stats Enabled: {item.spec?.readiness?.statsEnabled}
-                    </p>
-                  </EuiText>
-                </EuiFlexItem>
-              </EuiFlexGroup>
-              <EuiSpacer size="s"/>
-              <EuiSpacer size="s"/>
-            </>
+          <EuiFlexItem>
+            <EuiSpacer />
+            <EuiTitle size="xxs">
+              <p>
+                Readiness
+              </p>
+            </EuiTitle>
+            <EuiSpacer />
+            <EuiDescriptionList
+                compressed={true}
+                type="responsiveColumn"
+                listItems={[
+                  {
+                    title: "Stats Enabled",
+                    description: item.spec?.readiness?.statsEnabled.toString(),
+                  },
+                ]}
+                style={{ maxWidth: '200px' }}
+            />
+          </EuiFlexItem>
           }
           {item.spec?.sync &&
-            <>
-              <EuiFlexGroup direction="column" gutterSize="s">
-                <EuiFlexItem grow={false}>
-                  <EuiText size="s">
-                    <p style={{fontWeight: "bold"}}>
-                      Sync
-                    </p>
-                  </EuiText>
-                </EuiFlexItem>
-                <EuiFlexItem>
-                  <EuiAccordion
-                    id="accordion-3"
-                    buttonContent="Schema definition"
-                    paddingSize="l">
-                    <EuiCodeBlock language="json">
-                      {JSON.stringify(item.spec.sync, null, 2)}
-                    </EuiCodeBlock>
-                  </EuiAccordion>
-                </EuiFlexItem>
-              </EuiFlexGroup>
-              <EuiSpacer size="s"/>
-              <EuiSpacer size="s"/>
-            </>
+          <EuiFlexItem>
+            <EuiSpacer />
+            <EuiTitle size="xxs">
+              <p>
+                Sync
+              </p>
+            </EuiTitle>
+            <EuiSpacer />
+            <EuiTitle size="xxs">
+              <p>
+                syncOnly
+              </p>
+            </EuiTitle>
+            <EuiSpacer />
+            <EuiFlexGroup wrap={true}>
+              {item.spec?.sync.syncOnly.map(sync => {
+                return (
+                  <EuiFlexItem grow={false}>
+                    <EuiDescriptionList
+                      compressed={true}
+                      type="responsiveColumn"
+                      listItems={Object.entries(sync).map(k => {
+                        return {
+                          title: k[0],
+                          description: k[1],
+                        };
+                      })}
+                      style={{ maxWidth: '200px' }}
+                    />
+                  </EuiFlexItem>
+                )
+              })}
+            </EuiFlexGroup>
+          </EuiFlexItem>
           }
           {item.spec?.validation &&
-            <>
-              <EuiFlexGroup direction="column" gutterSize="s">
-                <EuiFlexItem grow={false}>
-                  <EuiText size="s">
-                    <p style={{fontWeight: "bold"}}>
-                      Validation
-                    </p>
-                  </EuiText>
-                </EuiFlexItem>
-                <EuiFlexItem>
-                  <EuiAccordion
-                    id="accordion-3"
-                    buttonContent="Schema definition"
-                    paddingSize="l">
-                    <EuiCodeBlock language="json">
-                      {JSON.stringify(item.spec.validation, null, 2)}
-                    </EuiCodeBlock>
-                  </EuiAccordion>
-                </EuiFlexItem>
-              </EuiFlexGroup>
-            </>
+          <EuiFlexItem>
+            <EuiSpacer />
+            <EuiTitle size="xxs">
+              <p>
+                Validation
+              </p>
+            </EuiTitle>
+            <EuiSpacer />
+            <EuiTitle size="xxs">
+              <p>
+                traces
+              </p>
+            </EuiTitle>
+            <EuiSpacer />
+            <EuiFlexGroup wrap={true}>
+              {item.spec?.validation.traces.map(trace => {
+                return (
+                  <EuiFlexItem grow={false}>
+                    <EuiDescriptionList
+                      compressed={true}
+                      type="responsiveColumn"
+                      listItems={Object.entries(trace).map(k => {
+                        return {
+                          title: k[0],
+                          description: typeof k[1] !== "string" ? JSON.stringify(k[1], null, 2) : k[1],
+                        };
+                      })}
+                    />
+                  </EuiFlexItem>
+                )
+              })}
+            </EuiFlexGroup>
+          </EuiFlexItem>
           }
         </EuiFlexItem>
       </EuiFlexGroup>
+      <EuiSpacer size="s"/>
       <EuiHorizontalRule margin="none"/>
       <EuiSpacer size="s"/>
       <EuiFlexGroup justifyContent="flexEnd" gutterSize="s">
         <EuiFlexItem grow={false}>
           <EuiText size="xs"
-                   style={{textTransform: "uppercase"}}
+            style={{textTransform: "uppercase"}}
           >
             created on {item.metadata.creationTimestamp}
           </EuiText>
@@ -275,60 +320,166 @@ function SingleConfig(item: IConfig) {
 
 function ConfigurationsComponent() {
   const [sideNav, setSideNav] = useState<ISideNav[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [items, setItems] = useState<IConfig[]>([]);
+  const [currentElementInView, setCurrentElementInView] = useState<string>("");
+  const panelsRef = useRef<HTMLDivElement[]>([]);
+  const offset = 50;
   const appContextData = useContext(ApplicationContext);
+  const { hash } = useLocation();
+  const navigate = useNavigate();
+
+  const onScroll = () => {
+    const elementVisible = panelsRef.current.filter(element => {
+      const top = element.getBoundingClientRect().top;
+
+      return top + offset >= 0 && top - offset <= window.innerHeight
+    });
+
+    if (elementVisible.length > 0) {
+      setCurrentElementInView(elementVisible[0].id);
+    }
+  }
 
   useEffect(() => {
+    document.addEventListener('scroll', onScroll, true)
+    return () => document.removeEventListener('scroll', onScroll, true)
+  }, [])
+
+  useEffect(() => {
+    setIsLoading(true);
     fetch(`${appContextData.context.apiUrl}api/v1/configs/${appContextData.context.currentK8sContext}`)
-      .then<IConfig[]>(res => res.json())
-      .then(body => {
+      .then(async res => {
+        const body: IConfig[] = await res.json();
+
+        if (!res.ok) {
+          throw new Error(JSON.stringify(body));
+        }
+
         setSideNav(generateSideNav(body))
         setItems(body);
       })
       .catch(err => {
-        setItems([]);
-        console.error(err);
-      });
+        let error: BackendError
+        try {
+          error = JSON.parse(err.message);
+        } catch (e) {
+          error = {
+            description: err.message,
+            error: "An error occurred while fetching the configurations",
+            action: "Please try again later",
+          }
+        }
+        navigate(`/error`, {state: {error: error, entity: "configurations"}});
+      })
+      .finally(() => setIsLoading(false));
   }, [appContextData.context.currentK8sContext])
 
+  useEffect(() => {
+    if (hash) {
+      scrollToElement(hash);
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }, [items])
+
+  useEffect(() => {
+    if (currentElementInView) {
+      const newItems = sideNav[0].items.map(item => {
+        if (item.name === currentElementInView) {
+          item.isSelected = true;
+        } else {
+          item.isSelected = false;
+        }
+
+        return item;
+      })
+      setSideNav([{ ...sideNav[0], items: newItems }]);
+    }
+  }, [currentElementInView])
+
   return (
-    <EuiFlexGroup
-      style={{minHeight: "calc(100vh - 100px)"}}
-      gutterSize="none"
-      direction="column"
-    >
-      <EuiPage
-        paddingSize="none"
-        restrictWidth={1100}
-        grow={true}
-        style={{position: "relative"}}
-        className="gpm-page"
-      >
-        <EuiPageSideBar paddingSize="l" sticky>
-          <EuiSideNav
-            items={sideNav}
-          />
-        </EuiPageSideBar>
-        <EuiPageBody>
-          <EuiPageContent
-            hasBorder={false}
-            hasShadow={false}
-            color="transparent"
-            borderRadius="none"
+    <>
+    {
+      isLoading ?
+        <EuiFlexGroup
+          justifyContent="center"
+          alignItems="center"
+          direction="column"
+          style={{ height: "86vh" }}
+          gutterSize="none"
+        >
+          <EuiFlexItem grow={false}>
+            <EuiTitle size="l">
+              <h1>Loading...</h1>
+            </EuiTitle>
+            <EuiSpacer size="m"/>
+          </EuiFlexItem>
+          <EuiFlexItem grow={false}>
+            <EuiLoadingSpinner style={{width: "75px", height: "75px"}} />
+          </EuiFlexItem>
+        </EuiFlexGroup> :
+        <EuiFlexGroup
+          style={{minHeight: "calc(100vh - 100px)"}}
+          gutterSize="none"
+          direction="column"
+        >
+          <EuiPage
+            paddingSize="none"
+            restrictWidth={1100}
+            grow={true}
+            style={{position: "relative"}}
+            className="gpm-page"
           >
-            <EuiPageContentBody restrictWidth>
-              {items && items.length > 0 ?
-                items.map(item => {
-                  return SingleConfig(item)
-                })
-                :
-                <></>
-              }
-            </EuiPageContentBody>
-          </EuiPageContent>
-        </EuiPageBody>
-      </EuiPage>
-    </EuiFlexGroup>
+            <EuiPageSideBar paddingSize="l" sticky>
+              <EuiSideNav
+                items={sideNav}
+              />
+            </EuiPageSideBar>
+            <EuiPageBody>
+              <EuiPageContent
+                hasBorder={false}
+                hasShadow={false}
+                color="transparent"
+                borderRadius="none"
+              >
+                <EuiPageContentBody
+                  restrictWidth
+                  style={{marginBottom: 350}}
+                >
+                  {items && items.length > 0 ?
+                    items.map((item, index) => {
+                      return (
+                        <div
+                          id={`${item.metadata.name}`}
+                          key={`${item.metadata.name}`}
+                          ref={ref => {
+                            if (ref) {
+                              panelsRef.current[index] = ref;
+                            }
+                          }}
+                        >
+                          {SingleConfig(item)}
+                        </div>
+                      )
+                    })
+                    :
+                    <EuiEmptyPrompt
+                      iconType="alert"
+                      body={
+                        <p>
+                          No Configuration found
+                        </p>
+                      }
+                    />
+                  }
+                </EuiPageContentBody>
+              </EuiPageContent>
+            </EuiPageBody>
+          </EuiPage>
+        </EuiFlexGroup>
+    }
+    </>
   )
 }
 

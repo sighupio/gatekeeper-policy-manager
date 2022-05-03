@@ -18,6 +18,8 @@ import {Constraints} from "./pages/Constraints";
 import {Configurations} from "./pages/Configurations";
 import "fury-design-system/dist/eui_theme_fury_community.css";
 import ContextProvider from "./AppContextProvider";
+import {Error} from "./pages/Error";
+import {NotFound} from "./pages/NotFound";
 
 function App() {
   return (
@@ -28,7 +30,8 @@ function App() {
         <Route path={`/constrainttemplates`} element={<ConstraintTemplates/>}/>
         <Route path={`/constraints`} element={<Constraints/>}/>
         <Route path={`/configurations`} element={<Configurations/>}/>
-        <Route path="*" element={<></>}/>
+        <Route path={`/error`} element={<Error />}/>
+        <Route path="*" element={<NotFound />}/>
       </Routes>
       <Footer/>
     </ContextProvider>
