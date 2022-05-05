@@ -1,12 +1,12 @@
-# v0.5.2
+# v0.1.0
 
-Gatekeeper Policy Manager version 0.5.2
+Gatekeeper Policy Manager version 1.0.0
 
 ## Changes from v0.5.1
 
-- Brand new logo
+- Brand new logo and UI using the Fury Design System
+- Switched to Ingress networking.k8s.io/v1 from networking.k8s.io/v1beta1 for Kubernetes >1.22 compatibility
 - Updated dependencies
-
 ### Updated dependencies
 
 Backend:
