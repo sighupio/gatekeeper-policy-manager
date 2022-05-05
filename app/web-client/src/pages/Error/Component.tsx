@@ -46,19 +46,19 @@ function ErrorComponent() {
           <EuiFlexItem grow={false}>
             <EuiText textAlign="center">
               <h2>
-                {(state as ErrorPageState).error.error}
+                {(state as ErrorPageState)?.error?.error}
               </h2>
             </EuiText>
           </EuiFlexItem>
           <EuiFlexItem grow={false}>
             <EuiText textAlign="center">
               <h4>
-                {(state as ErrorPageState).error.action}
+                {(state as ErrorPageState)?.error?.action}
               </h4>
             </EuiText>
           </EuiFlexItem>
           <EuiFlexItem grow={false}>
-            <EuiButton href={`/${(state as ErrorPageState).entity}`} iconSide="right" iconType="arrowRight" aria-label="Next" >
+            <EuiButton href={`/${(state as ErrorPageState)?.entity ?? ""}`} iconSide="right" iconType="arrowRight" aria-label="Next" >
               Go back
             </EuiButton>
           </EuiFlexItem>

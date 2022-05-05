@@ -10,6 +10,7 @@ export interface IApplicationContextData {
   apiUrl: string;
   k8sContexts: string[];
   currentK8sContext: string;
+  authEnabled: boolean;
 }
 
 export interface IApplicationContext {
@@ -22,5 +23,6 @@ export const ApplicationContext = createContext<IApplicationContext>({
     apiUrl: "",
     k8sContexts: [],
     currentK8sContext: "",
+    authEnabled: false,
   },
 });

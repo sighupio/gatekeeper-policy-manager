@@ -87,7 +87,7 @@ interface IRelatedConstraints {
 }
 
 interface IConstraintTemplateResponse {
-  constrainttemplates: IConstraintTemplateList;
+  constrainttemplates: IConstraintTemplate[];
   constraints_by_constrainttemplates: IRelatedConstraints;
 }
 
@@ -105,8 +105,8 @@ function scrollToElement(hash: string, smooth: boolean = false) {
   }
 }
 
-function generateSideNav(list: IConstraintTemplateList): ISideNav[] {
-  const sideBarItems = (list.items ?? []).map((item, index) => {
+function generateSideNav(list: IConstraintTemplate[]): ISideNav[] {
+  const sideBarItems = (list ?? []).map((item, index) => {
     return {
       name: item.spec.crd.spec.names.kind,
       id: htmlIdGenerator('constraint-templates')(),
@@ -330,29 +330,19 @@ function ConstraintTemplatesComponent() {
     fetch(`${appContextData.context.apiUrl}api/v1/constrainttemplates/${appContextData.context.currentK8sContext}`)
       .then(async res => {
         const body: IConstraintTemplateResponse = await res.json();
-        let constraintTemplates: IConstraintTemplateList;
+        let constraintTemplates: IConstraintTemplate[] = [];
 
         if (!res.ok) {
           throw new Error(JSON.stringify(body));
         }
 
-        if ((body?.constrainttemplates?.items?.length ?? 0) === 0) {
-          constraintTemplates = {
-            apiVersion: "",
-            kind: "",
-            metadata: {
-              resourceVersion: "",
-              continue: "",
-            },
-            items: [],
-          };
-        } else {
+        if ((body?.constrainttemplates?.length ?? 0) > 0) {
           constraintTemplates = body.constrainttemplates;
         }
 
         setSideNav(generateSideNav(constraintTemplates));
         setRelatedConstraints(body.constraints_by_constrainttemplates);
-        setItems(constraintTemplates.items);
+        setItems(constraintTemplates);
       })
       .catch(err => {
         let error: BackendError

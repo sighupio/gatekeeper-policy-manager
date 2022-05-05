@@ -19,11 +19,16 @@ interface IK8sContext {
   name: string;
 }
 
+interface IAuthResponse {
+  auth_enabled: boolean;
+}
+
 type K8sContextsResponse = IK8sContext[][] | IK8sContext[];
 
 const getDefaultContext = (): IApplicationContextData => {
   return {
     apiUrl: process.env.NODE_ENV !== 'production' ? "http://localhost:5000/" : "",
+    authEnabled: JSON.parse(localStorage.getItem("authEnabled") ?? "false") || false,
     currentK8sContext: localStorage.getItem("currentK8sContext") || "",
     k8sContexts: localStorage.getItem("k8sContexts") ?
       JSON.parse(localStorage.getItem("k8sContexts") || "[]") : [],
@@ -46,6 +51,11 @@ const ContextProvider = ({children}: ContextProviderProps) => {
     if (updates.k8sContexts) {
       localStorage.setItem("k8sContexts", JSON.stringify(updates.k8sContexts));
     }
+
+    if (updates.authEnabled) {
+      localStorage.setItem("authEnabled", JSON.stringify(updates.authEnabled));
+    }
+
   }, [appContext, setAppContext]);
 
   const contextValue = useMemo(() => ({
@@ -54,10 +64,11 @@ const ContextProvider = ({children}: ContextProviderProps) => {
   }), [appContext, setCurrentContext])
 
   useEffect(() => {
-    fetch(`${appContext.apiUrl}api/v1/contexts`)
+    Promise.allSettled([
+      fetch(`${appContext.apiUrl}api/v1/contexts`)
       .then<K8sContextsResponse>(res => res.json())
       .then(body => {
-        if (body.length > 1) {
+        if ((body?.length ?? 1) > 1) {
           const newContexts = (body[0] as IK8sContext[]).map(c => c.name);
           const newCurrentContext = localStorage.getItem("currentK8sContext") || (body[1] as IK8sContext).name;
 
@@ -69,13 +80,37 @@ const ContextProvider = ({children}: ContextProviderProps) => {
             k8sContexts: newContexts,
             currentK8sContext: newCurrentContext,
           });
+        } else {
+          localStorage.removeItem("k8sContexts");
+          localStorage.removeItem("currentK8sContext");
+
+          setAppContext({
+            ...appContext,
+            k8sContexts: [],
+            currentK8sContext: "",
+          });
         }
       })
       .catch(err => {
         localStorage.removeItem("k8sContexts");
         localStorage.removeItem("currentK8sContext");
         console.error(err);
+      }),
+      fetch(`${appContext.apiUrl}api/v1/auth`)
+      .then<IAuthResponse>(res => res.json())
+      .then(body => {
+        localStorage.setItem("authEnabled", JSON.stringify(body.auth_enabled));
+
+          setAppContext({
+            ...appContext,
+            authEnabled: body.auth_enabled,
+          });
       })
+      .catch(err => {
+        localStorage.setItem("authEnabled", "false");
+        console.error(err);
+      }),
+    ]);
   }, []);
 
   return (

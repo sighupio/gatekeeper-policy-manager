@@ -5,6 +5,7 @@
  */
 
 import {
+  EuiButton,
   EuiButtonEmpty,
   EuiHeader,
   EuiHeaderSection,
@@ -13,7 +14,7 @@ import {
   EuiSuperSelect, EuiText
 } from "fury-design-system";
 import "./Style.css";
-import {useContext, useEffect, useState} from "react";
+import {MouseEventHandler, MouseEvent, useContext, useEffect, useState} from "react";
 import {ApplicationContext} from "../../AppContext";
 import {EuiSuperSelectOption} from "fury-design-system/src/components/form/super_select/super_select_control";
 
@@ -44,6 +45,18 @@ function HeaderComponent() {
     });
     setOptionsFromContexts(optionsFromContexts);
   }, [context.k8sContexts]);
+
+  const doLogout: MouseEventHandler<HTMLButtonElement>
+    = (event: MouseEvent<HTMLButtonElement>): void => {
+    event.preventDefault();
+
+    fetch(`${context.apiUrl}/api/v1/auth/logout`, {method: "POST"})
+      .finally(() => {
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000)
+      })
+  }
 
   const onChangeContext = (value: string) => {
     if (setContext) {
@@ -79,23 +92,35 @@ function HeaderComponent() {
               </EuiButtonEmpty>
             </EuiHeaderSectionItem>
           </EuiHeaderSection>
+          <EuiHeaderSection side="right">
           { optionsFromContexts.length > 0 &&
-            <EuiHeaderSection side="right">
-              <EuiHeaderSectionItem>
-                <EuiText style={{marginRight: "5px"}} size="s">
-                  <p>
-                    <strong>Context:</strong>
-                  </p>
-                </EuiText>
-                <EuiSuperSelect
-                    style={{"width": "200px"}}
-                    options={optionsFromContexts}
-                    valueOfSelected={context.currentK8sContext}
-                    onChange={(value) => onChangeContext(value)}
-                />
-              </EuiHeaderSectionItem>
-            </EuiHeaderSection>
+            <EuiHeaderSectionItem>
+              <EuiText style={{marginRight: "5px"}} size="s">
+                <p>
+                  <strong>Context:</strong>
+                </p>
+              </EuiText>
+              <EuiSuperSelect
+                  style={{"width": "200px"}}
+                  options={optionsFromContexts}
+                  valueOfSelected={context.currentK8sContext}
+                  onChange={(value) => onChangeContext(value)}
+              />
+            </EuiHeaderSectionItem>
           }
+          { context.authEnabled &&
+            <EuiHeaderSectionItem>
+              <EuiButton
+                fill
+                iconType="push"
+                onClick={doLogout}
+                style={{marginLeft: "15px"}}
+              >
+                  Logout
+              </EuiButton>
+            </EuiHeaderSectionItem>
+          }
+          </EuiHeaderSection>
         </EuiHeader>
       </EuiHideFor>
     </div>
