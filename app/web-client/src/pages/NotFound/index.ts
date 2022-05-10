@@ -6,4 +6,4 @@
 
 import NotFoundComponent from "./Component";
 
-export {NotFoundComponent as NotFound};
+export { NotFoundComponent as NotFound };

@@ -4,36 +4,36 @@
  * license that can be found in the LICENSE file.
  */
 
-import React from 'react';
-import './App.css';
-import {
-    Routes,
-    Route,
-} from "react-router-dom";
-import {Home} from "./pages/Home";
-import {Header} from "./components/Header";
-import {Footer} from "./components/Footer";
-import {ConstraintTemplates} from "./pages/ConstraintTemplates";
-import {Constraints} from "./pages/Constraints";
-import {Configurations} from "./pages/Configurations";
+import React from "react";
+import "./App.css";
+import { Routes, Route } from "react-router-dom";
+import { Home } from "./pages/Home";
+import { Header } from "./components/Header";
+import { Footer } from "./components/Footer";
+import { ConstraintTemplates } from "./pages/ConstraintTemplates";
+import { Constraints } from "./pages/Constraints";
+import { Configurations } from "./pages/Configurations";
 import "fury-design-system/dist/eui_theme_fury_community.css";
 import ContextProvider from "./AppContextProvider";
-import {Error} from "./pages/Error";
-import {NotFound} from "./pages/NotFound";
+import { Error } from "./pages/Error";
+import { NotFound } from "./pages/NotFound";
 
 function App() {
   return (
     <ContextProvider>
-      <Header/>
+      <Header />
       <Routes>
-        <Route path={`/`} element={<Home/>}/>
-        <Route path={`/constrainttemplates`} element={<ConstraintTemplates/>}/>
-        <Route path={`/constraints`} element={<Constraints/>}/>
-        <Route path={`/configurations`} element={<Configurations/>}/>
-        <Route path={`/error`} element={<Error />}/>
-        <Route path="*" element={<NotFound />}/>
+        <Route path={`/`} element={<Home />} />
+        <Route
+          path={`/constrainttemplates`}
+          element={<ConstraintTemplates />}
+        />
+        <Route path={`/constraints`} element={<Constraints />} />
+        <Route path={`/configurations`} element={<Configurations />} />
+        <Route path={`/error`} element={<Error />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
-      <Footer/>
+      <Footer />
     </ContextProvider>
   );
 }

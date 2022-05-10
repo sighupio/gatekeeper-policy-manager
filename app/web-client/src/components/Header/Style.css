@@ -10,7 +10,7 @@
 }
 
 .gpm-header .header-active {
-  border-bottom: 1px solid #68288C;
+  border-bottom: 1px solid #68288c;
 }
 
 .gpm-header .euiHeader.gpm-header--desktop {
@@ -19,13 +19,13 @@
 }
 
 .gpm-header .euiHeader.gpm-header--mobile {
-   height: 54px;
-   padding-left: 16px;
-   padding-right: 16px;
+  height: 54px;
+  padding-left: 16px;
+  padding-right: 16px;
 }
 
 @media screen and (min-width: 1365px) {
   .gpm-header .euiHeader .gpm-header--desktop {
-      padding: 0 25%;
+    padding: 0 25%;
   }
 }

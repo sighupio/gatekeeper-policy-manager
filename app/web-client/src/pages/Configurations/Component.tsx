@@ -6,22 +6,34 @@
 
 import {
   EuiAccordion,
-  EuiCodeBlock, EuiEmptyPrompt,
+  EuiCodeBlock,
+  EuiEmptyPrompt,
   EuiFlexGroup,
-  EuiFlexItem, EuiHorizontalRule, EuiIcon, EuiLoadingSpinner,
-  EuiPage, EuiPageBody, EuiPageContent, EuiPageContentBody, EuiPageSideBar, EuiPanel, EuiSideNav,
+  EuiFlexItem,
+  EuiHorizontalRule,
+  EuiIcon,
+  EuiLoadingSpinner,
+  EuiPage,
+  EuiPageBody,
+  EuiPageContent,
+  EuiPageContentBody,
+  EuiPageSideBar,
+  EuiPanel,
+  EuiSideNav,
   EuiSpacer,
-  EuiText, EuiTitle, htmlIdGenerator
+  EuiText,
+  EuiTitle,
+  htmlIdGenerator,
 } from "fury-design-system";
-import {useCallback, useContext, useEffect, useRef, useState} from "react";
-import {BackendError, ISideNav, ISideNavItem} from "../types";
-import {ApplicationContext} from "../../AppContext";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { BackendError, ISideNav, ISideNavItem } from "../types";
+import { ApplicationContext } from "../../AppContext";
 import "./Style.css";
-import {useLocation, useNavigate} from "react-router-dom";
-import {JSONTree} from "react-json-tree";
+import { useLocation, useNavigate } from "react-router-dom";
+import { JSONTree } from "react-json-tree";
 import theme from "../theme";
-import {scrollToElement} from "../../utils";
-import {IConfig} from "./types";
+import { scrollToElement } from "../../utils";
+import { IConfig } from "./types";
 import useScrollToHash from "../../hooks/useScrollToHash";
 import useCurrentElementInView from "../../hooks/useCurrentElementInView";
 
@@ -30,7 +42,7 @@ function generateSideNav(list: IConfig[]): ISideNav[] {
     return {
       key: `${item.metadata.name}-side`,
       name: item.metadata.name,
-      id: htmlIdGenerator('constraints')(),
+      id: htmlIdGenerator("constraints")(),
       onClick: () => {
         scrollToElement(`#${item.metadata.name}`, true);
       },
@@ -38,115 +50,125 @@ function generateSideNav(list: IConfig[]): ISideNav[] {
     } as ISideNavItem;
   });
 
-  return [{
-    name: "Configurations",
-    id: htmlIdGenerator('constraints')(),
-    items: sideBarItems
-  }]
+  return [
+    {
+      name: "Configurations",
+      id: htmlIdGenerator("constraints")(),
+      items: sideBarItems,
+    },
+  ];
 }
 
 function SingleConfig(item: IConfig) {
   return (
-    <EuiPanel grow={true} style={{marginBottom: "24px"}}>
+    <EuiPanel grow={true} style={{ marginBottom: "24px" }}>
       <EuiFlexGroup gutterSize="s" alignItems="center">
         <EuiFlexItem>
-          <EuiFlexGroup justifyContent="flexStart" style={{padding: 2}} alignItems="center">
+          <EuiFlexGroup
+            justifyContent="flexStart"
+            style={{ padding: 2 }}
+            alignItems="center"
+          >
             <EuiFlexItem grow={false}>
               <EuiText>
-                <h4 style={{textTransform: "capitalize"}}>
+                <h4 style={{ textTransform: "capitalize" }}>
                   {item.metadata.name}
                 </h4>
               </EuiText>
             </EuiFlexItem>
-            <EuiFlexItem grow={false} style={{marginLeft: "10px"}}>
+            <EuiFlexItem grow={false} style={{ marginLeft: "10px" }}>
               <EuiText size="xs">
-                <span style={{textTransform: "uppercase", fontWeight: "bold"}}>NAMESPACE: </span> {item.metadata.namespace}
+                <span
+                  style={{ textTransform: "uppercase", fontWeight: "bold" }}
+                >
+                  NAMESPACE:{" "}
+                </span>{" "}
+                {item.metadata.namespace}
               </EuiText>
             </EuiFlexItem>
           </EuiFlexGroup>
         </EuiFlexItem>
       </EuiFlexGroup>
-      <EuiSpacer size="s"/>
-      <EuiHorizontalRule margin="none"/>
-      <EuiSpacer size="s"/>
+      <EuiSpacer size="s" />
+      <EuiHorizontalRule margin="none" />
+      <EuiSpacer size="s" />
       <EuiFlexGroup direction="column">
         <EuiFlexItem>
           <EuiAccordion
             id="accordion-1"
             buttonContent="YAML definition"
-            paddingSize="none">
+            paddingSize="none"
+          >
             <EuiCodeBlock language="json">
-              {JSON.stringify(item, (k, v) => {
-                if (typeof v === 'string') {
-                    return v
-                      .replace(/\n/g, '')
-                      .replace(/"/g, "'");
-                }
+              {JSON.stringify(
+                item,
+                (k, v) => {
+                  if (typeof v === "string") {
+                    return v.replace(/\n/g, "").replace(/"/g, "'");
+                  }
 
-                return v;
-              }, 2)}
+                  return v;
+                },
+                2
+              )}
             </EuiCodeBlock>
           </EuiAccordion>
         </EuiFlexItem>
       </EuiFlexGroup>
-      <EuiSpacer size="s"/>
-      <EuiHorizontalRule margin="none"/>
-      <EuiSpacer size="s"/>
+      <EuiSpacer size="s" />
+      <EuiHorizontalRule margin="none" />
+      <EuiSpacer size="s" />
       <EuiFlexGroup direction="column">
         <EuiFlexItem>
-          {!item.spec ?
-          <>
-            <EuiFlexGroup alignItems="center">
-              <EuiFlexItem grow={false}>
-                <EuiIcon type="cross" size="l" color="danger"/>
-              </EuiFlexItem>
-              <EuiFlexItem grow={false}>
-                <EuiText size="s">
-                  <h5>
-                    This Configuration has no spec defined
-                  </h5>
-                </EuiText>
-              </EuiFlexItem>
-            </EuiFlexGroup>
-          </>
-          :
-          <>
-            <EuiFlexGroup direction="column" gutterSize="s">
-              <EuiFlexItem grow={false}>
-                <EuiText size="s">
-                  <p style={{fontWeight: "bold"}}>
-                    Spec definition for configuration
-                  </p>
-                </EuiText>
-              </EuiFlexItem>
-              <EuiFlexItem grow={false}>
-                <JSONTree
-                  data={item?.spec}
-                  shouldExpandNode={() => true}
-                  hideRoot={true}
-                  theme={theme}
-                  invertTheme={false}
-                />
-              </EuiFlexItem>
-            </EuiFlexGroup>
-          </>
-          }
+          {!item.spec ? (
+            <>
+              <EuiFlexGroup alignItems="center">
+                <EuiFlexItem grow={false}>
+                  <EuiIcon type="cross" size="l" color="danger" />
+                </EuiFlexItem>
+                <EuiFlexItem grow={false}>
+                  <EuiText size="s">
+                    <h5>This Configuration has no spec defined</h5>
+                  </EuiText>
+                </EuiFlexItem>
+              </EuiFlexGroup>
+            </>
+          ) : (
+            <>
+              <EuiFlexGroup direction="column" gutterSize="s">
+                <EuiFlexItem grow={false}>
+                  <EuiText size="s">
+                    <p style={{ fontWeight: "bold" }}>
+                      Spec definition for configuration
+                    </p>
+                  </EuiText>
+                </EuiFlexItem>
+                <EuiFlexItem grow={false}>
+                  <JSONTree
+                    data={item?.spec}
+                    shouldExpandNode={() => true}
+                    hideRoot={true}
+                    theme={theme}
+                    invertTheme={false}
+                  />
+                </EuiFlexItem>
+              </EuiFlexGroup>
+            </>
+          )}
         </EuiFlexItem>
       </EuiFlexGroup>
-      <EuiSpacer size="s"/>
-      <EuiHorizontalRule margin="none"/>
-      <EuiSpacer size="s"/>
+      <EuiSpacer size="s" />
+      <EuiHorizontalRule margin="none" />
+      <EuiSpacer size="s" />
       <EuiFlexGroup justifyContent="flexEnd" gutterSize="s">
         <EuiFlexItem grow={false}>
-          <EuiText size="xs"
-            style={{textTransform: "uppercase"}}
-          >
+          <EuiText size="xs" style={{ textTransform: "uppercase" }}>
             created on {item.metadata.creationTimestamp}
           </EuiText>
         </EuiFlexItem>
       </EuiFlexGroup>
     </EuiPanel>
-  )
+  );
 }
 
 function ConfigurationsComponent() {
@@ -160,33 +182,38 @@ function ConfigurationsComponent() {
   const { hash } = useLocation();
   const navigate = useNavigate();
 
-  const onRefChange = useCallback((element: HTMLDivElement | null, index: number) => {
-    if (!element) {
-      return;
-    }
+  const onRefChange = useCallback(
+    (element: HTMLDivElement | null, index: number) => {
+      if (!element) {
+        return;
+      }
 
-    panelsRef.current[index] = element;
+      panelsRef.current[index] = element;
 
-    if (index === items.length - 1) {
-      setFullyLoadedRefs(true);
-    }
-  },[panelsRef, items]);
+      if (index === items.length - 1) {
+        setFullyLoadedRefs(true);
+      }
+    },
+    [panelsRef, items]
+  );
 
   useEffect(() => {
     setIsLoading(true);
-    fetch(`${appContextData.context.apiUrl}api/v1/configs/${appContextData.context.currentK8sContext}`)
-      .then(async res => {
+    fetch(
+      `${appContextData.context.apiUrl}api/v1/configs/${appContextData.context.currentK8sContext}`
+    )
+      .then(async (res) => {
         const body: IConfig[] = await res.json();
 
         if (!res.ok) {
           throw new Error(JSON.stringify(body));
         }
 
-        setSideNav(generateSideNav(body))
+        setSideNav(generateSideNav(body));
         setItems(body);
       })
-      .catch(err => {
-        let error: BackendError
+      .catch((err) => {
+        let error: BackendError;
         try {
           error = JSON.parse(err.message);
         } catch (e) {
@@ -194,12 +221,14 @@ function ConfigurationsComponent() {
             description: err.message,
             error: "An error occurred while fetching the configurations",
             action: "Please try again later",
-          }
+          };
         }
-        navigate(`/error`, {state: {error: error, entity: "configurations"}});
+        navigate(`/error`, {
+          state: { error: error, entity: "configurations" },
+        });
       })
       .finally(() => setIsLoading(false));
-  }, [appContextData.context.currentK8sContext])
+  }, [appContextData.context.currentK8sContext]);
 
   useScrollToHash(hash, [fullyLoadedRefs]);
 
@@ -207,7 +236,7 @@ function ConfigurationsComponent() {
 
   useEffect(() => {
     if (currentElementInView) {
-      const newItems = sideNav[0].items.map(item => {
+      const newItems = sideNav[0].items.map((item) => {
         if (item.name === currentElementInView) {
           item.isSelected = true;
         } else {
@@ -215,15 +244,14 @@ function ConfigurationsComponent() {
         }
 
         return item;
-      })
+      });
       setSideNav([{ ...sideNav[0], items: newItems }]);
     }
-  }, [currentElementInView])
+  }, [currentElementInView]);
 
   return (
     <>
-    {
-      isLoading ?
+      {isLoading ? (
         <EuiFlexGroup
           justifyContent="center"
           alignItems="center"
@@ -235,14 +263,15 @@ function ConfigurationsComponent() {
             <EuiTitle size="l">
               <h1>Loading...</h1>
             </EuiTitle>
-            <EuiSpacer size="m"/>
+            <EuiSpacer size="m" />
           </EuiFlexItem>
           <EuiFlexItem grow={false}>
-            <EuiLoadingSpinner style={{width: "75px", height: "75px"}} />
+            <EuiLoadingSpinner style={{ width: "75px", height: "75px" }} />
           </EuiFlexItem>
-        </EuiFlexGroup> :
+        </EuiFlexGroup>
+      ) : (
         <EuiFlexGroup
-          style={{minHeight: "calc(100vh - 100px)"}}
+          style={{ minHeight: "calc(100vh - 100px)" }}
           gutterSize="none"
           direction="column"
         >
@@ -250,13 +279,11 @@ function ConfigurationsComponent() {
             paddingSize="none"
             restrictWidth={1100}
             grow={true}
-            style={{position: "relative"}}
+            style={{ position: "relative" }}
             className="gpm-page gpm-page-config"
           >
             <EuiPageSideBar paddingSize="m" sticky>
-              <EuiSideNav
-                items={sideNav}
-              />
+              <EuiSideNav items={sideNav} />
             </EuiPageSideBar>
             <EuiPageBody>
               <EuiPageContent
@@ -265,11 +292,8 @@ function ConfigurationsComponent() {
                 color="transparent"
                 borderRadius="none"
               >
-                <EuiPageContentBody
-                  restrictWidth
-                  style={{marginBottom: 350}}
-                >
-                  {items && items.length > 0 ?
+                <EuiPageContentBody restrictWidth style={{ marginBottom: 350 }}>
+                  {items && items.length > 0 ? (
                     items.map((item, index) => {
                       return (
                         <div
@@ -279,26 +303,22 @@ function ConfigurationsComponent() {
                         >
                           {SingleConfig(item)}
                         </div>
-                      )
+                      );
                     })
-                    :
+                  ) : (
                     <EuiEmptyPrompt
                       iconType="alert"
-                      body={
-                        <p>
-                          No Configuration found
-                        </p>
-                      }
+                      body={<p>No Configuration found</p>}
                     />
-                  }
+                  )}
                 </EuiPageContentBody>
               </EuiPageContent>
             </EuiPageBody>
           </EuiPage>
         </EuiFlexGroup>
-    }
+      )}
     </>
-  )
+  );
 }
 
 export default ConfigurationsComponent;

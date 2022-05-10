@@ -5,22 +5,26 @@
  */
 
 .gpm-page-constraints .euiAccordion__button:focus {
- text-decoration: none !important;
+  text-decoration: none !important;
 }
 
 .gpm-page-constraints .euiAccordion__button:hover {
- text-decoration: none !important;
+  text-decoration: none !important;
 }
 
 .gpm-page-constraints .euiDescriptionList__title {
- max-width: 100px;
+  max-width: 100px;
 }
 
-.gpm-page-constraints .euiDescriptionList.euiDescriptionList--column.euiDescriptionList--compressed .euiDescriptionList__description,
-.gpm-page-constraints .euiDescriptionList.euiDescriptionList--responsiveColumn.euiDescriptionList--compressed .euiDescriptionList__description {
- width: calc(100% - 100px)
+.gpm-page-constraints
+  .euiDescriptionList.euiDescriptionList--column.euiDescriptionList--compressed
+  .euiDescriptionList__description,
+.gpm-page-constraints
+  .euiDescriptionList.euiDescriptionList--responsiveColumn.euiDescriptionList--compressed
+  .euiDescriptionList__description {
+  width: calc(100% - 100px);
 }
 
 .gpm-page-constraints .euiCodeBlock .token.function {
- color: #68288C !important;
+  color: #68288c !important;
 }

@@ -6,4 +6,4 @@
 
 import ErrorComponent from "./Component";
 
-export {ErrorComponent as Error};
+export { ErrorComponent as Error };

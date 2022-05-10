@@ -1,4 +1,4 @@
-import {IConstraint} from "../Constraints/types";
+import { IConstraint } from "../Constraints/types";
 
 /**
  * Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
@@ -38,16 +38,16 @@ export interface IConstraintTemplate {
       spec: {
         names: {
           kind: string;
-        },
+        };
         validation: any;
-      }
-    },
+      };
+    };
     targets: IConstraintTemplateSpecTarget[];
-  },
+  };
   status: {
     byPod: IConstraintTemplateSpecStatusPod[];
     created: boolean;
-  }
+  };
 }
 
 export interface IRelatedConstraints {

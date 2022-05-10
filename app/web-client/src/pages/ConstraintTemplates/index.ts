@@ -6,4 +6,4 @@
 
 import ConstraintTemplatesComponent from "./Component";
 
-export {ConstraintTemplatesComponent as ConstraintTemplates};
+export { ConstraintTemplatesComponent as ConstraintTemplates };

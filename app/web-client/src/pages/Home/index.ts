@@ -6,4 +6,4 @@
 
 import HomeComponent from "./Component";
 
-export {HomeComponent as Home};
+export { HomeComponent as Home };

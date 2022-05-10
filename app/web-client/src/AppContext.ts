@@ -4,7 +4,7 @@
  * license that can be found in the LICENSE file.
  */
 
-import {createContext} from "react";
+import { createContext } from "react";
 
 export interface IApplicationContextData {
   apiUrl: string;

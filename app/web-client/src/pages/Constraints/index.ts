@@ -6,4 +6,4 @@
 
 import ConstraintsComponent from "./Component";
 
-export {ConstraintsComponent as Constraints};
+export { ConstraintsComponent as Constraints };

@@ -6,6 +6,4 @@
 
 import FooterComponent from "./Component";
 
-export {
-    FooterComponent as Footer
-}
+export { FooterComponent as Footer };

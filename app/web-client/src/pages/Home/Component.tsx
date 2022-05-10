@@ -10,48 +10,53 @@ import {
   EuiFlexItem,
   EuiPage,
   EuiSpacer,
-  EuiText
+  EuiText,
 } from "fury-design-system";
 
 function HomeComponent() {
   return (
-      <EuiPage
-        paddingSize="s"
+    <EuiPage
+      paddingSize="s"
+      direction="column"
+      restrictWidth={600}
+      style={{
+        height: "85vh",
+      }}
+      grow={true}
+      className="gpm-page"
+    >
+      <EuiFlexGroup
+        justifyContent="center"
+        alignItems="center"
         direction="column"
-        restrictWidth={600}
-        style={{
-          height: "85vh"
-        }}
-        grow={true}
-        className="gpm-page"
       >
-        <EuiFlexGroup
-          justifyContent="center"
-          alignItems="center"
-          direction="column"
-        >
-          <EuiFlexItem grow={false}>
-            <EuiText textAlign="center">
-              <h1>Welcome!</h1>
-            </EuiText>
-          </EuiFlexItem>
-          <EuiFlexItem grow={false}>
-            <EuiText textAlign="center">
-              <h2>
-                Gatekeeper Policy Manager is a simple to use web-based tool to
-                see the policies deployed in your cluster and their status
-              </h2>
-            </EuiText>
-          </EuiFlexItem>
-          <EuiFlexItem grow={false}>
-            <EuiButton href="/constraints" iconSide="right" iconType="arrowRight" aria-label="Next" >
-              See Constraints status
-            </EuiButton>
-          </EuiFlexItem>
-        </EuiFlexGroup>
-        <EuiSpacer size="xxl" />
-      </EuiPage>
-  )
+        <EuiFlexItem grow={false}>
+          <EuiText textAlign="center">
+            <h1>Welcome!</h1>
+          </EuiText>
+        </EuiFlexItem>
+        <EuiFlexItem grow={false}>
+          <EuiText textAlign="center">
+            <h2>
+              Gatekeeper Policy Manager is a simple to use web-based tool to see
+              the policies deployed in your cluster and their status
+            </h2>
+          </EuiText>
+        </EuiFlexItem>
+        <EuiFlexItem grow={false}>
+          <EuiButton
+            href="/constraints"
+            iconSide="right"
+            iconType="arrowRight"
+            aria-label="Next"
+          >
+            See Constraints status
+          </EuiButton>
+        </EuiFlexItem>
+      </EuiFlexGroup>
+      <EuiSpacer size="xxl" />
+    </EuiPage>
+  );
 }
 
 export default HomeComponent;

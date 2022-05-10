@@ -11,22 +11,28 @@ import {
   EuiHeaderSection,
   EuiHeaderSectionItem,
   EuiHideFor,
-  EuiSuperSelect, EuiText
+  EuiSuperSelect,
+  EuiText,
 } from "fury-design-system";
 import "./Style.css";
-import {MouseEventHandler, MouseEvent, useContext, useEffect, useState} from "react";
-import {ApplicationContext} from "../../AppContext";
-import {EuiSuperSelectOption} from "fury-design-system/src/components/form/super_select/super_select_control";
-import {useLocation} from "react-router-dom";
+import {
+  MouseEventHandler,
+  MouseEvent,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import { ApplicationContext } from "../../AppContext";
+import { EuiSuperSelectOption } from "fury-design-system/src/components/form/super_select/super_select_control";
+import { useLocation } from "react-router-dom";
 
 function HeaderComponent() {
-  const [optionsFromContexts, setOptionsFromContexts] = useState<EuiSuperSelectOption<string>[]>([]);
-  const {
-    context,
-    setContext,
-  } = useContext(ApplicationContext);
+  const [optionsFromContexts, setOptionsFromContexts] = useState<
+    EuiSuperSelectOption<string>[]
+  >([]);
+  const { context, setContext } = useContext(ApplicationContext);
   const { pathname } = useLocation();
-  const routes =[
+  const routes = [
     {
       path: "/",
       name: "Home",
@@ -42,41 +48,45 @@ function HeaderComponent() {
     {
       path: "/configurations",
       name: "Configurations",
-    }
-  ]
+    },
+  ];
 
   useEffect(() => {
-    const optionsFromContexts = context.k8sContexts.map(k8sContext => {
+    const optionsFromContexts = context.k8sContexts.map((k8sContext) => {
       return {
         value: k8sContext,
         inputDisplay: k8sContext,
-        dropdownDisplay: <EuiText
-          size="s"
-          style={
-            {
-            maxWidth: "200px",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap"
-            }
-          }
-        >{k8sContext}</EuiText>,
+        dropdownDisplay: (
+          <EuiText
+            size="s"
+            style={{
+              maxWidth: "200px",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {k8sContext}
+          </EuiText>
+        ),
       };
     });
     setOptionsFromContexts(optionsFromContexts);
   }, [context.k8sContexts]);
 
-  const doLogout: MouseEventHandler<HTMLButtonElement>
-    = (event: MouseEvent<HTMLButtonElement>): void => {
+  const doLogout: MouseEventHandler<HTMLButtonElement> = (
+    event: MouseEvent<HTMLButtonElement>
+  ): void => {
     event.preventDefault();
 
-    fetch(`${context.apiUrl}/api/v1/auth/logout`, {method: "POST"})
-      .finally(() => {
+    fetch(`${context.apiUrl}/api/v1/auth/logout`, { method: "POST" }).finally(
+      () => {
         setTimeout(() => {
           window.location.reload();
-        }, 2000)
-      })
-  }
+        }, 2000);
+      }
+    );
+  };
 
   const onChangeContext = (value: string) => {
     if (setContext) {
@@ -91,11 +101,11 @@ function HeaderComponent() {
       <EuiHideFor sizes={["xs", "s"]}>
         <EuiHeader className="gpm-header--desktop">
           <EuiHeaderSection side="left">
-            {
-              routes && routes.map((route) => {
+            {routes &&
+              routes.map((route) => {
                 return (
                   <EuiHeaderSectionItem
-                    className={ pathname === route.path ? "header-active" : ""}
+                    className={pathname === route.path ? "header-active" : ""}
                     key={route.path}
                   >
                     <EuiButtonEmpty href={route.path}>
@@ -103,42 +113,41 @@ function HeaderComponent() {
                     </EuiButtonEmpty>
                   </EuiHeaderSectionItem>
                 );
-              })
-            }
+              })}
           </EuiHeaderSection>
           <EuiHeaderSection side="right">
-          { optionsFromContexts.length > 0 &&
-            <EuiHeaderSectionItem>
-              <EuiText style={{marginRight: "5px"}} size="s">
-                <p>
-                  <strong>Context:</strong>
-                </p>
-              </EuiText>
-              <EuiSuperSelect
-                  style={{"width": "200px"}}
+            {optionsFromContexts.length > 0 && (
+              <EuiHeaderSectionItem>
+                <EuiText style={{ marginRight: "5px" }} size="s">
+                  <p>
+                    <strong>Context:</strong>
+                  </p>
+                </EuiText>
+                <EuiSuperSelect
+                  style={{ width: "200px" }}
                   options={optionsFromContexts}
                   valueOfSelected={context.currentK8sContext}
                   onChange={(value) => onChangeContext(value)}
-              />
-            </EuiHeaderSectionItem>
-          }
-          { context.authEnabled &&
-            <EuiHeaderSectionItem>
-              <EuiButton
-                fill
-                iconType="push"
-                onClick={doLogout}
-                style={{marginLeft: "15px"}}
-              >
-                Logout
-              </EuiButton>
-            </EuiHeaderSectionItem>
-          }
+                />
+              </EuiHeaderSectionItem>
+            )}
+            {context.authEnabled && (
+              <EuiHeaderSectionItem>
+                <EuiButton
+                  fill
+                  iconType="push"
+                  onClick={doLogout}
+                  style={{ marginLeft: "15px" }}
+                >
+                  Logout
+                </EuiButton>
+              </EuiHeaderSectionItem>
+            )}
           </EuiHeaderSection>
         </EuiHeader>
       </EuiHideFor>
     </div>
-  )
+  );
 }
 
 export default HeaderComponent;

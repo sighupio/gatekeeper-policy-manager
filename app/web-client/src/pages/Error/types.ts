@@ -4,7 +4,7 @@
  * license that can be found in the LICENSE file.
  */
 
-import {BackendError} from "../types";
+import { BackendError } from "../types";
 
 export interface ErrorPageState {
   error: BackendError;

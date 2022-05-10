@@ -47,7 +47,7 @@ export interface IConfig {
     name: string;
     namespace: string;
     creationTimestamp: string;
-  }
+  };
   spec?: IConfigSpec;
   status?: any;
 }

@@ -48,7 +48,7 @@ export interface IConstraintSpec {
     name?: string;
   };
   parameters: {
-    [key: string]: any
+    [key: string]: any;
   };
 }
 
@@ -58,12 +58,12 @@ export interface IConstraint {
   metadata: {
     name: string;
     creationTimestamp: string;
-  }
+  };
   spec?: IConstraintSpec;
   status: {
     byPod: IConstraintStatusPod[];
     auditTimestamp: string;
     totalViolations?: number;
     violations: IConstraintStatusViolation[];
-  }
+  };
 }

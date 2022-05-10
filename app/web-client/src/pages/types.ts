@@ -4,8 +4,8 @@
  * license that can be found in the LICENSE file.
  */
 
-import {RenderItem} from "fury-design-system/src/components/side_nav/side_nav_item";
-import {ReactElement} from "react";
+import { RenderItem } from "fury-design-system/src/components/side_nav/side_nav_item";
+import { ReactElement } from "react";
 
 export interface ISideNavItem {
   name: string;

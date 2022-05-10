@@ -6,4 +6,4 @@
 
 import ConfigurationsComponent from "./Component";
 
-export {ConfigurationsComponent as Configurations};
+export { ConfigurationsComponent as Configurations };

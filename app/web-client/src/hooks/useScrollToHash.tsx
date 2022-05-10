@@ -4,8 +4,8 @@
  * license that can be found in the LICENSE file.
  */
 
-import { useEffect } from 'react';
-import {scrollToElement} from "../utils";
+import { useEffect } from "react";
+import { scrollToElement } from "../utils";
 
 export default function useScrollToHash(hash: string, deps: any[]) {
   useEffect(() => {
@@ -14,5 +14,5 @@ export default function useScrollToHash(hash: string, deps: any[]) {
     } else {
       window.scrollTo(0, 0);
     }
-  }, [...deps])
+  }, [...deps]);
 }

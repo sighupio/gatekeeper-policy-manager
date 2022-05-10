@@ -6,6 +6,4 @@
 
 import HeaderComponent from "./Component";
 
-export {
-    HeaderComponent as Header
-}
+export { HeaderComponent as Header };

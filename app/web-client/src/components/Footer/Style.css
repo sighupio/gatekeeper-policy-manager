@@ -4,8 +4,8 @@
  * license that can be found in the LICENSE file.
  */
 
-
-.gpm-footer > .euiFlexGroup { /* stylelint-disable-line selector-class-pattern */
+.gpm-footer > .euiFlexGroup {
+  /* stylelint-disable-line selector-class-pattern */
   margin-left: auto;
   margin-right: auto;
   z-index: 1002;

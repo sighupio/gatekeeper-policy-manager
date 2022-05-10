@@ -6,9 +6,13 @@
 
 import {
   EuiFlexGroup,
-  EuiFlexItem, EuiIcon, EuiLink, EuiSpacer, EuiText,
+  EuiFlexItem,
+  EuiIcon,
+  EuiLink,
+  EuiSpacer,
+  EuiText,
 } from "fury-design-system";
-import githubLogo from '../../assets/github-logo.svg';
+import githubLogo from "../../assets/github-logo.svg";
 import "./Style.css";
 
 function FooterComponent() {
@@ -22,30 +26,30 @@ function FooterComponent() {
             </p>
           </EuiText>
           <EuiText size="s">
-            <p>
-              A simple to use web-based Gatekeeper policies manager
-            </p>
+            <p>A simple to use web-based Gatekeeper policies manager</p>
           </EuiText>
         </EuiFlexItem>
         <EuiFlexItem grow={false}>
           <EuiText size="s">
             <p>
-              <EuiIcon type="heart" color="red" />
-              {' '} Proud part of the {' '}
+              <EuiIcon type="heart" color="red" /> Proud part of the{" "}
               <EuiLink href="https://kubernetesfury.com/" target="_blank">
                 Kubernetes Fury Distribution
               </EuiLink>
             </p>
           </EuiText>
           <EuiFlexGroup justifyContent="flexStart">
-            <EuiFlexItem grow={false} style={{"marginRight": 0}}>
-              <EuiIcon type={githubLogo} size="m"/>
+            <EuiFlexItem grow={false} style={{ marginRight: 0 }}>
+              <EuiIcon type={githubLogo} size="m" />
             </EuiFlexItem>
-            <EuiFlexItem grow={false} style={{"marginLeft": 0}}>
+            <EuiFlexItem grow={false} style={{ marginLeft: 0 }}>
               <EuiText size="s">
                 <p>
                   &nbsp;
-                  <EuiLink href="https://github.com/sighupio/gatekeeper-policy-manager" target="_blank">
+                  <EuiLink
+                    href="https://github.com/sighupio/gatekeeper-policy-manager"
+                    target="_blank"
+                  >
                     Source Code
                   </EuiLink>
                 </p>
@@ -56,7 +60,7 @@ function FooterComponent() {
       </EuiFlexGroup>
       <EuiSpacer size="l" />
     </footer>
-  )
+  );
 }
 
 export default FooterComponent;
