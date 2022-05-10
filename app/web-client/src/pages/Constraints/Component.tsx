@@ -10,15 +10,12 @@ import {
   EuiBasicTable,
   EuiButton,
   EuiCallOut,
-  EuiCodeBlock,
-  EuiDescriptionList, EuiEmptyPrompt,
+  EuiEmptyPrompt,
   EuiFlexGroup,
   EuiFlexItem,
   EuiHorizontalRule,
   EuiIcon,
   EuiLink,
-  EuiListGroup,
-  EuiListGroupItem,
   EuiLoadingSpinner,
   EuiNotificationBadge,
   EuiPage,
@@ -29,99 +26,26 @@ import {
   EuiPanel,
   EuiSideNav,
   EuiSpacer,
-  EuiTable,
   EuiText,
   EuiTitle,
   htmlIdGenerator,
 } from "fury-design-system";
-import {useContext, useEffect, useRef, useState} from "react";
+import {useCallback, useContext, useEffect, useRef, useState} from "react";
 import {ApplicationContext} from "../../AppContext";
 import {BackendError, ISideNav, ISideNavItem} from "../types";
+import { JSONTree } from 'react-json-tree';
 import "./Style.css";
 import {useLocation, useNavigate} from "react-router-dom";
-
-interface IConstraintStatusPod {
-  id: string;
-  observedGeneration: number;
-  operations: string[];
-  enforced: boolean;
-  constraintUID: string;
-}
-
-interface IConstraintStatusViolation {
-  enforcementAction: string;
-  kind: string;
-  message: string;
-  name: string;
-  namespace: string;
-}
-
-interface IConstraintSpecMatchKinds {
-  apiGroups: string[];
-  kinds: string[];
-}
-
-interface IConstraintSpecMatchLabelSelector {
-  matchExpressions?: {
-    key: string;
-    operator: string;
-    values: string[];
-  }[];
-  matchLabels?: {
-    [key: string]: string;
-  };
-}
-
-
-interface IConstraintSpec {
-  enforcementAction: string;
-  match?: {
-    kinds?: IConstraintSpecMatchKinds[];
-    scope?: string;
-    namespaces?: string[];
-    excludedNamespaces?: string[];
-    labelSelector?: IConstraintSpecMatchLabelSelector;
-    namespaceSelector?: IConstraintSpecMatchLabelSelector;
-    name?: string;
-  };
-  parameters: {
-    [key: string]: any
-  };
-}
-
-export interface IConstraint {
-  apiVersion: string;
-  kind: string;
-  metadata: {
-    name: string;
-    creationTimestamp: string;
-  }
-  spec?: IConstraintSpec;
-  status: {
-    byPod: IConstraintStatusPod[];
-    auditTimestamp: string;
-    totalViolations?: number;
-    violations: IConstraintStatusViolation[];
-  }
-}
-
-function scrollToElement(hash: string, smooth: boolean = false) {
-  let element = document.querySelector(hash);
-
-  if (!element) {
-    return;
-  }
-
-  if (smooth) {
-    element.scrollIntoView({behavior: 'smooth'});
-  } else {
-    element.scrollIntoView();
-  }
-}
+import theme from "../theme";
+import {scrollToElement} from "../../utils";
+import {IConstraint} from "./types";
+import useScrollToHash from "../../hooks/useScrollToHash";
+import useCurrentElementInView from "../../hooks/useCurrentElementInView";
 
 function generateSideNav(list: IConstraint[]): ISideNav[] {
   const sideBarItems = (list ?? []).map((item, index) => {
     return {
+      key: `${item.metadata.name}-side`,
       name: item.metadata.name,
       id: htmlIdGenerator('constraints')(),
       onClick: () => {
@@ -228,7 +152,7 @@ function SingleConstraint(item: IConstraint) {
                         </EuiFlexItem>
                       </EuiFlexGroup>
                     }
-                    paddingSize="l">
+                    paddingSize="none">
                       <EuiFlexGroup direction="column" gutterSize="s">
                         <EuiFlexItem>
                           <EuiBasicTable
@@ -317,235 +241,15 @@ function SingleConstraint(item: IConstraint) {
                     </p>
                   </EuiText>
                 </EuiFlexItem>
-                {
-                  item?.spec?.match?.kinds &&
-                  <EuiFlexItem>
-                    <EuiSpacer />
-                    <EuiTitle size="xxs">
-                      <p>
-                        Kinds
-                      </p>
-                    </EuiTitle>
-                    <EuiSpacer />
-                    <EuiFlexGroup wrap={true}>
-                    {item?.spec?.match?.kinds.map(kind => {
-                      return (
-                        <EuiFlexItem grow={false}>
-                          <EuiDescriptionList
-                            compressed={true}
-                            type="responsiveColumn"
-                            listItems={Object.entries(kind).map(k => {
-                              return {
-                                title: k[0],
-                                description: k[1].length > 0 ? k[1][0] === '' ? "empty (core)" : k[1].join(", ") : "empty (core)",
-                              };
-                            })}
-                            style={{ maxWidth: '200px' }}
-                          />
-                        </EuiFlexItem>
-                      )
-                    })}
-                    </EuiFlexGroup>
-                  </EuiFlexItem>
-                }
-                {
-                  item?.spec?.match?.scope &&
-                  <EuiFlexItem>
-                    <EuiSpacer />
-                    <EuiTitle size="xxs">
-                      <p>
-                        Scope
-                      </p>
-                    </EuiTitle>
-                    <EuiSpacer />
-                    <EuiText size="s">
-                      <p>
-                        {item?.spec?.match?.scope}
-                      </p>
-                    </EuiText>
-                  </EuiFlexItem>
-                }
-                {
-                  item?.spec?.match?.name &&
-                  <EuiFlexItem>
-                    <EuiSpacer />
-                    <EuiTitle size="xxs">
-                      <p>
-                        Name
-                      </p>
-                    </EuiTitle>
-                    <EuiSpacer />
-                    <EuiText size="s">
-                      <p>
-                        {item?.spec?.match?.name}
-                      </p>
-                    </EuiText>
-                  </EuiFlexItem>
-                }
-                {
-                  item?.spec?.match?.namespaces &&
-                  <EuiFlexItem>
-                    <EuiSpacer />
-                    <EuiTitle size="xxs">
-                      <p>
-                        Namespaces
-                      </p>
-                    </EuiTitle>
-                    <EuiSpacer />
-                    <EuiText size="s">
-                      <p>
-                        {item?.spec?.match?.namespaces.join(", ")}
-                      </p>
-                    </EuiText>
-                  </EuiFlexItem>
-                }
-                {
-                  item?.spec?.match?.excludedNamespaces &&
-                  <EuiFlexItem>
-                    <EuiSpacer />
-                    <EuiTitle size="xxs">
-                      <p>
-                        Excluded Namespaces
-                      </p>
-                    </EuiTitle>
-                    <EuiSpacer />
-                    <EuiText size="s">
-                      <p>
-                        {item?.spec?.match?.excludedNamespaces.join(", ")}
-                      </p>
-                    </EuiText>
-                  </EuiFlexItem>
-                }
-                {
-                  item?.spec?.match?.labelSelector &&
-                  <EuiFlexItem>
-                    <EuiSpacer />
-                    <EuiTitle size="xxs">
-                      <p>
-                        Label Selector
-                      </p>
-                    </EuiTitle>
-                    <EuiSpacer />
-                    {
-                      item?.spec?.match?.labelSelector?.matchExpressions &&
-                      <>
-                        <EuiTitle size="xxs">
-                          <p>
-                            Match Expressions
-                          </p>
-                        </EuiTitle>
-                        <EuiSpacer />
-                        <EuiFlexGroup wrap={true}>
-                          {item?.spec?.match?.labelSelector.matchExpressions.map(expr => {
-                            return (
-                              <EuiFlexItem grow={false}>
-                                <EuiDescriptionList
-                                  compressed={true}
-                                  type="responsiveColumn"
-                                  listItems={Object.entries(expr).map(k => {
-                                    return {
-                                      title: k[0],
-                                      description: Array.isArray(k[1]) ? k[1].join(", ") : k[1],
-                                    };
-                                  })}
-                                  style={{ maxWidth: '200px' }}
-                                />
-                              </EuiFlexItem>
-                            )
-                          })}
-                        </EuiFlexGroup>
-                      </>
-                    }
-                    {
-                      item?.spec?.match?.labelSelector?.matchLabels &&
-                      <>
-                        <EuiSpacer />
-                        <EuiTitle size="xxs">
-                          <p>
-                            Match Labels
-                          </p>
-                        </EuiTitle>
-                        <EuiSpacer />
-                        <EuiDescriptionList
-                          compressed={true}
-                          type="responsiveColumn"
-                          listItems={Object.entries(item?.spec?.match?.labelSelector?.matchLabels).map(k => {
-                            return {
-                              title: k[0],
-                              description: k[1],
-                            };
-                          })}
-                          style={{ maxWidth: '200px' }}
-                        />
-                      </>
-                    }
-                  </EuiFlexItem>
-                }
-                {
-                  item?.spec?.match?.namespaceSelector &&
-                    <EuiFlexItem>
-                      <EuiSpacer />
-                      <EuiTitle size="xxs">
-                        <p>
-                          Namespace Selector
-                        </p>
-                      </EuiTitle>
-                      <EuiSpacer />
-                      {
-                        item?.spec?.match?.namespaceSelector?.matchExpressions &&
-                          <>
-                            <EuiTitle size="xxs">
-                              <p>
-                                Match Expressions
-                              </p>
-                            </EuiTitle>
-                            <EuiSpacer />
-                            <EuiFlexGroup wrap={true}>
-                              {item?.spec?.match?.namespaceSelector.matchExpressions.map(expr => {
-                                return (
-                                  <EuiFlexItem grow={false}>
-                                    <EuiDescriptionList
-                                      compressed={true}
-                                      type="responsiveColumn"
-                                      listItems={Object.entries(expr).map(k => {
-                                        return {
-                                          title: k[0],
-                                          description: Array.isArray(k[1]) ? k[1].join(", ") : k[1],
-                                        };
-                                      })}
-                                      style={{ maxWidth: '200px' }}
-                                    />
-                                  </EuiFlexItem>
-                                )
-                              })}
-                            </EuiFlexGroup>
-                          </>
-                      }
-                      {
-                        item?.spec?.match?.namespaceSelector?.matchLabels &&
-                          <>
-                            <EuiSpacer />
-                            <EuiTitle size="xxs">
-                              <p>
-                                Match Labels
-                              </p>
-                            </EuiTitle>
-                            <EuiSpacer />
-                            <EuiDescriptionList
-                              compressed={true}
-                              type="responsiveColumn"
-                              listItems={Object.entries(item?.spec?.match?.namespaceSelector?.matchLabels).map(k => {
-                                return {
-                                  title: k[0],
-                                  description: k[1],
-                                };
-                              })}
-                              style={{ maxWidth: '200px' }}
-                            />
-                          </>
-                      }
-                    </EuiFlexItem>
-                }
+                <EuiFlexItem>
+                  <JSONTree
+                    data={item?.spec?.match}
+                    shouldExpandNode={() => true}
+                    hideRoot={true}
+                    theme={theme}
+                    invertTheme={false}
+                  />
+                </EuiFlexItem>
               </EuiFlexGroup>
               <EuiSpacer size="s"/>
               <EuiHorizontalRule margin="none"/>
@@ -563,16 +267,12 @@ function SingleConstraint(item: IConstraint) {
                   </EuiText>
                 </EuiFlexItem>
                 <EuiFlexItem>
-                  <EuiSpacer />
-                  <EuiDescriptionList
-                    compressed={true}
-                    type="responsiveColumn"
-                    listItems={Object.entries(item?.spec?.parameters).map(k => {
-                      return {
-                        title: k[0],
-                        description: JSON.stringify(k[1], null, 2),
-                      };
-                    })}
+                  <JSONTree
+                    data={item?.spec?.parameters}
+                    shouldExpandNode={() => true}
+                    hideRoot={true}
+                    theme={theme}
+                    invertTheme={false}
                   />
                 </EuiFlexItem>
               </EuiFlexGroup>
@@ -595,7 +295,7 @@ function SingleConstraint(item: IConstraint) {
           <EuiFlexGroup direction="row" gutterSize="xs" wrap={true}>
             {item.status.byPod.map(pod => {
               return (
-                <EuiFlexItem grow={false}>
+                <EuiFlexItem grow={false} key={`${item.metadata.name}-${pod.id}`}>
                   <EuiBadge
                     iconType={pod.enforced ? "lock" : "lockOpen"}
                     title={`Constraint is ${!pod.enforced ? "NOT ": ""}being ENFORCED by this POD`}
@@ -645,28 +345,23 @@ function ConstraintsComponent() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [items, setItems] = useState<IConstraint[]>([]);
   const [currentElementInView, setCurrentElementInView] = useState<string>("");
+  const [fullyLoadedRefs, setFullyLoadedRefs] = useState<boolean>(false);
   const panelsRef = useRef<HTMLDivElement[]>([]);
   const appContextData = useContext(ApplicationContext);
-  const offset = 50;
   const { hash } = useLocation();
   const navigate = useNavigate();
 
-  const onScroll = () => {
-    const elementVisible = panelsRef.current.filter(element => {
-      const top = element.getBoundingClientRect().top;
-
-      return top + offset >= 0 && top - offset <= window.innerHeight
-    });
-
-    if (elementVisible.length > 0) {
-      setCurrentElementInView(elementVisible[0].id);
+  const onRefChange = useCallback((element: HTMLDivElement | null, index: number) => {
+    if (!element) {
+      return;
     }
-  }
 
-  useEffect(() => {
-    document.addEventListener('scroll', onScroll, true)
-    return () => document.removeEventListener('scroll', onScroll, true)
-  }, [])
+    panelsRef.current[index] = element;
+
+    if (index === items.length - 1) {
+      setFullyLoadedRefs(true);
+    }
+  },[panelsRef, items]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -697,13 +392,9 @@ function ConstraintsComponent() {
       .finally(() => setIsLoading(false));
   }, [appContextData.context.currentK8sContext])
 
-  useEffect(() => {
-    if (hash) {
-      scrollToElement(hash);
-    } else {
-      window.scrollTo(0, 0);
-    }
-  }, [items])
+  useScrollToHash(hash, [fullyLoadedRefs]);
+
+  useCurrentElementInView(panelsRef, setCurrentElementInView);
 
   useEffect(() => {
     if (currentElementInView) {
@@ -751,10 +442,10 @@ function ConstraintsComponent() {
               restrictWidth={1100}
               grow={true}
               style={{position: "relative"}}
-              className="gpm-page"
+              className="gpm-page gpm-page-constraints"
             >
               <EuiPageSideBar
-                paddingSize="l"
+                paddingSize="m"
                 style={{
                   minWidth: "270px",
                 }}
@@ -795,11 +486,7 @@ function ConstraintsComponent() {
                           <div
                             id={item.metadata.name}
                             key={item.metadata.name}
-                            ref={ref => {
-                              if (ref) {
-                                panelsRef.current[index] = ref;
-                              }
-                            }}
+                            ref={(node) => onRefChange(node, index)}
                           >
                             {SingleConstraint(item)}
                           </div>

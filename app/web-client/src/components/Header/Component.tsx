@@ -17,6 +17,7 @@ import "./Style.css";
 import {MouseEventHandler, MouseEvent, useContext, useEffect, useState} from "react";
 import {ApplicationContext} from "../../AppContext";
 import {EuiSuperSelectOption} from "fury-design-system/src/components/form/super_select/super_select_control";
+import {useLocation} from "react-router-dom";
 
 function HeaderComponent() {
   const [optionsFromContexts, setOptionsFromContexts] = useState<EuiSuperSelectOption<string>[]>([]);
@@ -24,6 +25,25 @@ function HeaderComponent() {
     context,
     setContext,
   } = useContext(ApplicationContext);
+  const { pathname } = useLocation();
+  const routes =[
+    {
+      path: "/",
+      name: "Home",
+    },
+    {
+      path: "/constrainttemplates",
+      name: "Constraint Templates",
+    },
+    {
+      path: "/constraints",
+      name: "Constraints",
+    },
+    {
+      path: "/configurations",
+      name: "Configurations",
+    }
+  ]
 
   useEffect(() => {
     const optionsFromContexts = context.k8sContexts.map(k8sContext => {
@@ -71,26 +91,20 @@ function HeaderComponent() {
       <EuiHideFor sizes={["xs", "s"]}>
         <EuiHeader className="gpm-header--desktop">
           <EuiHeaderSection side="left">
-            <EuiHeaderSectionItem>
-              <EuiButtonEmpty href="/">
-                Home
-              </EuiButtonEmpty>
-            </EuiHeaderSectionItem>
-            <EuiHeaderSectionItem>
-              <EuiButtonEmpty href="/constrainttemplates">
-                Constraint Templates
-              </EuiButtonEmpty>
-            </EuiHeaderSectionItem>
-            <EuiHeaderSectionItem>
-              <EuiButtonEmpty href="/constraints">
-                Constraints
-              </EuiButtonEmpty>
-            </EuiHeaderSectionItem>
-            <EuiHeaderSectionItem>
-              <EuiButtonEmpty href="/configurations">
-                Configurations
-              </EuiButtonEmpty>
-            </EuiHeaderSectionItem>
+            {
+              routes && routes.map((route) => {
+                return (
+                  <EuiHeaderSectionItem
+                    className={ pathname === route.path ? "header-active" : ""}
+                    key={route.path}
+                  >
+                    <EuiButtonEmpty href={route.path}>
+                      {route.name}
+                    </EuiButtonEmpty>
+                  </EuiHeaderSectionItem>
+                );
+              })
+            }
           </EuiHeaderSection>
           <EuiHeaderSection side="right">
           { optionsFromContexts.length > 0 &&
@@ -116,7 +130,7 @@ function HeaderComponent() {
                 onClick={doLogout}
                 style={{marginLeft: "15px"}}
               >
-                  Logout
+                Logout
               </EuiButton>
             </EuiHeaderSectionItem>
           }

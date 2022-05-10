@@ -9,6 +9,10 @@
     margin-right: auto;
 }
 
+.gpm-header .header-active {
+    border-bottom: 1px solid #68288C;
+}
+
 .gpm-header .euiHeader.gpm-header--desktop {
     z-index: 1002;
     padding: 0 13%;

@@ -11,3 +11,15 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.gpm-page .euiPanel.euiPanel--hasShadow {
+  transition: 0.75s ease-out all;
+}
+
+.gpm-page .euiPanel.euiPanel--hasShadow.highlighted {
+  background-color: rgba(104, 40, 140, 0.07);
+  box-shadow: 0 0.9px 4px -1px rgb(104 40 140 / 18%),
+  0 2.6px 8px -1px rgb(104 40 140 / 16%),
+  0 5.7px 12px -1px rgb(104 40 140 / 15%),
+  0 15px 15px -1px rgb(104 40 140 / 14%);
+}

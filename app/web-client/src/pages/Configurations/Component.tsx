@@ -6,85 +6,29 @@
 
 import {
   EuiAccordion,
-  EuiBadge,
-  EuiButton, EuiCodeBlock, EuiDescriptionList, EuiEmptyPrompt,
+  EuiCodeBlock, EuiEmptyPrompt,
   EuiFlexGroup,
-  EuiFlexItem, EuiHorizontalRule, EuiIcon, EuiLink, EuiLoadingSpinner,
+  EuiFlexItem, EuiHorizontalRule, EuiIcon, EuiLoadingSpinner,
   EuiPage, EuiPageBody, EuiPageContent, EuiPageContentBody, EuiPageSideBar, EuiPanel, EuiSideNav,
   EuiSpacer,
   EuiText, EuiTitle, htmlIdGenerator
 } from "fury-design-system";
-import {useContext, useEffect, useRef, useState} from "react";
+import {useCallback, useContext, useEffect, useRef, useState} from "react";
 import {BackendError, ISideNav, ISideNavItem} from "../types";
 import {ApplicationContext} from "../../AppContext";
 import "./Style.css";
 import {useLocation, useNavigate} from "react-router-dom";
-
-interface IGVK {
-  group: string;
-  version: string;
-  kind: string;
-}
-
-interface ITrace {
-  user: string;
-  kind: IGVK;
-  dump: string;
-}
-
-interface IConfigSpecSync {
-  syncOnly: IGVK[];
-}
-
-interface IConfigSpecValidation {
-  traces: ITrace[];
-}
-
-interface IConfigSpecMatch {
-  processes: string[];
-  excludedNamespaces: string[];
-}
-
-interface IConfigSpecReadiness {
-  statsEnabled: boolean;
-}
-
-interface IConfigSpec {
-  sync?: IConfigSpecSync;
-  validation?: IConfigSpecValidation;
-  match?: IConfigSpecMatch[];
-  readiness?: IConfigSpecReadiness;
-}
-
-interface IConfig {
-  apiVersion: string;
-  kind: string;
-  metadata: {
-    name: string;
-    namespace: string;
-    creationTimestamp: string;
-  }
-  spec?: IConfigSpec;
-  status?: any;
-}
-
-function scrollToElement(hash: string, smooth: boolean = false) {
-  let element = document.querySelector(hash);
-
-  if (!element) {
-    return;
-  }
-
-  if (smooth) {
-    element.scrollIntoView({behavior: 'smooth'});
-  } else {
-    element.scrollIntoView();
-  }
-}
+import {JSONTree} from "react-json-tree";
+import theme from "../theme";
+import {scrollToElement} from "../../utils";
+import {IConfig} from "./types";
+import useScrollToHash from "../../hooks/useScrollToHash";
+import useCurrentElementInView from "../../hooks/useCurrentElementInView";
 
 function generateSideNav(list: IConfig[]): ISideNav[] {
   const sideBarItems = (list ?? []).map((item, index) => {
     return {
+      key: `${item.metadata.name}-side`,
       name: item.metadata.name,
       id: htmlIdGenerator('constraints')(),
       onClick: () => {
@@ -130,7 +74,7 @@ function SingleConfig(item: IConfig) {
           <EuiAccordion
             id="accordion-1"
             buttonContent="YAML definition"
-            paddingSize="l">
+            paddingSize="none">
             <EuiCodeBlock language="json">
               {JSON.stringify(item, (k, v) => {
                 if (typeof v === 'string') {
@@ -167,7 +111,7 @@ function SingleConfig(item: IConfig) {
           </>
           :
           <>
-            <EuiFlexGroup alignItems="center">
+            <EuiFlexGroup direction="column" gutterSize="s">
               <EuiFlexItem grow={false}>
                 <EuiText size="s">
                   <p style={{fontWeight: "bold"}}>
@@ -175,130 +119,17 @@ function SingleConfig(item: IConfig) {
                   </p>
                 </EuiText>
               </EuiFlexItem>
+              <EuiFlexItem grow={false}>
+                <JSONTree
+                  data={item?.spec}
+                  shouldExpandNode={() => true}
+                  hideRoot={true}
+                  theme={theme}
+                  invertTheme={false}
+                />
+              </EuiFlexItem>
             </EuiFlexGroup>
           </>
-          }
-          {item.spec?.match &&
-          <>
-            <EuiSpacer />
-            <EuiTitle size="xxs">
-              <p>
-                Match criteria
-              </p>
-            </EuiTitle>
-            <EuiSpacer />
-            <EuiFlexGroup wrap={true}>
-              {item.spec.match.map(trace => {
-                return (
-                  <EuiFlexItem grow={false}>
-                    <EuiDescriptionList
-                      compressed={true}
-                      type="responsiveColumn"
-                      listItems={Object.entries(trace).map(k => {
-                        return {
-                          title: k[0],
-                          description: Array.isArray(k[1]) ? k[1].join(", ") : k[1],
-                        };
-                      })}
-                    />
-                  </EuiFlexItem>
-                )
-              })}
-            </EuiFlexGroup>
-          </>
-          }
-          {item.spec?.readiness &&
-          <EuiFlexItem>
-            <EuiSpacer />
-            <EuiTitle size="xxs">
-              <p>
-                Readiness
-              </p>
-            </EuiTitle>
-            <EuiSpacer />
-            <EuiDescriptionList
-                compressed={true}
-                type="responsiveColumn"
-                listItems={[
-                  {
-                    title: "Stats Enabled",
-                    description: item.spec?.readiness?.statsEnabled.toString(),
-                  },
-                ]}
-                style={{ maxWidth: '200px' }}
-            />
-          </EuiFlexItem>
-          }
-          {item.spec?.sync &&
-          <EuiFlexItem>
-            <EuiSpacer />
-            <EuiTitle size="xxs">
-              <p>
-                Sync
-              </p>
-            </EuiTitle>
-            <EuiSpacer />
-            <EuiTitle size="xxs">
-              <p>
-                syncOnly
-              </p>
-            </EuiTitle>
-            <EuiSpacer />
-            <EuiFlexGroup wrap={true}>
-              {item.spec?.sync.syncOnly.map(sync => {
-                return (
-                  <EuiFlexItem grow={false}>
-                    <EuiDescriptionList
-                      compressed={true}
-                      type="responsiveColumn"
-                      listItems={Object.entries(sync).map(k => {
-                        return {
-                          title: k[0],
-                          description: k[1],
-                        };
-                      })}
-                      style={{ maxWidth: '200px' }}
-                    />
-                  </EuiFlexItem>
-                )
-              })}
-            </EuiFlexGroup>
-          </EuiFlexItem>
-          }
-          {item.spec?.validation &&
-          <EuiFlexItem>
-            <EuiSpacer />
-            <EuiTitle size="xxs">
-              <p>
-                Validation
-              </p>
-            </EuiTitle>
-            <EuiSpacer />
-            <EuiTitle size="xxs">
-              <p>
-                traces
-              </p>
-            </EuiTitle>
-            <EuiSpacer />
-            <EuiFlexGroup wrap={true}>
-              {item.spec?.validation.traces.map(trace => {
-                return (
-                  <EuiFlexItem grow={false}>
-                    <EuiDescriptionList
-                      compressed={true}
-                      type="responsiveColumn"
-                      listItems={Object.entries(trace).map(k => {
-                        return {
-                          title: k[0],
-                          description: typeof k[1] !== "string" ? JSON.stringify(k[1], null, 2) : k[1],
-                        };
-                      })}
-                    />
-                  </EuiFlexItem>
-                )
-              })}
-            </EuiFlexGroup>
-          </EuiFlexItem>
           }
         </EuiFlexItem>
       </EuiFlexGroup>
@@ -323,28 +154,23 @@ function ConfigurationsComponent() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [items, setItems] = useState<IConfig[]>([]);
   const [currentElementInView, setCurrentElementInView] = useState<string>("");
+  const [fullyLoadedRefs, setFullyLoadedRefs] = useState<boolean>(false);
   const panelsRef = useRef<HTMLDivElement[]>([]);
-  const offset = 50;
   const appContextData = useContext(ApplicationContext);
   const { hash } = useLocation();
   const navigate = useNavigate();
 
-  const onScroll = () => {
-    const elementVisible = panelsRef.current.filter(element => {
-      const top = element.getBoundingClientRect().top;
-
-      return top + offset >= 0 && top - offset <= window.innerHeight
-    });
-
-    if (elementVisible.length > 0) {
-      setCurrentElementInView(elementVisible[0].id);
+  const onRefChange = useCallback((element: HTMLDivElement | null, index: number) => {
+    if (!element) {
+      return;
     }
-  }
 
-  useEffect(() => {
-    document.addEventListener('scroll', onScroll, true)
-    return () => document.removeEventListener('scroll', onScroll, true)
-  }, [])
+    panelsRef.current[index] = element;
+
+    if (index === items.length - 1) {
+      setFullyLoadedRefs(true);
+    }
+  },[panelsRef, items]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -375,13 +201,9 @@ function ConfigurationsComponent() {
       .finally(() => setIsLoading(false));
   }, [appContextData.context.currentK8sContext])
 
-  useEffect(() => {
-    if (hash) {
-      scrollToElement(hash);
-    } else {
-      window.scrollTo(0, 0);
-    }
-  }, [items])
+  useScrollToHash(hash, [fullyLoadedRefs]);
+
+  useCurrentElementInView(panelsRef, setCurrentElementInView);
 
   useEffect(() => {
     if (currentElementInView) {
@@ -429,9 +251,9 @@ function ConfigurationsComponent() {
             restrictWidth={1100}
             grow={true}
             style={{position: "relative"}}
-            className="gpm-page"
+            className="gpm-page gpm-page-config"
           >
-            <EuiPageSideBar paddingSize="l" sticky>
+            <EuiPageSideBar paddingSize="m" sticky>
               <EuiSideNav
                 items={sideNav}
               />
@@ -453,11 +275,7 @@ function ConfigurationsComponent() {
                         <div
                           id={`${item.metadata.name}`}
                           key={`${item.metadata.name}`}
-                          ref={ref => {
-                            if (ref) {
-                              panelsRef.current[index] = ref;
-                            }
-                          }}
+                          ref={(node) => onRefChange(node, index)}
                         >
                           {SingleConfig(item)}
                         </div>

@@ -22,92 +22,23 @@ import {
   EuiText, EuiTitle,
   htmlIdGenerator,
 } from "fury-design-system";
-import {useContext, useEffect, useRef, useState} from "react";
+import {useCallback, useContext, useEffect, useRef, useState} from "react";
 import {ApplicationContext} from "../../AppContext";
 import {BackendError, ISideNav, ISideNavItem} from "../types";
 import {useLocation, useNavigate} from "react-router-dom";
-import {IConstraint} from "../Constraints/Component";
-
-interface IConstraintTemplateSpecTarget {
-  rego: string;
-  libs?: string;
-  target: string;
-}
-
-interface IConstraintTemplateSpecStatusPod {
-  id: string;
-  observedGeneration: number;
-  operations: string[];
-  templateUID: string;
-}
-
-interface IConstraintTemplate {
-  apiVersion: string;
-  kind: string;
-  metadata: {
-    name: string;
-    namespace: string;
-    creationTimestamp: string;
-    labels: {
-      [key: string]: string;
-    };
-    annotations: {
-      [key: string]: string;
-    };
-  };
-  spec: {
-    crd: {
-      spec: {
-        names: {
-          kind: string;
-        },
-        validation: any;
-      }
-    },
-    targets: IConstraintTemplateSpecTarget[];
-  },
-  status: {
-    byPod: IConstraintTemplateSpecStatusPod[];
-    created: boolean;
-  }
-}
-
-interface IConstraintTemplateList {
-  apiVersion: string;
-  items: IConstraintTemplate[];
-  kind: string;
-  metadata: {
-    continue: string;
-    resourceVersion: string;
-  }
-}
-
-interface IRelatedConstraints {
-  [key: string]: IConstraint[];
-}
-
-interface IConstraintTemplateResponse {
-  constrainttemplates: IConstraintTemplate[];
-  constraints_by_constrainttemplates: IRelatedConstraints;
-}
-
-function scrollToElement(hash: string, smooth: boolean = false) {
-  let element = document.querySelector(hash);
-
-  if (!element) {
-    return;
-  }
-
-  if (smooth) {
-    element.scrollIntoView({behavior: 'smooth'});
-  } else {
-    element.scrollIntoView();
-  }
-}
+import {IConstraint} from "../Constraints/types";
+import "./Style.css";
+import {JSONTree} from "react-json-tree";
+import theme from "../theme";
+import {scrollToElement} from "../../utils";
+import {IConstraintTemplate, IConstraintTemplateResponse, IRelatedConstraints} from "./types";
+import useScrollToHash from "../../hooks/useScrollToHash";
+import useCurrentElementInView from "../../hooks/useCurrentElementInView";
 
 function generateSideNav(list: IConstraintTemplate[]): ISideNav[] {
   const sideBarItems = (list ?? []).map((item, index) => {
     return {
+      key: `${item.spec.crd.spec.names.kind}-side`,
       name: item.spec.crd.spec.names.kind,
       id: htmlIdGenerator('constraint-templates')(),
       onClick: () => {
@@ -174,7 +105,7 @@ function SingleConstraintTemplate(item: IConstraintTemplate, relatedConstraints:
               <EuiAccordion
                 id="accordion-1"
                 buttonContent="Libs definition"
-                paddingSize="l">
+                paddingSize="none">
                 <EuiCodeBlock language="rego">
                   {item.spec.targets[0].libs}
                 </EuiCodeBlock>
@@ -186,7 +117,7 @@ function SingleConstraintTemplate(item: IConstraintTemplate, relatedConstraints:
           <EuiAccordion
             id="accordion-2"
             buttonContent="Rego definition"
-            paddingSize="l">
+            paddingSize="none">
             <EuiCodeBlock language="rego">
               {item.spec.targets[0].rego}
             </EuiCodeBlock>
@@ -202,19 +133,18 @@ function SingleConstraintTemplate(item: IConstraintTemplate, relatedConstraints:
             <EuiFlexItem grow={false}>
               <EuiText size="s">
                 <p style={{fontWeight: "bold"}}>
-                  {`Parameters schema`}
+                  Parameters schema
                 </p>
               </EuiText>
             </EuiFlexItem>
-            <EuiFlexItem>
-              <EuiAccordion
-                id="accordion-3"
-                buttonContent="Schema definition"
-                paddingSize="l">
-                <EuiCodeBlock language="json">
-                  {JSON.stringify(item.spec.crd.spec?.validation?.openAPIV3Schema?.properties, null, 2)}
-                </EuiCodeBlock>
-              </EuiAccordion>
+            <EuiFlexItem grow={false}>
+              <JSONTree
+                data={item.spec.crd.spec?.validation?.openAPIV3Schema?.properties}
+                shouldExpandNode={() => true}
+                hideRoot={true}
+                theme={theme}
+                invertTheme={false}
+              />
             </EuiFlexItem>
           </EuiFlexGroup>
           <EuiSpacer size="s"/>
@@ -235,7 +165,7 @@ function SingleConstraintTemplate(item: IConstraintTemplate, relatedConstraints:
             </EuiFlexItem>
             {
               relatedConstraints.map((constraint, index) => (
-                <EuiFlexItem key={index}>
+                <EuiFlexItem key={constraint.metadata.name}>
                   <EuiLink
                     href={`/constraints#${constraint.metadata.name}`}
                   >
@@ -265,7 +195,7 @@ function SingleConstraintTemplate(item: IConstraintTemplate, relatedConstraints:
           <EuiFlexGroup direction="row" wrap={true} gutterSize="xs">
             {item.status.byPod.map(pod => {
               return (
-                <EuiFlexItem grow={false}>
+                <EuiFlexItem grow={false} key={`${item.spec.crd.spec.names.kind}-${pod.id}`}>
                   <EuiBadge style={
                     {
                       paddingRight: 0,
@@ -302,28 +232,23 @@ function ConstraintTemplatesComponent() {
   const [items, setItems] = useState<IConstraintTemplate[]>([]);
   const [relatedConstraints, setRelatedConstraints] = useState<IRelatedConstraints>({});
   const [currentElementInView, setCurrentElementInView] = useState<string>("");
+  const [fullyLoadedRefs, setFullyLoadedRefs] = useState<boolean>(false);
   const panelsRef = useRef<HTMLDivElement[]>([]);
   const appContextData = useContext(ApplicationContext);
-  const offset = 50;
   const { hash } = useLocation();
   const navigate = useNavigate();
 
-  const onScroll = () => {
-    const elementVisible = panelsRef.current.filter(element => {
-      const top = element.getBoundingClientRect().top;
-
-      return top + offset >= 0 && top - offset <= window.innerHeight
-    });
-
-    if (elementVisible.length > 0) {
-      setCurrentElementInView(elementVisible[0].id);
+  const onRefChange = useCallback((element: HTMLDivElement | null, index: number) => {
+    if (!element) {
+      return;
     }
-  }
 
-  useEffect(() => {
-    document.addEventListener('scroll', onScroll, true)
-    return () => document.removeEventListener('scroll', onScroll, true)
-  }, [])
+    panelsRef.current[index] = element;
+
+    if (index === items.length - 1) {
+      setFullyLoadedRefs(true);
+    }
+  },[panelsRef, items]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -360,13 +285,9 @@ function ConstraintTemplatesComponent() {
       .finally(() => setIsLoading(false));
   }, [appContextData.context.currentK8sContext])
 
-  useEffect(() => {
-    if (hash) {
-      scrollToElement(hash);
-    } else {
-      window.scrollTo(0, 0);
-    }
-  }, [items])
+  useScrollToHash(hash, [fullyLoadedRefs]);
+
+  useCurrentElementInView(panelsRef, setCurrentElementInView);
 
   useEffect(() => {
     if (currentElementInView) {
@@ -414,9 +335,9 @@ function ConstraintTemplatesComponent() {
               restrictWidth={1100}
               grow={true}
               style={{position: "relative"}}
-              className="gpm-page"
+              className="gpm-page gpm-page-constraint-templates"
             >
-              <EuiPageSideBar paddingSize="l" sticky>
+              <EuiPageSideBar paddingSize="m" sticky>
                 <EuiSideNav
                   items={sideNav}
                 />
@@ -439,11 +360,7 @@ function ConstraintTemplatesComponent() {
                           <div
                             id={item.spec.crd.spec.names.kind}
                             key={item.spec.crd.spec.names.kind}
-                            ref={ref => {
-                              if (ref) {
-                                panelsRef.current[index] = ref;
-                              }
-                            }}
+                            ref={(node) => onRefChange(node, index)}
                           >
                             {SingleConstraintTemplate(item, relatedConstraintsForItem)}
                           </div>

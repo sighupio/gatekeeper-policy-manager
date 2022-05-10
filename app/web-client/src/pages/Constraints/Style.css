@@ -4,19 +4,23 @@
  * license that can be found in the LICENSE file.
  */
 
-.euiAccordion__button:focus {
+.gpm-page-constraints .euiAccordion__button:focus {
  text-decoration: none !important;
 }
 
-.euiAccordion__button:hover {
+.gpm-page-constraints .euiAccordion__button:hover {
  text-decoration: none !important;
 }
 
-.euiDescriptionList__title {
+.gpm-page-constraints .euiDescriptionList__title {
  max-width: 100px;
 }
 
-.euiDescriptionList.euiDescriptionList--column.euiDescriptionList--compressed .euiDescriptionList__description,
-.euiDescriptionList.euiDescriptionList--responsiveColumn.euiDescriptionList--compressed .euiDescriptionList__description {
+.gpm-page-constraints .euiDescriptionList.euiDescriptionList--column.euiDescriptionList--compressed .euiDescriptionList__description,
+.gpm-page-constraints .euiDescriptionList.euiDescriptionList--responsiveColumn.euiDescriptionList--compressed .euiDescriptionList__description {
  width: calc(100% - 100px)
+}
+
+.gpm-page-constraints .euiCodeBlock .token.function {
+ color: #68288C !important;
 }
