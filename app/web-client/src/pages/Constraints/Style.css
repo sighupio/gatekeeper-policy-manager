@@ -20,12 +20,9 @@
 }
 
 /* stylelint-disable-next-line selector-class-pattern */
-.gpm-page-constraints
-.euiDescriptionList.euiDescriptionList--column.euiDescriptionList--compressed
-.euiDescriptionList__description,
-.gpm-page-constraints
-.euiDescriptionList.euiDescriptionList--responsiveColumn.euiDescriptionList--compressed
-.euiDescriptionList__description {
+.gpm-page-constraints .euiDescriptionList.euiDescriptionList--column.euiDescriptionList--compressed .euiDescriptionList__description,
+/* stylelint-disable-next-line selector-class-pattern */
+.gpm-page-constraints .euiDescriptionList.euiDescriptionList--responsiveColumn.euiDescriptionList--compressed .euiDescriptionList__description {
   width: calc(100% - 100px);
 }
 

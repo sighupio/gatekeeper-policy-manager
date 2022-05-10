@@ -4,6 +4,7 @@
  * license that can be found in the LICENSE file.
  */
 
+/* stylelint-disable-next-line selector-class-pattern */
 .gpm-page-constraint-templates .euiCodeBlock .token.function {
   color: #68288c !important;
 }
