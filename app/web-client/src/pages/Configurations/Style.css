@@ -4,6 +4,7 @@
  * license that can be found in the LICENSE file.
  */
 
+/* stylelint-disable-next-line selector-class-pattern */
 .gpm-page-config .euiDescriptionList__title {
   max-width: 100px;
   text-overflow: ellipsis;
@@ -11,15 +12,17 @@
   overflow: hidden;
 }
 
+/* stylelint-disable-next-line selector-class-pattern */
 .gpm-page-config
-  .euiDescriptionList.euiDescriptionList--column.euiDescriptionList--compressed
-  .euiDescriptionList__description,
+.euiDescriptionList.euiDescriptionList--column.euiDescriptionList--compressed
+.euiDescriptionList__description,
 .gpm-page-config
-  .euiDescriptionList.euiDescriptionList--responsiveColumn.euiDescriptionList--compressed
-  .euiDescriptionList__description {
+.euiDescriptionList.euiDescriptionList--responsiveColumn.euiDescriptionList--compressed
+.euiDescriptionList__description {
   width: calc(100% - 100px);
 }
 
+/* stylelint-disable-next-line selector-class-pattern */
 .gpm-page-config .euiCodeBlock .token.function {
   color: #68288c !important;
 }

@@ -4,6 +4,7 @@
  * license that can be found in the LICENSE file.
  */
 
+/* stylelint-disable-next-line selector-class-pattern */
 .gpm-header .euiHeader {
   margin-left: auto;
   margin-right: auto;
@@ -13,11 +14,13 @@
   border-bottom: 1px solid #68288c;
 }
 
+/* stylelint-disable-next-line selector-class-pattern */
 .gpm-header .euiHeader.gpm-header--desktop {
   z-index: 1002;
   padding: 0 13%;
 }
 
+/* stylelint-disable-next-line selector-class-pattern */
 .gpm-header .euiHeader.gpm-header--mobile {
   height: 54px;
   padding-left: 16px;
@@ -25,6 +28,7 @@
 }
 
 @media screen and (min-width: 1365px) {
+  /* stylelint-disable-next-line selector-class-pattern */
   .gpm-header .euiHeader .gpm-header--desktop {
     padding: 0 25%;
   }

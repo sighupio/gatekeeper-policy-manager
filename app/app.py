@@ -9,14 +9,21 @@ from io import BytesIO
 from logging.config import dictConfig
 from urllib.parse import urljoin
 
-from flask import Flask, jsonify, render_template, request, send_file, send_from_directory, redirect
+from flask import (
+    Flask,
+    jsonify,
+    render_template,
+    request,
+    send_file,
+    send_from_directory,
+)
+from flask_cors import CORS
 from flask_pyoidc import OIDCAuthentication
 from flask_pyoidc.provider_configuration import (
     ClientMetadata,
     ProviderConfiguration,
     ProviderMetadata,
 )
-from flask_cors import CORS
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from kubernetes.config.config_exception import ConfigException
@@ -423,10 +430,10 @@ if app.config.get("AUTH_ENABLED") == "OIDC":
     def error(error=None, error_description=None):
         """View to handle OIDC errors and show them properly"""
         return {
-                   "error": "OIDC Error: " + error,
-                   "action": "Something is wrong with your OIDC session. Please try to logout and login again",
-                   "description": error_description,
-               }, 401
+            "error": "OIDC Error: " + error,
+            "action": "Something is wrong with your OIDC session. Please try to logout and login again",
+            "description": error_description,
+        }, 401
 
 
 @app.route("/", defaults={'path': ''})

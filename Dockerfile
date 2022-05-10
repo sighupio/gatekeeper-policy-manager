@@ -5,10 +5,9 @@ FROM node:lts-alpine AS node
 COPY app/static /static
 COPY app/web-client /web-client
 WORKDIR /static
-RUN yarn install
+RUN yarn install && yarn cache clean
 WORKDIR /web-client
-RUN yarn install
-RUN yarn build
+RUN yarn install && yarn cache clean && yarn build
 
 
 FROM python:3.10-slim
