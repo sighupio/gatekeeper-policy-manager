@@ -4,29 +4,24 @@
  * license that can be found in the LICENSE file.
  */
 
-/* stylelint-disable-next-line selector-class-pattern */
+/* stylelint-disable selector-class-pattern max-line-length */
 .gpm-page-constraints .euiAccordion__button:focus {
   text-decoration: none !important;
 }
 
-/* stylelint-disable-next-line selector-class-pattern */
 .gpm-page-constraints .euiAccordion__button:hover {
   text-decoration: none !important;
 }
 
-/* stylelint-disable-next-line selector-class-pattern */
 .gpm-page-constraints .euiDescriptionList__title {
   max-width: 100px;
 }
 
-/* stylelint-disable-next-line selector-class-pattern */
 .gpm-page-constraints .euiDescriptionList.euiDescriptionList--column.euiDescriptionList--compressed .euiDescriptionList__description,
-/* stylelint-disable-next-line selector-class-pattern */
 .gpm-page-constraints .euiDescriptionList.euiDescriptionList--responsiveColumn.euiDescriptionList--compressed .euiDescriptionList__description {
   width: calc(100% - 100px);
 }
 
-/* stylelint-disable-next-line selector-class-pattern */
 .gpm-page-constraints .euiCodeBlock .token.function {
   color: #68288c !important;
 }
