@@ -333,7 +333,8 @@ def get_constrainttemplates(context=None):
                     group="constraints.gatekeeper.sh",
                     version="v1beta1",
                     plural=ct["metadata"]["name"],
-                ).get("items")
+                )
+                .get("items")
             )
     except NewConnectionError as e:
         return {
