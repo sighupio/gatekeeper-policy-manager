@@ -4,7 +4,7 @@
  * license that can be found in the LICENSE file.
  */
 
-/* stylelint-disable selector-class-pattern max-line-length */
+/* stylelint-disable selector-class-pattern, max-line-length */
 .gpm-page-constraints .euiAccordion__button:focus {
   text-decoration: none !important;
 }
