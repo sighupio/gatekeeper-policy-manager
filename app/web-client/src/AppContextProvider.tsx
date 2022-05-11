@@ -28,7 +28,7 @@ type K8sContextsResponse = IK8sContext[][] | IK8sContext[];
 const getDefaultContext = (): IApplicationContextData => {
   return {
     apiUrl:
-      process.env.NODE_ENV !== "production" ? "http://localhost:5000/" : "",
+      process.env.NODE_ENV !== "production" ? (process.env?.REACT_APP_LOCAL_GPM_SERVER_URL ?? "missing local url") : "",
     authEnabled:
       JSON.parse(localStorage.getItem("authEnabled") ?? "false") || false,
     currentK8sContext: localStorage.getItem("currentK8sContext") || "",
