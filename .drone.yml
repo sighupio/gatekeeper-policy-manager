@@ -314,7 +314,6 @@ steps:
       - prepare-tar-gz
       - prepare-release-notes
       - registry-tag
-      - helm-upload
     settings:
       api_key:
         from_secret: c3p0
@@ -350,14 +349,11 @@ trigger:
       - refs/tags/gatekeeper-policy-manager-*
 
 steps:
-
   - name: helm-package
     image: quay.io/helmpack/chart-releaser:v1.4.0
     volumes:
       - name: out
         path: /out
-    depends_on:
-      - registry-tag
     environment:
       OUT_PATH: /out
       CR_OWNER: sighupio
