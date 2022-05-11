@@ -29,4 +29,4 @@ resources:
 
 images:
   - name: quay.io/sighup/gatekeeper-policy-manager
-    newTag: "v0.5.2-rc9"
+    newTag: "v0.5.2-rc10"
