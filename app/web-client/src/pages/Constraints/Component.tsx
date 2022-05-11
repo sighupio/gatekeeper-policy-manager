@@ -30,7 +30,7 @@ import {
   EuiTitle,
   htmlIdGenerator,
 } from "fury-design-system";
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import {useCallback, useContext, useEffect, useMemo, useRef, useState} from "react";
 import { ApplicationContext } from "../../AppContext";
 import { BackendError, ISideNav, ISideNavItem } from "../types";
 import { JSONTree } from "react-json-tree";
@@ -38,9 +38,12 @@ import "./Style.css";
 import { useLocation, useNavigate } from "react-router-dom";
 import theme from "../theme";
 import { scrollToElement } from "../../utils";
-import { IConstraint } from "./types";
+import {IConstraint, IConstraintSpec} from "./types";
 import useScrollToHash from "../../hooks/useScrollToHash";
 import useCurrentElementInView from "../../hooks/useCurrentElementInView";
+import warnIcon from "../../assets/warn.svg";
+import shieldActive from "../../assets/shield-active.svg";
+import shieldInactive from "../../assets/shield-inactive.svg";
 
 function generateSideNav(list: IConstraint[]): ISideNav[] {
   const sideBarItems = (list ?? []).map((item, index) => {
@@ -71,6 +74,40 @@ function generateSideNav(list: IConstraint[]): ISideNav[] {
   ];
 }
 
+function EnforcementActionBadge(spec?: IConstraintSpec) {
+  let mode = "";
+  let color = "hollow";
+  let icon = "questionInCircle";
+
+  if (typeof spec !== "undefined") {
+    switch (spec.enforcementAction) {
+      case "dryrun":
+        icon = "indexRuntime";
+        color = "primary";
+        mode = "dryrun";
+        break;
+      case "warn":
+        icon = warnIcon;
+        color = "warning";
+        mode = "warn";
+        break;
+      default:
+        icon = "indexClose";
+        color = "danger";
+        mode = "deny";
+        break;
+    }
+  }
+
+  return <EuiBadge
+    color={color}
+    iconType={icon}
+    style={{fontSize: "10px", textTransform: "uppercase"}}
+  >
+    mode {mode}
+  </EuiBadge>
+}
+
 function SingleConstraint(item: IConstraint) {
   return (
     <EuiPanel grow={true} style={{ marginBottom: "24px" }}>
@@ -87,23 +124,7 @@ function SingleConstraint(item: IConstraint) {
               </EuiText>
             </EuiFlexItem>
             <EuiFlexItem grow={false}>
-              <EuiBadge
-                color={
-                  item.spec
-                    ? item.spec?.enforcementAction === "dryrun"
-                      ? "primary"
-                      : "warning"
-                    : "hollow"
-                }
-                iconType={
-                  item.spec?.enforcementAction !== "dryrun"
-                    ? "lock"
-                    : "lockOpen"
-                }
-                style={{ fontSize: "10px", textTransform: "uppercase" }}
-              >
-                mode {item.spec ? item.spec?.enforcementAction ?? "deny" : "?"}
-              </EuiBadge>
+              {EnforcementActionBadge(item.spec)}
             </EuiFlexItem>
             <EuiFlexItem grow={false} style={{ marginLeft: "auto" }}>
               <EuiLink href={`/constrainttemplates#${item.kind}`}>
@@ -326,7 +347,7 @@ function SingleConstraint(item: IConstraint) {
                   key={`${item.metadata.name}-${pod.id}`}
                 >
                   <EuiBadge
-                    iconType={pod.enforced ? "lock" : "lockOpen"}
+                    iconType={pod.enforced ? shieldActive : shieldInactive}
                     title={`Constraint is ${
                       !pod.enforced ? "NOT " : ""
                     }being ENFORCED by this POD`}

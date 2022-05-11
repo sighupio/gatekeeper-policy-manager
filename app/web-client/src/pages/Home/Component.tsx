@@ -7,11 +7,12 @@
 import {
   EuiButton,
   EuiFlexGroup,
-  EuiFlexItem,
+  EuiFlexItem, EuiImage,
   EuiPage,
   EuiSpacer,
   EuiText,
 } from "fury-design-system";
+import logo from "../../assets/gpm-logo.svg";
 
 function HomeComponent() {
   return (
@@ -31,13 +32,16 @@ function HomeComponent() {
         direction="column"
       >
         <EuiFlexItem grow={false}>
+          <EuiImage style={{width: 100}} src={logo} alt="gpm"/>
+        </EuiFlexItem>
+        <EuiFlexItem grow={false}>
           <EuiText textAlign="center">
             <h1>Welcome!</h1>
           </EuiText>
         </EuiFlexItem>
         <EuiFlexItem grow={false}>
           <EuiText textAlign="center">
-            <h2>
+            <h2 style={{fontWeight: 300}}>
               Gatekeeper Policy Manager is a simple to use web-based tool to see
               the policies deployed in your cluster and their status
             </h2>

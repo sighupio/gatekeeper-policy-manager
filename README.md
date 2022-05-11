@@ -123,14 +123,21 @@ When you run GPM locally, you are already using a `kubeconfig` file  to connect 
 
 ## Development
 
-GPM is written in Python using the Flask framework for the backend and Fomantic-UI for the frontend. To develop GPM, you'll need to create a Python 3 virtual environment, install all the dependencies specified in the provided `requirements.txt` and you are good to start hacking.
+GPM is written in Python using the Flask framework for the backend and React with Fury Design System for the frontend. To develop GPM, you'll need to create a Python 3 virtual environment, install all the dependencies specified in the provided `requirements.txt` and you are good to start hacking.
 
 The following commands should get you up and running:
 
 ```bash
-# Download fronted dependencies with NPM
+# Download static frontend dependencies with YARN
 $ pushd app/static
-$ npm install
+$ yarn install
+$ mkdir -p webapp
+$ cp -r node_modules ./webapp/node_modules
+$ popd
+# Build frontend and copy over to static folder
+$ pushd app/web-client
+$ yarn install && yarn build
+$ cp -r build/ ../static/webapp
 $ popd
 # Create a virtualenv
 $ python3 -m venv env
