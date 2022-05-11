@@ -308,7 +308,7 @@ steps:
         from_secret: c3p0
     commands:
       - mkdir -p $OUT_PATH/pages
-      # - cr upload # We are adding the files to the release manually
+      - cr upload # We are adding the files to the release manually
       - cr index
       - cat $CR_INDEX_PATH/index.yaml
 
