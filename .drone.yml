@@ -343,10 +343,10 @@ volumes:
 kind: pipeline
 name: release-helm-chart
 
-trigger:
-  ref:
-    include:
-      - refs/tags/gatekeeper-policy-manager-*
+# trigger:
+#   ref:
+#     include:
+#       - refs/tags/gatekeeper-policy-manager-*
 
 steps:
   - name: helm-package
