@@ -385,7 +385,7 @@ steps:
       # CR_RELEASE_NAME_TEMPLATE: "gpm-helm-chart-{{ .Version }}"
       CR_GIT_REPO: gatekeeper-policy-manager
       # CR_PAGES_BRANCH: github-pages
-      CR_PACKAGE_PATH: chart
+      CR_PACKAGE_PATH: ./chart
       # CR_INDEX_PATH: /out/pages
       CR_TOKEN:
         from_secret: c3p0
