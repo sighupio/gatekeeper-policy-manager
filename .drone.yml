@@ -391,8 +391,8 @@ steps:
         from_secret: c3p0
     commands:
       # - mkdir -p $OUT_PATH/pages
-      - export CR_PACKAGE_PATH=$(pwd)/chart
-      - cr package
+      # - export CR_PACKAGE_PATH=$(pwd)/chart
+      - cr package ./chart
       - cr upload
       - cr index
       # - cat $CR_INDEX_PATH/index.yaml
