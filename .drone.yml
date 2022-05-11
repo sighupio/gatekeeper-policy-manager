@@ -271,15 +271,17 @@ steps:
       - prepare-tar-gz
       - prepare-release-notes
       - registry-tag
+      - helm-upload
     settings:
       api_key:
         from_secret: c3p0
       file_exists: overwrite
       files:
         - gatekeeper-policy-manager-${DRONE_TAG}.tar.gz
+        - /out/packages/* # Helm Chart
       prerelease: true
       overwrite: true
-      title: "Preview ${DRONE_TAG}"
+      title: "Release Candidate ${DRONE_TAG}"
       note: release-notes.md
       checksum:
         - md5
@@ -296,12 +298,14 @@ steps:
       - prepare-tar-gz
       - prepare-release-notes
       - registry-tag
+      - helm-upload
     settings:
       api_key:
         from_secret: c3p0
       file_exists: overwrite
       files:
         - gatekeeper-policy-manager-${DRONE_TAG}.tar.gz
+        - /out/packages/*
       prerelease: false
       overwrite: true
       title: "Release ${DRONE_TAG}"
@@ -316,7 +320,68 @@ steps:
         include:
           - refs/tags/v**
 
+  - name: helm-package
+    image: quay.io/helmpack/chart-releaser:v1.4.0
+    volumes:
+      - name: out
+        path: /out
+    depends_on:
+      - registry-tag
+    environment:
+      OUT_PATH: /out
+      CR_OWNER: sighupio
+      CR_CHARTS_REPO: https://sighupio.github.io/gatekeeper-policy-manager/
+      CR_GIT_REPO: gatekeeper-policy-manager
+      CR_PACKAGE_PATH: /out/packages
+      CR_INDEX_PATH: /out/pages
+      CR_TOKEN:
+        from_secret: c3p0
+    commands:
+      - wget https://get.helm.sh/helm-v3.2.4-linux-amd64.tar.gz
+      - tar -zxvf helm-v3.2.4-linux-amd64.tar.gz
+      - mv linux-amd64/helm /usr/local/bin/helm
+      - helm dependency update chart/
+      - mkdir -p $OUT_PATH/packages
+      - helm package chart/ --destination $OUT_PATH/packages
+
+  - name: helm-upload
+    image: quay.io/helmpack/chart-releaser:v1.4.0
+    volumes:
+      - name: out
+        path: /out
+    depends_on:
+      - helm-package
+    environment:
+      OUT_PATH: /out
+      CR_OWNER: sighupio
+      CR_CHARTS_REPO: https://sighupio.github.io/gatekeeper-policy-manager/
+      CR_GIT_REPO: gatekeeper-policy-manager
+      CR_PACKAGE_PATH: /out/packages
+      CR_INDEX_PATH: /out/pages
+      CR_TOKEN:
+        from_secret: c3p0
+    commands:
+      - mkdir -p $OUT_PATH/pages
+      - cr upload
+      - cr index
+      - cat $CR_INDEX_PATH/index.yaml
+
+  - name: publish-helm-index
+    image: plugins/gh-pages
+    volumes:
+      - name: out
+        path: /out
+    depends_on:
+      - helm-upload
+    settings:
+      api_key:
+        from_secret: c3p0
+      target_branch: github-pages
+      pages_directory: /out/pages
+
 volumes:
   - name: dockersock
     host:
       path: /var/run/docker.sock
+  - name: out
+    temp: {}
