@@ -302,7 +302,7 @@ steps:
       # CR_CHARTS_REPO: https://sighupio.github.io/gatekeeper-policy-manager/
       # CR_RELEASE_NAME_TEMPLATE: "gpm-helm-chart-{{ .Version }}"
       CR_GIT_REPO: gatekeeper-policy-manager
-      CR_PAGES_BRANCH: github-pages
+      # CR_PAGES_BRANCH: github-pages
       CR_PACKAGE_PATH: /out/packages
       CR_INDEX_PATH: /out/pages
       CR_TOKEN:
@@ -323,7 +323,7 @@ steps:
     settings:
       api_key:
         from_secret: c3p0
-      target_branch: github-pages
+      # target_branch: github-pages
       pages_directory: /out/pages
 
   - name: publish-prerelease
