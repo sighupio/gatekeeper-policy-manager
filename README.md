@@ -44,7 +44,7 @@ Then access it with your browser on: [http://127.0.0.1:8080](http://127.0.0.1:80
 
 ### Deploy using Helm
 
-Since `v0.5.2-rc4` it's also possible to deploy GPM using the [provided Helm Chart](./chart). There's no Helm repository yet, but you can download the chart folder and use it locally:
+Since `v0.5.2-rc5` it's also possible to deploy GPM using the [provided Helm Chart](./chart). There's no Helm repository yet, but you can download the chart folder and use it locally:
 
 ```bash
 git clone https://github.com/sighupio/gatekeeper-policy-manager.git
@@ -58,7 +58,7 @@ Where `my-values.yaml` is your custom values for the release. See the [chart's r
 GPM can also be run locally using docker and a `kubeconfig`, assuming that the `kubeconfig` file you want to use is located at `~/.kube/config` the command to run GPM locally would be:
 
 ```bash
-docker run -v ~/.kube/config:/home/gpm/.kube/config -p 8080:8080 quay.io/sighup/gatekeeper-policy-manager:v0.5.2-rc4
+docker run -v ~/.kube/config:/home/gpm/.kube/config -p 8080:8080 quay.io/sighup/gatekeeper-policy-manager:v0.5.2-rc5
 ```
 
 Then access it with your browser on: [http://127.0.0.1:8080](http://127.0.0.1:8080)
@@ -93,7 +93,7 @@ GPM is a stateless application, but it can be configured using environment varia
 
 ### Multi-cluster support
 
-Since `v0.5.2-rc4` GPM has basic multi-cluster support when using a `kubeconfig` with more than one context. GPM will let you chose the context right from the UI.
+Since `v0.5.2-rc5` GPM has basic multi-cluster support when using a `kubeconfig` with more than one context. GPM will let you chose the context right from the UI.
 
 If you want to run GPM in a cluster but with multi-cluster support, it's as easy as mounting a `kubeconfig` file in GPM's pod(s) with the cluster access configuration and set the environment variable `KUBECONFIG` with the path to the mounted `kubeconfig` file. Or you can simply mount it in `/home/gpm/.kube/config` and GPM will detect it automatically.
 
