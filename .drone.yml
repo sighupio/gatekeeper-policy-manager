@@ -300,13 +300,14 @@ steps:
       CR_OWNER: sighupio
       CR_CHARTS_REPO: https://sighupio.github.io/gatekeeper-policy-manager/
       CR_GIT_REPO: gatekeeper-policy-manager
+      CR_PAGES_BRANCH: github-pages
       CR_PACKAGE_PATH: /out/packages
       CR_INDEX_PATH: /out/pages
       CR_TOKEN:
         from_secret: c3p0
     commands:
       - mkdir -p $OUT_PATH/pages
-      - cr upload
+      # - cr upload # We are adding the files to the release manually
       - cr index
       - cat $CR_INDEX_PATH/index.yaml
 
