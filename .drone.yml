@@ -264,62 +264,6 @@ steps:
       event:
         - tag
 
-  - name: publish-prerelease
-    image: plugins/github-release
-    pull: always
-    depends_on:
-      - prepare-tar-gz
-      - prepare-release-notes
-      - registry-tag
-      - helm-upload
-    settings:
-      api_key:
-        from_secret: c3p0
-      file_exists: overwrite
-      files:
-        - gatekeeper-policy-manager-${DRONE_TAG}.tar.gz
-        - /out/packages/* # Helm Chart
-      prerelease: true
-      overwrite: true
-      title: "Release Candidate ${DRONE_TAG}"
-      note: release-notes.md
-      checksum:
-        - md5
-        - sha256
-    when:
-      ref:
-        include:
-          - refs/tags/v**-rc**
-
-  - name: publish-stable
-    image: plugins/github-release
-    pull: always
-    depends_on:
-      - prepare-tar-gz
-      - prepare-release-notes
-      - registry-tag
-      - helm-upload
-    settings:
-      api_key:
-        from_secret: c3p0
-      file_exists: overwrite
-      files:
-        - gatekeeper-policy-manager-${DRONE_TAG}.tar.gz
-        - /out/packages/*
-      prerelease: false
-      overwrite: true
-      title: "Release ${DRONE_TAG}"
-      note: release-notes.md
-      checksum:
-        - md5
-        - sha256
-    when:
-      ref:
-        exclude:
-          - refs/tags/v**-rc**
-        include:
-          - refs/tags/v**
-
   - name: helm-package
     image: quay.io/helmpack/chart-releaser:v1.4.0
     volumes:
@@ -378,6 +322,62 @@ steps:
         from_secret: c3p0
       target_branch: github-pages
       pages_directory: /out/pages
+
+  - name: publish-prerelease
+    image: plugins/github-release
+    pull: always
+    depends_on:
+      - prepare-tar-gz
+      - prepare-release-notes
+      - registry-tag
+      - helm-upload
+    settings:
+      api_key:
+        from_secret: c3p0
+      file_exists: overwrite
+      files:
+        - gatekeeper-policy-manager-${DRONE_TAG}.tar.gz
+        - /out/packages/* # Helm Chart
+      prerelease: true
+      overwrite: true
+      title: "Release Candidate ${DRONE_TAG}"
+      note: release-notes.md
+      checksum:
+        - md5
+        - sha256
+    when:
+      ref:
+        include:
+          - refs/tags/v**-rc**
+
+  - name: publish-stable
+    image: plugins/github-release
+    pull: always
+    depends_on:
+      - prepare-tar-gz
+      - prepare-release-notes
+      - registry-tag
+      - helm-upload
+    settings:
+      api_key:
+        from_secret: c3p0
+      file_exists: overwrite
+      files:
+        - gatekeeper-policy-manager-${DRONE_TAG}.tar.gz
+        - /out/packages/*
+      prerelease: false
+      overwrite: true
+      title: "Release ${DRONE_TAG}"
+      note: release-notes.md
+      checksum:
+        - md5
+        - sha256
+    when:
+      ref:
+        exclude:
+          - refs/tags/v**-rc**
+        include:
+          - refs/tags/v**
 
 volumes:
   - name: dockersock
