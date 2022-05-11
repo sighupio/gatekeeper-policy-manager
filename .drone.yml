@@ -12,6 +12,11 @@ steps:
     commands:
       - go get -u github.com/google/addlicense
       - addlicense -c "SIGHUP s.r.l" -v -l bsd -check -ignore 'chart/**' .
+trigger:
+  ref:
+    exclude:
+      - refs/tags/gatekeeper-policy-manager-*
+
 ---
 kind: pipeline
 name: policeman
@@ -48,6 +53,10 @@ steps:
       - render
     commands:
       - /conftest test -p /policies gpm.yml
+trigger:
+  ref:
+    exclude:
+      - refs/tags/gatekeeper-policy-manager-*
 
 ---
 kind: pipeline
@@ -61,6 +70,8 @@ trigger:
     include:
       - refs/tags/**
       - refs/heads/**
+    exclude:
+      - refs/tags/gatekeeper-policy-manager-*
 
 steps:
   - name: build
@@ -91,6 +102,7 @@ volumes:
   - name: dockersock
     host:
       path: /var/run/docker.sock
+
 ---
 kind: pipeline
 name: e2e
@@ -105,6 +117,8 @@ trigger:
       - refs/heads/master
       - refs/heads/renovate/*
       - refs/heads/dependabot/*
+    exclude:
+      - refs/tags/gatekeeper-policy-manager-*
 
 steps:
   - name: kind
@@ -169,6 +183,7 @@ volumes:
   - name: dockersock
     host:
       path: /var/run/docker.sock
+
 ---
 kind: pipeline
 name: release
@@ -210,6 +225,8 @@ steps:
       ref:
         include:
           - refs/tags/**
+        exclude:
+          - refs/tags/gatekeeper-policy-manager-* # Exclude helm chart releases
 
   - name: registry-sha
     image: docker:dind
@@ -264,6 +281,75 @@ steps:
     when:
       event:
         - tag
+
+  - name: publish-prerelease
+    image: plugins/github-release
+    pull: always
+    depends_on:
+      - prepare-tar-gz
+      - prepare-release-notes
+      - registry-tag
+    settings:
+      api_key:
+        from_secret: c3p0
+      file_exists: overwrite
+      files:
+        - gatekeeper-policy-manager-${DRONE_TAG}.tar.gz
+      prerelease: true
+      overwrite: true
+      title: "Release Candidate ${DRONE_TAG}"
+      note: release-notes.md
+      checksum:
+        - md5
+        - sha256
+    when:
+      ref:
+        include:
+          - refs/tags/v**-rc**
+
+  - name: publish-stable
+    image: plugins/github-release
+    pull: always
+    depends_on:
+      - prepare-tar-gz
+      - prepare-release-notes
+      - registry-tag
+      - helm-upload
+    settings:
+      api_key:
+        from_secret: c3p0
+      file_exists: overwrite
+      files:
+        - gatekeeper-policy-manager-${DRONE_TAG}.tar.gz
+      prerelease: false
+      overwrite: true
+      title: "Release ${DRONE_TAG}"
+      note: release-notes.md
+      checksum:
+        - md5
+        - sha256
+    when:
+      ref:
+        exclude:
+          - refs/tags/v**-rc**
+        include:
+          - refs/tags/v**
+
+volumes:
+  - name: dockersock
+    host:
+      path: /var/run/docker.sock
+
+---
+kind: pipeline
+name: release-helm-chart
+
+trigger:
+  ref:
+    include:
+      - refs/tags/gatekeeper-policy-manager-*
+
+steps:
 
   - name: helm-package
     image: quay.io/helmpack/chart-releaser:v1.4.0
@@ -325,62 +411,6 @@ steps:
         from_secret: c3p0
       # target_branch: github-pages
       pages_directory: /out/pages
-
-  - name: publish-prerelease
-    image: plugins/github-release
-    pull: always
-    depends_on:
-      - prepare-tar-gz
-      - prepare-release-notes
-      - registry-tag
-      - helm-upload
-    settings:
-      api_key:
-        from_secret: c3p0
-      file_exists: overwrite
-      files:
-        - gatekeeper-policy-manager-${DRONE_TAG}.tar.gz
-        - /out/packages/* # Helm Chart
-      prerelease: true
-      overwrite: true
-      title: "Release Candidate ${DRONE_TAG}"
-      note: release-notes.md
-      checksum:
-        - md5
-        - sha256
-    when:
-      ref:
-        include:
-          - refs/tags/v**-rc**
-
-  - name: publish-stable
-    image: plugins/github-release
-    pull: always
-    depends_on:
-      - prepare-tar-gz
-      - prepare-release-notes
-      - registry-tag
-      - helm-upload
-    settings:
-      api_key:
-        from_secret: c3p0
-      file_exists: overwrite
-      files:
-        - gatekeeper-policy-manager-${DRONE_TAG}.tar.gz
-        - /out/packages/*
-      prerelease: false
-      overwrite: true
-      title: "Release ${DRONE_TAG}"
-      note: release-notes.md
-      checksum:
-        - md5
-        - sha256
-    when:
-      ref:
-        exclude:
-          - refs/tags/v**-rc**
-        include:
-          - refs/tags/v**
 
 volumes:
   - name: dockersock
