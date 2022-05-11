@@ -349,68 +349,69 @@ name: release-helm-chart
 #       - refs/tags/gatekeeper-policy-manager-*
 
 steps:
-  - name: helm-package
-    image: quay.io/helmpack/chart-releaser:v1.4.0
-    volumes:
-      - name: out
-        path: /out
-    environment:
-      OUT_PATH: /out
-      CR_OWNER: sighupio
-      CR_CHARTS_REPO: https://sighupio.github.io/gatekeeper-policy-manager/
-      CR_GIT_REPO: gatekeeper-policy-manager
-      CR_PACKAGE_PATH: /out/packages
-      CR_INDEX_PATH: /out/pages
-      CR_TOKEN:
-        from_secret: c3p0
-    commands:
-      - wget https://get.helm.sh/helm-v3.2.4-linux-amd64.tar.gz
-      - tar -zxvf helm-v3.2.4-linux-amd64.tar.gz
-      - mv linux-amd64/helm /usr/local/bin/helm
-      - helm dependency update chart/
-      - mkdir -p $OUT_PATH/packages
-      - helm package chart/ --destination $OUT_PATH/packages
+  # - name: helm-package
+  #   image: quay.io/helmpack/chart-releaser:v1.4.0
+  #   volumes:
+  #     - name: out
+  #       path: /out
+  #   environment:
+  #     OUT_PATH: /out
+  #     CR_OWNER: sighupio
+  #     CR_CHARTS_REPO: https://sighupio.github.io/gatekeeper-policy-manager/
+  #     CR_GIT_REPO: gatekeeper-policy-manager
+  #     CR_PACKAGE_PATH: /out/packages
+  #     CR_INDEX_PATH: /out/pages
+  #     CR_TOKEN:
+  #       from_secret: c3p0
+  #   commands:
+  #     - wget https://get.helm.sh/helm-v3.2.4-linux-amd64.tar.gz
+  #     - tar -zxvf helm-v3.2.4-linux-amd64.tar.gz
+  #     - mv linux-amd64/helm /usr/local/bin/helm
+  #     - helm dependency update chart/
+  #     - mkdir -p $OUT_PATH/packages
+  #     - helm package chart/ --destination $OUT_PATH/packages
 
-  - name: helm-upload
+  - name: chart-releaser
     image: quay.io/helmpack/chart-releaser:v1.4.0
     volumes:
       - name: out
         path: /out
-    depends_on:
-      - helm-package
+    # depends_on:
+    #   - helm-package
     environment:
-      OUT_PATH: /out
+      # OUT_PATH: /out
       CR_OWNER: sighupio
       # CR_CHARTS_REPO: https://sighupio.github.io/gatekeeper-policy-manager/
       # CR_RELEASE_NAME_TEMPLATE: "gpm-helm-chart-{{ .Version }}"
       CR_GIT_REPO: gatekeeper-policy-manager
       # CR_PAGES_BRANCH: github-pages
-      CR_PACKAGE_PATH: /out/packages
-      CR_INDEX_PATH: /out/pages
+      # CR_PACKAGE_PATH: /out/packages
+      # CR_INDEX_PATH: /out/pages
       CR_TOKEN:
         from_secret: c3p0
     commands:
       - mkdir -p $OUT_PATH/pages
+      - cr package
       - cr upload # We are adding the files to the release manually
       - cr index
       - cat $CR_INDEX_PATH/index.yaml
 
-  - name: publish-helm-index
-    image: plugins/gh-pages
-    volumes:
-      - name: out
-        path: /out
-    depends_on:
-      - helm-upload
-    settings:
-      api_key:
-        from_secret: c3p0
+  # - name: publish-helm-index
+  #   image: plugins/gh-pages
+    # volumes:
+    #   - name: out
+    #     path: /out
+    # depends_on:
+    #   - helm-upload
+    # settings:
+    #   api_key:
+    #     from_secret: c3p0
       # target_branch: github-pages
-      pages_directory: /out/pages
+      # pages_directory: /out/pages
 
 volumes:
   - name: dockersock
     host:
       path: /var/run/docker.sock
-  - name: out
-    temp: {}
+  # - name: out
+  #   temp: {}
