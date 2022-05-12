@@ -24,7 +24,9 @@ You'll need OPA Gatekeeper running in your cluster and at least some constraint 
 
 ## Deploying GPM
 
-To deploy Gatekeeper Policy Manager to your cluster, apply the provided `kustomization` file running the following command:
+### Deploy using Kustomize
+
+To deploy Gatekeeper Policy Manager to your cluster, apply the provided [`kustomization`](kustomization.yaml) file running the following command:
 
 ```shell
 kubectl apply -k .
@@ -38,27 +40,29 @@ Once you've deployed the application, if you haven't set up an ingress, you can 
 
 ```bash
 kubectl -n gatekeeper-system port-forward  svc/gatekeeper-policy-manager 8080:80
-````
+```
 
 Then access it with your browser on: [http://127.0.0.1:8080](http://127.0.0.1:8080)
 
 ### Deploy using Helm
 
-Since `v0.5.1` it's also possible to deploy GPM using the [provided Helm Chart](./chart). There's no Helm repository yet, but you can download the chart folder and use it locally:
+It is also possible to deploy GPM using the [provided Helm Chart](./chart).
+
+First create a values file, for example `my-values.yaml`, with your custom values for the release. See the [chart's readme](./chart/README.md) and the [default values.yaml](./chart/values.yaml) for more information.
+
+Then, execute:
 
 ```bash
-git clone https://github.com/sighupio/gatekeeper-policy-manager.git
-helm upgrade --install gpm gatekeeper-policy-manager/chart --values my-values.yaml --namespace gatekeeper-system
+helm repo add gpm https://sighupio.github.io/gatekeeper-policy-manager
+helm upgrade --install --namespace gatekeeper-system --set image.tag=v0.5.2-rc17 --values my-values.yaml gatekeeper-policy-managergpm/gatekeeper-policy-manager
 ```
-
-Where `my-values.yaml` is your custom values for the release. See the [chart's readme](./chart/README.md) and the [default values.yaml](./chart/values.yaml) for more information.
 
 ## Running locally
 
 GPM can also be run locally using docker and a `kubeconfig`, assuming that the `kubeconfig` file you want to use is located at `~/.kube/config` the command to run GPM locally would be:
 
 ```bash
-docker run -v ~/.kube/config:/home/gpm/.kube/config -p 8080:8080 quay.io/sighup/gatekeeper-policy-manager:v0.5.1
+docker run -v ~/.kube/config:/home/gpm/.kube/config -p 8080:8080 quay.io/sighup/gatekeeper-policy-manager:v0.5.2-rc17
 ```
 
 Then access it with your browser on: [http://127.0.0.1:8080](http://127.0.0.1:8080)
@@ -93,7 +97,7 @@ GPM is a stateless application, but it can be configured using environment varia
 
 ### Multi-cluster support
 
-Since `v0.5.1` GPM has basic multi-cluster support when using a `kubeconfig` with more than one context. GPM will let you chose the context right from the UI.
+Since `v0.5.2-rc17` GPM has basic multi-cluster support when using a `kubeconfig` with more than one context. GPM will let you chose the context right from the UI.
 
 If you want to run GPM in a cluster but with multi-cluster support, it's as easy as mounting a `kubeconfig` file in GPM's pod(s) with the cluster access configuration and set the environment variable `KUBECONFIG` with the path to the mounted `kubeconfig` file. Or you can simply mount it in `/home/gpm/.kube/config` and GPM will detect it automatically.
 

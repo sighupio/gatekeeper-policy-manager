@@ -1,7 +1,7 @@
 apiVersion: v2
 type: application
 name: gatekeeper-policy-manager
-description: A Helm chart for Gatekeeper Policy Manager which is a simple read-only web UI for
+description: A Helm chart for Gatekeeper Policy Manager, a simple to use, read-only web UI for
              viewing OPA Gatekeeper policies' status in a Kubernetes Cluster.
 home: https://sighup.io
 sources:
@@ -10,7 +10,7 @@ icon: https://raw.githubusercontent.com/sighupio/gatekeeper-policy-manager/maste
 maintainers:
   - name: Ramiro Algozino
     email: ramiro@sighup.io
-keywords: ["opa", "gatekeeper", "policies", "ui", "dashboard", "web", "rego", "webapp"]
+keywords: ["opa", "gatekeeper", "policy", "ui", "dashboard", "web", "rego", "webapp"]
 
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
@@ -20,4 +20,4 @@ version: 0.2.0
 # This is the version number of the application being deployed. This version number should be
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
-appVersion: v0.5.1
+appVersion: "v0.5.2-rc17"
