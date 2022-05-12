@@ -12,7 +12,7 @@
 
 The target Kubernetes Cluster can be the same where GPM is running or some other [remote cluster(s) using a `kubeconfig` file](#Multi-cluster-support). You can also run GPM [locally in a client machine](#Running-locally) and connect to a remote cluster.
 
-GPM can display all the defined **Constraint Templates** with their rego code, all the Gatekeeper Configuration CRDs, and all the **Constraints** with its current status, violations, enforcement action, matches definitions, etc.
+GPM can display all the defined **Constraint Templates** with their rego code, all the Gatekeeper Configuration CRDs, and all the **Constraints** with their current status, violations, enforcement action, matches definitions, etc.
 
 [You can see some screenshots below](#Screenshots).
 
@@ -106,6 +106,26 @@ If you want to run GPM in a cluster but with multi-cluster support, it's as easy
 > Also note that the cluster where GPM is running should be able to reach the other clusters.
 
 When you run GPM locally, you are already using a `kubeconfig` file  to connect to the clusters, now you should see all your defined contexts and you can switch between them easily from the UI.
+
+#### AWS IAM Authentication
+
+If you want to use a Kubeconfig with IAM Authentication, you'll need to customize GPM's container image because the IAM authentication uses external AWS binaries that are not included by default in the image.
+
+You can customize the container image with a `Dockerfile` like the following:
+
+```Dockerfile
+FROM curlimages/curl:7.81.0 as downloader
+RUN curl https://github.com/kubernetes-sigs/aws-iam-authenticator/releases/download/v0.5.5/aws-iam-authenticator_0.5.5_linux_amd64 --output /tmp/aws-iam-authenticator
+RUN chmod +x /tmp/aws-iam-authenticator
+FROM quay.io/sighup/gatekeeper-policy-manager:v0.5.2-rc17
+COPY --from=downloader --chown=root:root /tmp/aws-iam-authenticator /usr/local/bin/
+```
+
+You may need to add also the `aws` CLI, you can use the same approach as before.
+
+Make sure that your `kubeconfig` has the `apiVersion` set as `client.authentication.k8s.io/v1beta1`
+
+You can read more [in this issue](https://github.com/sighupio/gatekeeper-policy-manager/issues/330).
 
 ## Screenshots
 
