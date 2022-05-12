@@ -277,7 +277,7 @@ function ConfigurationsComponent() {
         >
           <EuiPage
             paddingSize="none"
-            restrictWidth={1100}
+            restrictWidth={1200}
             grow={true}
             style={{ position: "relative" }}
             className="gpm-page gpm-page-config"

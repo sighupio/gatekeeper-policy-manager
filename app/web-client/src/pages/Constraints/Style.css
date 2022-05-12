@@ -26,7 +26,3 @@
 .gpm-page-constraints .euiDescriptionList.euiDescriptionList--responsiveColumn.euiDescriptionList--compressed .euiDescriptionList__description {
   width: calc(100% - 100px);
 }
-
-.gpm-page-constraints .euiCodeBlock .token.function {
-  color: #68288c !important;
-}

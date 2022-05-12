@@ -116,21 +116,20 @@ function SingleConstraintTemplate(
           </EuiText>
         </EuiFlexItem>
         <EuiFlexItem>
-          {item.spec.targets[0].libs ? (
-            <>
+          {(item.spec.targets[0].libs ?? []).map((lib, index) => {
+            return (
               <EuiAccordion
-                id={`${item.spec.crd.spec.names.kind}-libs`}
+                id={`${item.spec.crd.spec.names.kind}-libs-${index}`}
+                key={`${item.spec.crd.spec.names.kind}-libs-${index}`}
                 buttonContent="Libs definition"
                 paddingSize="none"
               >
                 <EuiCodeBlock language="rego">
-                  {item.spec.targets[0].libs}
+                  {lib}
                 </EuiCodeBlock>
               </EuiAccordion>
-            </>
-          ) : (
-            <></>
-          )}
+            )
+          })}
           <EuiAccordion
             id={`${item.spec.crd.spec.names.kind}-rego`}
             buttonContent="Rego definition"
@@ -373,7 +372,7 @@ function ConstraintTemplatesComponent() {
         >
           <EuiPage
             paddingSize="none"
-            restrictWidth={1100}
+            restrictWidth={1200}
             grow={true}
             style={{ position: "relative" }}
             className="gpm-page gpm-page-constraint-templates"

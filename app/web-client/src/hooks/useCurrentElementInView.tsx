@@ -9,7 +9,7 @@ import { MutableRefObject, useEffect } from "react";
 export default function useCurrentElementInView(
   refs: MutableRefObject<HTMLDivElement[]>,
   cb: (id: string) => any,
-  offset = 50
+  offset = 0
 ) {
   const onScroll = () => {
     const elementVisible = refs.current.filter((element) => {

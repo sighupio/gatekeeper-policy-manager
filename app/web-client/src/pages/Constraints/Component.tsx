@@ -47,6 +47,8 @@ import shieldInactive from "../../assets/shield-inactive.svg";
 
 function generateSideNav(list: IConstraint[]): ISideNav[] {
   const sideBarItems = (list ?? []).map((item, index) => {
+    const enforcementRenderData = getEnforcementActionRenderData(item.spec);
+
     return {
       key: `${item.metadata.name}-side`,
       name: item.metadata.name,
@@ -56,11 +58,19 @@ function generateSideNav(list: IConstraint[]): ISideNav[] {
       },
       isSelected: index === 0,
       icon: (
-        <EuiBadge
-          color={item.status?.totalViolations ?? 0 > 0 ? "danger" : "success"}
-        >
-          {item.status.totalViolations}
-        </EuiBadge>
+        <>
+          <EuiBadge
+            color={item.status?.totalViolations ?? 0 > 0 ? "danger" : "success"}
+          >
+            {item.status.totalViolations}
+          </EuiBadge>
+          <EuiIcon
+            type={enforcementRenderData.icon}
+            style={{
+              margin: "0 5px",
+            }}
+          />
+        </>
       ),
     } as ISideNavItem;
   });
@@ -74,7 +84,7 @@ function generateSideNav(list: IConstraint[]): ISideNav[] {
   ];
 }
 
-function EnforcementActionBadge(spec?: IConstraintSpec) {
+function getEnforcementActionRenderData(spec?: IConstraintSpec) {
   let mode = "";
   let color = "hollow";
   let icon = "questionInCircle";
@@ -99,13 +109,19 @@ function EnforcementActionBadge(spec?: IConstraintSpec) {
     }
   }
 
-  return <EuiBadge
-    color={color}
-    iconType={icon}
-    style={{fontSize: "10px", textTransform: "uppercase"}}
-  >
-    mode {mode}
-  </EuiBadge>
+  return {
+    icon: icon,
+    color: color,
+    badge: (
+      <EuiBadge
+        color={color}
+        iconType={icon}
+        style={{fontSize: "10px", textTransform: "uppercase"}}
+      >
+        mode {mode}
+      </EuiBadge>
+    ),
+  };
 }
 
 function SingleConstraint(item: IConstraint) {
@@ -124,7 +140,7 @@ function SingleConstraint(item: IConstraint) {
               </EuiText>
             </EuiFlexItem>
             <EuiFlexItem grow={false}>
-              {EnforcementActionBadge(item.spec)}
+              {getEnforcementActionRenderData(item.spec).badge}
             </EuiFlexItem>
             <EuiFlexItem grow={false} style={{ marginLeft: "auto" }}>
               <EuiLink href={`/constrainttemplates#${item.kind}`}>
@@ -494,7 +510,7 @@ function ConstraintsComponent() {
         >
           <EuiPage
             paddingSize="none"
-            restrictWidth={1100}
+            restrictWidth={1200}
             grow={true}
             style={{ position: "relative" }}
             className="gpm-page gpm-page-constraints"
@@ -502,7 +518,7 @@ function ConstraintsComponent() {
             <EuiPageSideBar
               paddingSize="m"
               style={{
-                minWidth: "270px",
+                minWidth: "300px",
               }}
               sticky
             >
@@ -512,6 +528,7 @@ function ConstraintsComponent() {
                   iconSide="right"
                   iconSize="s"
                   iconType="popout"
+                  style={{width: "100%"}}
                   href={`${appContextData.context.apiUrl}api/v1/constraints?report=html`}
                   download
                 >

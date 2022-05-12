@@ -8,7 +8,7 @@ import { IConstraint } from "../Constraints/types";
 
 export interface IConstraintTemplateSpecTarget {
   rego: string;
-  libs?: string;
+  libs?: string[];
   target: string;
 }
 
