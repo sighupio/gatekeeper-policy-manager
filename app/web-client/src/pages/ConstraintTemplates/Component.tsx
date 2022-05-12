@@ -172,7 +172,7 @@ function SingleConstraintTemplate(
       ) : (
         <></>
       )}
-      {relatedConstraints.length > 0 && (
+      {relatedConstraints.length > 0 ? (
         <>
           <EuiFlexGroup direction="column" gutterSize="s">
             <EuiFlexItem grow={false}>
@@ -192,6 +192,22 @@ function SingleConstraintTemplate(
                 </EuiLink>
               </EuiFlexItem>
             ))}
+          </EuiFlexGroup>
+          <EuiSpacer size="s" />
+          <EuiHorizontalRule margin="none" />
+          <EuiSpacer size="s" />
+        </>
+      ) : (
+        <>
+          <EuiFlexGroup alignItems="center" gutterSize="s">
+            <EuiFlexItem grow={false}>
+              <EuiIcon type="alert" color="warning" size="l" />
+            </EuiFlexItem>
+            <EuiFlexItem grow={false}>
+              <EuiText size="s">
+                <h5>No Constraint found using this Constraint Template</h5>
+              </EuiText>
+            </EuiFlexItem>
           </EuiFlexGroup>
           <EuiSpacer size="s" />
           <EuiHorizontalRule margin="none" />
