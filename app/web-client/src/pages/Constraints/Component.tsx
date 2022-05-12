@@ -172,7 +172,7 @@ function SingleConstraint(item: IConstraint) {
             <EuiFlexGroup direction="column" gutterSize="s">
               <EuiFlexItem>
                 <EuiAccordion
-                  id="violations-1"
+                  id={`violations-${item.metadata.name}`}
                   buttonContent={
                     <EuiFlexGroup
                       gutterSize="s"

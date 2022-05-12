@@ -119,7 +119,7 @@ function SingleConstraintTemplate(
           {item.spec.targets[0].libs ? (
             <>
               <EuiAccordion
-                id="accordion-1"
+                id={`${item.spec.crd.spec.names.kind}-libs`}
                 buttonContent="Libs definition"
                 paddingSize="none"
               >
@@ -132,7 +132,7 @@ function SingleConstraintTemplate(
             <></>
           )}
           <EuiAccordion
-            id="accordion-2"
+            id={`${item.spec.crd.spec.names.kind}-rego`}
             buttonContent="Rego definition"
             paddingSize="none"
           >
