@@ -319,7 +319,7 @@ function ConstraintTemplatesComponent() {
           };
         }
         navigate(`/error`, {
-          state: { error: error, entity: "constrainttemplates" },
+          state: { error: error },
         });
       })
       .finally(() => setIsLoading(false));

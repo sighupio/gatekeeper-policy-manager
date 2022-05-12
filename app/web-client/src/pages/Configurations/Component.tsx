@@ -224,7 +224,7 @@ function ConfigurationsComponent() {
           };
         }
         navigate(`/error`, {
-          state: { error: error, entity: "configurations" },
+          state: { error: error },
         });
       })
       .finally(() => setIsLoading(false));

@@ -458,7 +458,7 @@ function ConstraintsComponent() {
             action: "Please try again later",
           };
         }
-        navigate(`/error`, { state: { error: error, entity: "constraints" } });
+        navigate(`/error`, { state: { error: error } });
       })
       .finally(() => setIsLoading(false));
   }, [appContextData.context.currentK8sContext]);
