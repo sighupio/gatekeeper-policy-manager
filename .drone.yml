@@ -349,27 +349,15 @@ name: release-helm-chart
 #       - refs/tags/gatekeeper-policy-manager-*
 
 steps:
-  # - name: helm-package
-  #   image: quay.io/helmpack/chart-releaser:v1.4.0
-  #   volumes:
-  #     - name: out
-  #       path: /out
-  #   environment:
-  #     OUT_PATH: /out
-  #     CR_OWNER: sighupio
-  #     CR_CHARTS_REPO: https://sighupio.github.io/gatekeeper-policy-manager/
-  #     CR_GIT_REPO: gatekeeper-policy-manager
-  #     CR_PACKAGE_PATH: /out/packages
-  #     CR_INDEX_PATH: /out/pages
-  #     CR_TOKEN:
-  #       from_secret: c3p0
-  #   commands:
-  #     - wget https://get.helm.sh/helm-v3.2.4-linux-amd64.tar.gz
-  #     - tar -zxvf helm-v3.2.4-linux-amd64.tar.gz
-  #     - mv linux-amd64/helm /usr/local/bin/helm
-  #     - helm dependency update chart/
-  #     - mkdir -p $OUT_PATH/packages
-  #     - helm package chart/ --destination $OUT_PATH/packages
+
+  # We need to manually fetch the gh-pages branch because Drone by default 
+  # only checksout the current branch with a minimal depth
+  # see: https://docs.drone.io/pipeline/docker/syntax/cloning/
+  - name: fetch-gh-pages-branch
+    image: alpine/git
+    commands:
+    - git fetch origin gh-pages
+
 
   - name: chart-releaser
     image: quay.io/helmpack/chart-releaser:v1.4.0
