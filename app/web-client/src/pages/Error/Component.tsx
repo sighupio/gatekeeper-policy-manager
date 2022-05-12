@@ -13,12 +13,32 @@ import {
   EuiSpacer,
   EuiText,
 } from "fury-design-system";
-import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import {useContext, useEffect, useState} from "react";
+import {useLocation, useNavigate} from "react-router-dom";
 import { ErrorPageState } from "./types";
+import {ApplicationContext} from "../../AppContext";
 
 function ErrorComponent() {
   const { state } = useLocation();
+  const navigate = useNavigate();
+  const [initialContext, setInitialContext] = useState<string>();
+  const appContextData = useContext(ApplicationContext);
+
+  useEffect(() => {
+    if (
+      initialContext === undefined &&
+      appContextData.context.currentK8sContext !== undefined
+    ){
+      setInitialContext(appContextData.context.currentK8sContext);
+    }
+
+    if (
+      initialContext !== undefined &&
+      appContextData.context.currentK8sContext !== initialContext
+    ) {
+      navigate("/");
+    }
+  }, [appContextData.context.currentK8sContext])
 
   return (
     <EuiPage
