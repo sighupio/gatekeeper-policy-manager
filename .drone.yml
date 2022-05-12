@@ -358,32 +358,19 @@ steps:
     commands:
     - git fetch origin gh-pages
 
-
   - name: chart-releaser
     image: quay.io/helmpack/chart-releaser:v1.4.0
-    volumes:
-      - name: out
-        path: /out
-    # depends_on:
-    #   - helm-package
     environment:
-      # OUT_PATH: /out
       CR_OWNER: sighupio
-      # CR_CHARTS_REPO: https://sighupio.github.io/gatekeeper-policy-manager/
-      # CR_RELEASE_NAME_TEMPLATE: "gpm-helm-chart-{{ .Version }}"
       CR_GIT_REPO: gatekeeper-policy-manager
-      # CR_PAGES_BRANCH: github-pages
-      # CR_PACKAGE_PATH: ./chart
-      # CR_INDEX_PATH: /out/pages
+      # CR_RELEASE_NAME_TEMPLATE: "gpm-helm-chart-{{ .Version }}"
       CR_TOKEN:
         from_secret: c3p0
     commands:
-      # - mkdir -p $OUT_PATH/pages
-      # - export CR_PACKAGE_PATH=$(pwd)/chart
       - cr package ./chart
       - cr upload
       - cr index
-      # - cat $CR_INDEX_PATH/index.yaml
+      - cat .cr-index/index.yaml || true
 
   # - name: publish-helm-index
   #   image: plugins/gh-pages
@@ -391,7 +378,7 @@ steps:
     #   - name: out
     #     path: /out
     # depends_on:
-    #   - helm-upload
+    #   - chart-releaser
     # settings:
     #   api_key:
     #     from_secret: c3p0
@@ -402,5 +389,3 @@ volumes:
   - name: dockersock
     host:
       path: /var/run/docker.sock
-  # - name: out
-  #   temp: {}
