@@ -28,11 +28,11 @@
 .gpm-page .euiCodeBlock .token.prolog,
 .gpm-page .euiCodeBlock .token.doctype,
 .gpm-page .euiCodeBlock .token.cdata {
-  color: #666666;
+  color: #666;
 }
 
 .gpm-page .euiCodeBlock .token.punctuation {
-  color: #333333;
+  color: #333;
 }
 
 .gpm-page .euiCodeBlock .token.tag,
@@ -85,6 +85,7 @@
 .gpm-page .euiCodeBlock .token.bold {
   font-weight: bold;
 }
+
 .gpm-page .euiCodeBlock .token.italic {
   font-style: italic;
 }
