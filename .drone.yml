@@ -367,9 +367,10 @@ steps:
       CR_TOKEN:
         from_secret: c3p0
     commands:
+      - mkdir -p .cr-index # for some reason we need to manually create this folder
       - cr package ./chart
       - cr upload
-      - cr index
+      - cr index --push
       - cat .cr-index/index.yaml || true
 
   # - name: publish-helm-index
