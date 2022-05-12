@@ -373,19 +373,6 @@ steps:
       - cr index --push
       - cat .cr-index/index.yaml || true
 
-  # - name: publish-helm-index
-  #   image: plugins/gh-pages
-    # volumes:
-    #   - name: out
-    #     path: /out
-    # depends_on:
-    #   - chart-releaser
-    # settings:
-    #   api_key:
-    #     from_secret: c3p0
-      # target_branch: github-pages
-      # pages_directory: /out/pages
-
 volumes:
   - name: dockersock
     host:
