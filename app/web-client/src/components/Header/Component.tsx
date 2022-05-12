@@ -24,14 +24,18 @@ import {
 } from "react";
 import { ApplicationContext } from "../../AppContext";
 import { EuiSuperSelectOption } from "fury-design-system/src/components/form/super_select/super_select_control";
-import { useLocation } from "react-router-dom";
+import {useLocation, useNavigate, useParams} from "react-router-dom";
 
 function HeaderComponent() {
   const [optionsFromContexts, setOptionsFromContexts] = useState<
     EuiSuperSelectOption<string>[]
   >([]);
   const { context, setContext } = useContext(ApplicationContext);
-  const { pathname } = useLocation();
+  const { pathname, hash } = useLocation();
+  const navigate = useNavigate();
+
+  const pathSplit = pathname.match(/\/([^/]*)/gi);
+
   const routes = [
     {
       path: "/",
@@ -72,6 +76,14 @@ function HeaderComponent() {
       };
     });
     setOptionsFromContexts(optionsFromContexts);
+
+    if (pathSplit && pathSplit.length > 1 && pathname !== "/" && pathname !== "/error" && context.k8sContexts.length > 0) {
+      if (setContext) {
+        setContext({
+          currentK8sContext: pathSplit[1].slice(1),
+        });
+      }
+    }
   }, [context.k8sContexts]);
 
   const doLogout: MouseEventHandler<HTMLButtonElement> = (
@@ -93,6 +105,11 @@ function HeaderComponent() {
       setContext({
         currentK8sContext: value,
       });
+
+      if (pathSplit && pathSplit.length > 0 && pathname !== "/" && pathname !== "/error") {
+        navigate(pathSplit[0] + "/" + value + hash, { replace: true })
+        navigate(0)
+      }
     }
   };
 
@@ -105,10 +122,10 @@ function HeaderComponent() {
               routes.map((route) => {
                 return (
                   <EuiHeaderSectionItem
-                    className={pathname === route.path ? "header-active" : ""}
+                    className={(pathSplit ? pathSplit[0] : pathname) === route.path ? "header-active" : ""}
                     key={route.path}
                   >
-                    <EuiButtonEmpty href={route.path}>
+                    <EuiButtonEmpty href={`${route.path === "/" ? route.path : route.path + "/" + (context.currentK8sContext ?? "")}`}>
                       {route.name}
                     </EuiButtonEmpty>
                   </EuiHeaderSectionItem>

@@ -23,14 +23,23 @@ function App() {
     <ContextProvider>
       <Header />
       <Routes>
+        <Route path={`/constrainttemplates`}>
+          <Route path=":context" element={<ConstraintTemplates />} />
+          <Route path="" element={<ConstraintTemplates />} />
+        </Route>
+        <Route path={`/constraints`}>
+          <Route path=":context" element={<Constraints />} />
+          <Route path="" element={<Constraints />} />
+        </Route>
+        <Route path={`/configurations`}>
+          <Route path=":context" element={<Configurations />} />
+          <Route path="" element={<Configurations />} />
+        </Route>
+        <Route path={`/error`}>
+          <Route path=":context" element={<Error />} />
+          <Route path="" element={<Error />} />
+        </Route>
         <Route path={`/`} element={<Home />} />
-        <Route
-          path={`/constrainttemplates`}
-          element={<ConstraintTemplates />}
-        />
-        <Route path={`/constraints`} element={<Constraints />} />
-        <Route path={`/configurations`} element={<Configurations />} />
-        <Route path={`/error`} element={<Error />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Footer />

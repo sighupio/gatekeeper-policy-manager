@@ -35,7 +35,7 @@ import { ApplicationContext } from "../../AppContext";
 import { BackendError, ISideNav, ISideNavItem } from "../types";
 import { JSONTree } from "react-json-tree";
 import "./Style.css";
-import { useLocation, useNavigate } from "react-router-dom";
+import {useLocation, useNavigate, useParams} from "react-router-dom";
 import theme from "../theme";
 import { scrollToElement } from "../../utils";
 import {IConstraint, IConstraintSpec} from "./types";
@@ -124,7 +124,7 @@ function getEnforcementActionRenderData(spec?: IConstraintSpec) {
   };
 }
 
-function SingleConstraint(item: IConstraint) {
+function SingleConstraint(item: IConstraint, context?: string) {
   return (
     <EuiPanel grow={true} style={{ marginBottom: "24px" }}>
       <EuiFlexGroup gutterSize="s" alignItems="center">
@@ -143,7 +143,7 @@ function SingleConstraint(item: IConstraint) {
               {getEnforcementActionRenderData(item.spec).badge}
             </EuiFlexItem>
             <EuiFlexItem grow={false} style={{ marginLeft: "auto" }}>
-              <EuiLink href={`/constrainttemplates#${item.kind}`}>
+              <EuiLink href={`/constrainttemplates${context ? "/"+context : ""}#${item.kind}`}>
                 <EuiText size="xs">
                   <span>TEMPLATE: {item.kind}</span>
                   <EuiIcon type="link" size="s" style={{ marginLeft: 5 }} />
@@ -416,6 +416,7 @@ function ConstraintsComponent() {
   const appContextData = useContext(ApplicationContext);
   const { hash } = useLocation();
   const navigate = useNavigate();
+  const { context } = useParams<"context">();
 
   const onRefChange = useCallback(
     (element: HTMLDivElement | null, index: number) => {
@@ -463,7 +464,7 @@ function ConstraintsComponent() {
       .finally(() => setIsLoading(false));
   }, [appContextData.context.currentK8sContext]);
 
-  useScrollToHash(hash, [fullyLoadedRefs]);
+  useScrollToHash(hash, [fullyLoadedRefs, ]);
 
   useCurrentElementInView(panelsRef, setCurrentElementInView);
 
@@ -552,7 +553,7 @@ function ConstraintsComponent() {
                           key={item.metadata.name}
                           ref={(node) => onRefChange(node, index)}
                         >
-                          {SingleConstraint(item)}
+                          {SingleConstraint(item, context)}
                         </div>
                       );
                     })

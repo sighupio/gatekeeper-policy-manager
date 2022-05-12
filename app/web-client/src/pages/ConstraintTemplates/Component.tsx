@@ -30,7 +30,7 @@ import {
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { ApplicationContext } from "../../AppContext";
 import { BackendError, ISideNav, ISideNavItem } from "../types";
-import { useLocation, useNavigate } from "react-router-dom";
+import {useLocation, useNavigate, useParams} from "react-router-dom";
 import { IConstraint } from "../Constraints/types";
 import "./Style.css";
 import { JSONTree } from "react-json-tree";
@@ -68,7 +68,8 @@ function generateSideNav(list: IConstraintTemplate[]): ISideNav[] {
 
 function SingleConstraintTemplate(
   item: IConstraintTemplate,
-  relatedConstraints: IConstraint[]
+  relatedConstraints: IConstraint[],
+  context?: string
 ) {
   return (
     <EuiPanel grow={true} style={{ marginBottom: "24px" }}>
@@ -183,7 +184,7 @@ function SingleConstraintTemplate(
             </EuiFlexItem>
             {relatedConstraints.map((constraint, index) => (
               <EuiFlexItem key={constraint.metadata.name}>
-                <EuiLink href={`/constraints#${constraint.metadata.name}`}>
+                <EuiLink href={`/constraints${context ? "/"+context : ""}#${constraint.metadata.name}`}>
                   <EuiText size="s">
                     <span>{constraint.metadata.name}</span>
                     <EuiIcon type="link" size="s" style={{ marginLeft: 5 }} />
@@ -270,6 +271,7 @@ function ConstraintTemplatesComponent() {
   const appContextData = useContext(ApplicationContext);
   const { hash } = useLocation();
   const navigate = useNavigate();
+  const { context } = useParams<"context">();
 
   const onRefChange = useCallback(
     (element: HTMLDivElement | null, index: number) => {
@@ -400,7 +402,8 @@ function ConstraintTemplatesComponent() {
                         >
                           {SingleConstraintTemplate(
                             item,
-                            relatedConstraintsForItem
+                            relatedConstraintsForItem,
+                            context
                           )}
                         </div>
                       );
