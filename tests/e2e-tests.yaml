@@ -17,10 +17,10 @@ spec:
       - name: constrainttemplates
         image: docker.io/curlimages/curl
         command: ["/bin/sh",  "-c"]
-        args: ["curl -s http://gatekeeper-policy-manager.gatekeeper-system.svc.cluster.local/api/v1/constrainttemplates/ | grep 'target admission.k8s.gatekeeper.sh'"]
+        args: ["curl -s http://gatekeeper-policy-manager.gatekeeper-system.svc.cluster.local/api/v1/constrainttemplates/ | grep 'target'"]
       - name: constraints
         image: docker.io/curlimages/curl
         command: ["/bin/sh",  "-c"]
         args: ["curl -s http://gatekeeper-policy-manager.gatekeeper-system.svc.cluster.local/api/v1/constraints/ | grep 'totalViolations'"]
       restartPolicy: Never
-  backoffLimit: 10
+  backoffLimit: 9
