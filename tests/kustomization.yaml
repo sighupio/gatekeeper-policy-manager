@@ -5,7 +5,7 @@
 namespace: gatekeeper-system
 
 bases:
-  - github.com/sighupio/fury-kubernetes-opa/katalog/gatekeeper?ref=v1.2.1
+  - github.com/sighupio/fury-kubernetes-opa/katalog/gatekeeper?ref=v1.6.2
 
 resources:
   - ../manifests/rbac.yaml
