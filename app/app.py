@@ -6,30 +6,21 @@ import os
 from datetime import datetime
 from functools import wraps
 from io import BytesIO
+from logging import getLevelName, getLogger
 from logging.config import dictConfig
-from logging import getLogger, getLevelName
 from urllib.parse import urljoin
 
-from flask import (
-    Flask,
-    jsonify,
-    render_template,
-    request,
-    send_file,
-    send_from_directory,
-)
+from flask import (Flask, jsonify, render_template, request, send_file,
+                   send_from_directory)
 from flask_cors import CORS
 from flask_pyoidc import OIDCAuthentication
-from flask_pyoidc.provider_configuration import (
-    ClientMetadata,
-    ProviderConfiguration,
-    ProviderMetadata,
-)
+from flask_pyoidc.provider_configuration import (ClientMetadata,
+                                                 ProviderConfiguration,
+                                                 ProviderMetadata)
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from kubernetes.config.config_exception import ConfigException
 from urllib3.exceptions import MaxRetryError, NewConnectionError
-
 
 app = Flask(__name__, static_folder="static/webapp", template_folder="templates")
 
