@@ -36,13 +36,17 @@ app = Flask(__name__, static_folder="static/webapp", template_folder="templates"
 # setup logging
 if "gunicorn" in os.environ.get("SERVER_SOFTWARE", ""):
     # let's use gunicorn logger.
-    gunicorn_logger = getLogger('gunicorn.error')
+    gunicorn_logger = getLogger("gunicorn.error")
     # print(gunicorn_logger)
     app.logger.handlers = gunicorn_logger.handlers
     gunicorn_logger.setLevel(os.environ.get("GPM_LOG_LEVEL", "INFO"))
     app.logger.setLevel(gunicorn_logger.level)
-    app.logger.info(f"gunicorn log level is set to: {getLevelName(gunicorn_logger.level)}")
-    app.logger.info(f"application log level is set to: {getLevelName(app.logger.level)}")
+    app.logger.info(
+        f"gunicorn log level is set to: {getLevelName(gunicorn_logger.level)}"
+    )
+    app.logger.info(
+        f"application log level is set to: {getLevelName(app.logger.level)}"
+    )
 else:
     # we're running through flask directly, use standard logger
     dictConfig(
@@ -81,7 +85,7 @@ app.config.update(
 )
 
 if app.config.get("APP_ENV") == "development":
-    app.logger.info('running Flask in development mode')
+    app.logger.info("running Flask in development mode")
     CORS(app)
 
 if app.config.get("AUTH_ENABLED") == "OIDC":
@@ -189,7 +193,7 @@ def get_api(context=None):
     and returns the corresponding API object to be used to query the API server.
     """
     if app.config.get("MODE") == "KUBECONFIG":
-        app.logger.debug('entering KUBECONFIG MODE and getting API objects')
+        app.logger.debug("entering KUBECONFIG MODE and getting API objects")
         return {
             "cm": client.CustomObjectsApi(
                 config.new_client_from_config(context=context)
@@ -197,7 +201,7 @@ def get_api(context=None):
             "apis": client.ApisApi(config.new_client_from_config(context=context)),
         }
     elif app.config.get("MODE") == "CLUSTER":
-        app.logger.debug('entering CLUSTER MODE and getting API objects')
+        app.logger.debug("entering CLUSTER MODE and getting API objects")
         return {
             "cm": client.CustomObjectsApi(),
             "apis": client.ApisApi(),
