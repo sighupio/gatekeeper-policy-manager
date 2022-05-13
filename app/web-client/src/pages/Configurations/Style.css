@@ -1,0 +1,18 @@
+/**
+ * Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+ * Use of this source code is governed by a BSD-style
+ * license that can be found in the LICENSE file.
+ */
+
+/* stylelint-disable selector-class-pattern, max-line-length */
+.gpm-page-config .euiDescriptionList__title {
+  max-width: 100px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.gpm-page-config .euiDescriptionList.euiDescriptionList--column.euiDescriptionList--compressed .euiDescriptionList__description,
+.gpm-page-config .euiDescriptionList.euiDescriptionList--responsiveColumn.euiDescriptionList--compressed .euiDescriptionList__description {
+  width: calc(100% - 100px);
+}

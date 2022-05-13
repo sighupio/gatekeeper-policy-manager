@@ -1,0 +1,99 @@
+/**
+ * Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+ * Use of this source code is governed by a BSD-style
+ * license that can be found in the LICENSE file.
+ */
+
+/* stylelint-disable selector-class-pattern, max-line-length */
+.gpm-page .euiPanel.euiPanel--hasShadow {
+  transition: 0.75s ease-out all;
+}
+
+.gpm-page .euiPanel.euiPanel--hasShadow.highlighted {
+  background-color: rgb(104 40 140 / 7%);
+  box-shadow:
+    0 0.9px 4px -1px rgb(104 40 140 / 18%),
+    0 2.6px 8px -1px rgb(104 40 140 / 16%),
+    0 5.7px 12px -1px rgb(104 40 140 / 15%),
+    0 15px 15px -1px rgb(104 40 140 / 14%);
+}
+
+.gpm-page .euiCodeBlock {
+  filter: invert();
+  background: white;
+}
+
+.gpm-page .euiCodeBlock .token.comment,
+.gpm-page .euiCodeBlock .token.block-comment,
+.gpm-page .euiCodeBlock .token.prolog,
+.gpm-page .euiCodeBlock .token.doctype,
+.gpm-page .euiCodeBlock .token.cdata {
+  color: #666;
+}
+
+.gpm-page .euiCodeBlock .token.punctuation {
+  color: #333;
+}
+
+.gpm-page .euiCodeBlock .token.tag,
+.gpm-page .euiCodeBlock .token.attr-name,
+.gpm-page .euiCodeBlock .token.namespace,
+.gpm-page .euiCodeBlock .token.deleted {
+  color: #1d8885;
+}
+
+.gpm-page .euiCodeBlock .token.function-name {
+  color: #9e6933;
+}
+
+.gpm-page .euiCodeBlock .token.boolean,
+.gpm-page .euiCodeBlock .token.number,
+.gpm-page .euiCodeBlock .token.function {
+  color: #0f72b6;
+}
+
+.gpm-page .euiCodeBlock .token.property,
+.gpm-page .euiCodeBlock .token.class-name,
+.gpm-page .euiCodeBlock .token.constant,
+.gpm-page .euiCodeBlock .token.symbol {
+  color: #073aaa;
+}
+
+.gpm-page .euiCodeBlock .token.selector,
+.gpm-page .euiCodeBlock .token.important,
+.gpm-page .euiCodeBlock .token.atrule,
+.gpm-page .euiCodeBlock .token.keyword,
+.gpm-page .euiCodeBlock .token.builtin {
+  color: #336632;
+}
+
+.gpm-page .euiCodeBlock .token.string,
+.gpm-page .euiCodeBlock .token.char,
+.gpm-page .euiCodeBlock .token.attr-value,
+.gpm-page .euiCodeBlock .token.regex,
+.gpm-page .euiCodeBlock .token.variable {
+  color: #813966;
+}
+
+.gpm-page .euiCodeBlock .token.operator,
+.gpm-page .euiCodeBlock .token.entity,
+.gpm-page .euiCodeBlock .token.url {
+  color: #983233;
+}
+
+.gpm-page .euiCodeBlock .token.important,
+.gpm-page .euiCodeBlock .token.bold {
+  font-weight: bold;
+}
+
+.gpm-page .euiCodeBlock .token.italic {
+  font-style: italic;
+}
+
+.gpm-page .euiCodeBlock .token.entity {
+  cursor: help;
+}
+
+.gpm-page .euiCodeBlock .token.inserted {
+  color: #ff7fff;
+}

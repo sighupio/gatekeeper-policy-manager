@@ -3,3 +3,4 @@ env
 __pycache__
 launch.json
 app/static/node_modules
+app/static/webapp

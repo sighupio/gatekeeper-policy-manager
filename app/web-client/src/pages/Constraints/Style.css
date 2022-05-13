@@ -1,0 +1,28 @@
+/**
+ * Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+ * Use of this source code is governed by a BSD-style
+ * license that can be found in the LICENSE file.
+ */
+
+/* stylelint-disable selector-class-pattern, max-line-length */
+.gpm-page-constraints .euiAccordion__button:focus {
+  text-decoration: none !important;
+}
+
+.gpm-page-constraints .euiAccordion__button:hover {
+  text-decoration: none !important;
+}
+
+.gpm-page-constraints .euiDescriptionList__title {
+  max-width: 100px;
+}
+
+.gpm-page-constraints .euiPanel .euiBadge svg.euiIcon--small {
+  width: 14px;
+  height: 14px;
+}
+
+.gpm-page-constraints .euiDescriptionList.euiDescriptionList--column.euiDescriptionList--compressed .euiDescriptionList__description,
+.gpm-page-constraints .euiDescriptionList.euiDescriptionList--responsiveColumn.euiDescriptionList--compressed .euiDescriptionList__description {
+  width: calc(100% - 100px);
+}

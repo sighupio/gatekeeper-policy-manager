@@ -37,6 +37,7 @@ steps:
       VALIDATE_KUBERNETES_KUBEVAL: "false"
       # Some duplicated code is intended.
       VALIDATE_JSCPD: "false"
+      TYPESCRIPT_DEFAULT_STYLE: "prettier"
     depends_on:
       - clone
 
