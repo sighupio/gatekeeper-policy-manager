@@ -244,7 +244,7 @@ def get_constraints(context=None):
         }, 500
     except ApiException as e:
         if e.status == 404:
-            return []
+            return jsonify([])
         else:
             return {
                 "error": "We had a problem while asking the API for Gatekeeper Constraint objects",
