@@ -10,13 +10,21 @@ from logging import getLevelName, getLogger
 from logging.config import dictConfig
 from urllib.parse import urljoin
 
-from flask import (Flask, jsonify, render_template, request, send_file,
-                   send_from_directory)
+from flask import (
+    Flask,
+    jsonify,
+    render_template,
+    request,
+    send_file,
+    send_from_directory,
+)
 from flask_cors import CORS
 from flask_pyoidc import OIDCAuthentication
-from flask_pyoidc.provider_configuration import (ClientMetadata,
-                                                 ProviderConfiguration,
-                                                 ProviderMetadata)
+from flask_pyoidc.provider_configuration import (
+    ClientMetadata,
+    ProviderConfiguration,
+    ProviderMetadata,
+)
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from kubernetes.config.config_exception import ConfigException
