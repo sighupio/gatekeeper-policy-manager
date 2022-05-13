@@ -119,7 +119,7 @@ trigger:
   ref:
     include:
       - refs/tags/**
-      - refs/heads/master
+      - refs/heads/main
       - refs/heads/renovate/*
       - refs/heads/dependabot/*
     exclude:
