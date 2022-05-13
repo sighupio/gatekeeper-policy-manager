@@ -81,7 +81,7 @@ const ContextProvider = ({ children }: ContextProviderProps) => {
 
   useEffect(() => {
     Promise.allSettled([
-      fetch(`${appContext.apiUrl}api/v1/contexts`)
+      fetch(`${appContext.apiUrl}api/v1/contexts/`)
         .then<K8sContextsResponse>((res) => res.json())
         .then((body) => {
           if ((body?.length ?? 1) > 1) {
@@ -114,7 +114,7 @@ const ContextProvider = ({ children }: ContextProviderProps) => {
           localStorage.removeItem("currentK8sContext");
           console.error(err);
         }),
-      fetch(`${appContext.apiUrl}api/v1/auth`)
+      fetch(`${appContext.apiUrl}api/v1/auth/`)
         .then<IAuthResponse>((res) => res.json())
         .then((body) => {
           localStorage.setItem(

@@ -374,7 +374,7 @@ def get_constrainttemplates(context=None):
 
 
 @app.route("/api/v1/configs/")
-@app.route("/api/v1/configs/<context>")
+@app.route("/api/v1/configs/<context>/")
 @login_required_conditional
 def get_gatekeeperconfigs(context=None):
     """Gatekeeper Configs View"""

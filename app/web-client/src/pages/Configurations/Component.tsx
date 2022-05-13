@@ -200,7 +200,8 @@ function ConfigurationsComponent() {
   useEffect(() => {
     setIsLoading(true);
     fetch(
-      `${appContextData.context.apiUrl}api/v1/configs/${appContextData.context.currentK8sContext}`
+      `${appContextData.context.apiUrl}api/v1/configs/${appContextData.context.currentK8sContext ?
+        appContextData.context.currentK8sContext+"/" : ""}`
     )
       .then(async (res) => {
         const body: IConfig[] = await res.json();
