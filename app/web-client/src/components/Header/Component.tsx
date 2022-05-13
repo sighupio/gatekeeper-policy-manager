@@ -91,7 +91,7 @@ function HeaderComponent() {
   ): void => {
     event.preventDefault();
 
-    fetch(`${context.apiUrl}/api/v1/auth/logout`, { method: "POST" }).finally(
+    fetch(`${context.apiUrl}api/v1/auth/logout`, { method: "POST" }).finally(
       () => {
         setTimeout(() => {
           window.location.reload();
