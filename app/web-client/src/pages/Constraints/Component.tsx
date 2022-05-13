@@ -66,6 +66,7 @@ function generateSideNav(list: IConstraint[]): ISideNav[] {
           </EuiBadge>
           <EuiIcon
             type={enforcementRenderData.icon}
+            title={enforcementRenderData.mode}
             style={{
               margin: "0 5px",
             }}
@@ -112,6 +113,7 @@ function getEnforcementActionRenderData(spec?: IConstraintSpec) {
   return {
     icon: icon,
     color: color,
+    mode: mode,
     badge: (
       <EuiBadge
         color={color}

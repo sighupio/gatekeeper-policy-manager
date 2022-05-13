@@ -13,8 +13,12 @@ import {
   EuiText,
 } from "fury-design-system";
 import logo from "../../assets/gpm-logo.svg";
+import {useContext} from "react";
+import {ApplicationContext} from "../../AppContext";
 
 function HomeComponent() {
+  const appContextData = useContext(ApplicationContext);
+
   return (
     <EuiPage
       paddingSize="s"
@@ -49,7 +53,7 @@ function HomeComponent() {
         </EuiFlexItem>
         <EuiFlexItem grow={false}>
           <EuiButton
-            href="/constraints"
+            href={`/constraints/${appContextData.context.currentK8sContext}`}
             iconSide="right"
             iconType="arrowRight"
             aria-label="Next"
