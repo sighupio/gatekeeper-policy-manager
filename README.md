@@ -54,7 +54,7 @@ Then, execute:
 
 ```bash
 helm repo add gpm https://sighupio.github.io/gatekeeper-policy-manager
-helm upgrade --install --namespace gatekeeper-system --set image.tag=v1.0.0 --values my-values.yaml gatekeeper-policy-managergpm/gatekeeper-policy-manager
+helm upgrade --install --namespace gatekeeper-system --set image.tag=v1.0.0 --values my-values.yaml gpm/gatekeeper-policy-manager
 ```
 
 ## Running locally
