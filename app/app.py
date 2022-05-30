@@ -460,14 +460,14 @@ if app.config.get("AUTH_ENABLED") == "OIDC":
         if error == "login_required":
             user_session = UserSession(session)
             app.logger.debug(
-                f'session has expired for user {user_session.userinfo}. Cleaning session locally.'
+                f"session has expired for user {user_session.userinfo}. Cleaning session locally."
             )
             user_session.clear()
             # we should probably redirect to a "You've been loged out, please log in again" page instead
             app.logger.debug(
-                'redirecting to previous destination that will request login'
+                "redirecting to previous destination that will request login"
             )
-            return redirect(user_session._session_storage.get('destination', '/'))
+            return redirect(user_session._session_storage.get("destination", "/"))
         return {
             "error": "OIDC Error: " + error,
             "action": "Something is wrong with your OIDC session. Please try to logout and login again",
