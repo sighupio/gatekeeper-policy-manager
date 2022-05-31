@@ -13,10 +13,12 @@ from urllib.parse import urljoin
 from flask import (
     Flask,
     jsonify,
+    redirect,
     render_template,
     request,
     send_file,
     send_from_directory,
+    session,
 )
 from flask_cors import CORS
 from flask_pyoidc import OIDCAuthentication
@@ -25,6 +27,7 @@ from flask_pyoidc.provider_configuration import (
     ProviderConfiguration,
     ProviderMetadata,
 )
+from flask_pyoidc.user_session import UserSession
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from kubernetes.config.config_exception import ConfigException
@@ -454,6 +457,17 @@ if app.config.get("AUTH_ENABLED") == "OIDC":
     @auth.error_view
     def error(error=None, error_description=None):
         """View to handle OIDC errors and show them properly"""
+        if error == "login_required":
+            user_session = UserSession(session)
+            app.logger.debug(
+                f"session has expired for user {user_session.userinfo}. Cleaning session locally."
+            )
+            user_session.clear()
+            # we should probably redirect to a "You've been loged out, please log in again" page instead
+            app.logger.debug(
+                "redirecting to previous destination that will request login"
+            )
+            return redirect(user_session._session_storage.get("destination", "/"))
         return {
             "error": "OIDC Error: " + error,
             "action": "Something is wrong with your OIDC session. Please try to logout and login again",
