@@ -1,6 +1,6 @@
 -r requirements-base.txt
 Beaker==1.11.0
-cachetools==5.0.0
+cachetools==5.2.0
 certifi==2022.5.18.1
 cffi==1.15.0
 charset-normalizer==2.0.12
