@@ -30,7 +30,7 @@ import {
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { ApplicationContext } from "../../AppContext";
 import { BackendError, ISideNav, ISideNavItem } from "../types";
-import {useLocation, useNavigate, useParams} from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { IConstraint } from "../Constraints/types";
 import "./Style.css";
 import { JSONTree } from "react-json-tree";
@@ -105,6 +105,15 @@ function SingleConstraintTemplate(
           </EuiFlexGroup>
         </EuiFlexItem>
       </EuiFlexGroup>
+      {item.metadata.annotations.description &&
+        <EuiFlexGroup direction="column" gutterSize="s">
+          <EuiFlexItem grow={false}>
+            <EuiText size="s">
+              <p>{item.metadata.annotations.description}</p>
+            </EuiText>
+          </EuiFlexItem>
+        </EuiFlexGroup>
+      }
       <EuiSpacer size="s" />
       <EuiHorizontalRule margin="none" />
       <EuiSpacer size="s" />
@@ -184,7 +193,7 @@ function SingleConstraintTemplate(
             </EuiFlexItem>
             {relatedConstraints.map((constraint, index) => (
               <EuiFlexItem key={constraint.metadata.name}>
-                <EuiLink href={`/constraints${context ? "/"+context : ""}#${constraint.metadata.name}`}>
+                <EuiLink href={`/constraints${context ? "/" + context : ""}#${constraint.metadata.name}`}>
                   <EuiText size="s">
                     <span>{constraint.metadata.name}</span>
                     <EuiIcon type="link" size="s" style={{ marginLeft: 5 }} />
@@ -292,7 +301,7 @@ function ConstraintTemplatesComponent() {
     setIsLoading(true);
     fetch(
       `${appContextData.context.apiUrl}api/v1/constrainttemplates/${appContextData.context.currentK8sContext ?
-        appContextData.context.currentK8sContext+"/" : ""}`
+        appContextData.context.currentK8sContext + "/" : ""}`
     )
       .then(async (res) => {
         const body: IConstraintTemplateResponse = await res.json();
