@@ -12,7 +12,7 @@ import {
   EuiPage,
   EuiSpacer,
   EuiText,
-} from "fury-design-system";
+} from "@elastic/eui";
 import {useContext, useEffect, useState} from "react";
 import {useLocation, useNavigate} from "react-router-dom";
 import { ErrorPageState } from "./types";

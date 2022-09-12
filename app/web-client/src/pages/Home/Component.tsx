@@ -7,11 +7,12 @@
 import {
   EuiButton,
   EuiFlexGroup,
-  EuiFlexItem, EuiImage,
+  EuiFlexItem,
+  EuiImage,
   EuiPage,
   EuiSpacer,
   EuiText,
-} from "fury-design-system";
+} from "@elastic/eui";
 import logo from "../../assets/gpm-logo.svg";
 import {useContext} from "react";
 import {ApplicationContext} from "../../AppContext";

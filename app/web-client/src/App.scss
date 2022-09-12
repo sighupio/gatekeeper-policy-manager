@@ -5,6 +5,10 @@
  */
 
 /* stylelint-disable selector-class-pattern, max-line-length */
+.gpm-page {
+    width: 100%;
+}
+
 .gpm-page .euiPanel.euiPanel--hasShadow {
   transition: 0.75s ease-out all;
 }
@@ -19,7 +23,7 @@
 }
 
 .gpm-page .euiCodeBlock {
-  filter: invert();
+  filter: invert(1);
   background: white;
 }
 

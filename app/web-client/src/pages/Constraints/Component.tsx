@@ -20,21 +20,18 @@ import {
   EuiNotificationBadge,
   EuiPage,
   EuiPageBody,
-  EuiPageContent,
-  EuiPageContentBody,
-  EuiPageSideBar,
+  EuiPageSidebar,
   EuiPanel,
   EuiSideNav,
   EuiSpacer,
   EuiText,
   EuiTitle,
   htmlIdGenerator,
-} from "fury-design-system";
-import {useCallback, useContext, useEffect, useMemo, useRef, useState} from "react";
+} from "@elastic/eui";
+import {useCallback, useContext, useEffect, useRef, useState} from "react";
 import { ApplicationContext } from "../../AppContext";
 import { BackendError, ISideNav, ISideNavItem } from "../types";
 import { JSONTree } from "react-json-tree";
-import "./Style.css";
 import {useLocation, useNavigate, useParams} from "react-router-dom";
 import theme from "../theme";
 import { scrollToElement } from "../../utils";
@@ -44,6 +41,7 @@ import useCurrentElementInView from "../../hooks/useCurrentElementInView";
 import warnIcon from "../../assets/warn.svg";
 import shieldActive from "../../assets/shield-active.svg";
 import shieldInactive from "../../assets/shield-inactive.svg";
+import "./Style.scss";
 
 function generateSideNav(list: IConstraint[]): ISideNav[] {
   const sideBarItems = (list ?? []).map((item, index) => {
@@ -519,7 +517,7 @@ function ConstraintsComponent() {
             style={{ position: "relative" }}
             className="gpm-page gpm-page-constraints"
           >
-            <EuiPageSideBar
+            <EuiPageSidebar
               paddingSize="m"
               style={{
                 minWidth: "300px",
@@ -539,35 +537,31 @@ function ConstraintsComponent() {
                   <EuiText size="xs">Download violations report</EuiText>
                 </EuiButton>
               )}
-            </EuiPageSideBar>
-            <EuiPageBody>
-              <EuiPageContent
-                hasBorder={false}
-                hasShadow={false}
-                color="transparent"
-                borderRadius="none"
-              >
-                <EuiPageContentBody restrictWidth style={{ marginBottom: 350 }}>
-                  {items && items.length > 0 ? (
-                    items.map((item, index) => {
-                      return (
-                        <div
-                          id={item.metadata.name}
-                          key={item.metadata.name}
-                          ref={(node) => onRefChange(node, index)}
-                        >
-                          {SingleConstraint(item, context)}
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <EuiEmptyPrompt
-                      iconType="alert"
-                      body={<p>No Constraint found</p>}
-                    />
-                  )}
-                </EuiPageContentBody>
-              </EuiPageContent>
+            </EuiPageSidebar>
+            <EuiPageBody
+              paddingSize="m"
+              style={{ marginBottom: 350 }}
+            >
+              <>
+                {items && items.length > 0 ? (
+                  items.map((item, index) => {
+                    return (
+                      <div
+                        id={item.metadata.name}
+                        key={item.metadata.name}
+                        ref={(node) => onRefChange(node, index)}
+                      >
+                        {SingleConstraint(item, context)}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <EuiEmptyPrompt
+                    iconType="alert"
+                    body={<p>No Constraint found</p>}
+                  />
+                )}
+              </>
             </EuiPageBody>
           </EuiPage>
         </EuiFlexGroup>

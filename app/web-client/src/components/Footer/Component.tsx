@@ -11,9 +11,9 @@ import {
   EuiLink,
   EuiSpacer,
   EuiText,
-} from "fury-design-system";
+} from "@elastic/eui";
 import githubLogo from "../../assets/github-logo.svg";
-import "./Style.css";
+import "./Style.scss";
 
 function FooterComponent() {
   return (

@@ -13,8 +13,7 @@ import {
   EuiHideFor,
   EuiSuperSelect,
   EuiText,
-} from "fury-design-system";
-import "./Style.css";
+} from "@elastic/eui";
 import {
   MouseEventHandler,
   MouseEvent,
@@ -23,8 +22,9 @@ import {
   useState,
 } from "react";
 import { ApplicationContext } from "../../AppContext";
-import { EuiSuperSelectOption } from "fury-design-system/src/components/form/super_select/super_select_control";
-import {useLocation, useNavigate, useParams} from "react-router-dom";
+import { EuiSuperSelectOption } from "@elastic/eui/src/components/form/super_select/super_select_control";
+import { useLocation, useNavigate } from "react-router-dom";
+import "./Style.scss";
 
 function HeaderComponent() {
   const [optionsFromContexts, setOptionsFromContexts] = useState<
