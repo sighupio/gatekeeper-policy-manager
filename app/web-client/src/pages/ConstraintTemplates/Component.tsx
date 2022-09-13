@@ -25,7 +25,7 @@ import {
   EuiTitle,
   htmlIdGenerator,
 } from "@elastic/eui";
-import {memo, useCallback, useContext, useEffect, useRef, useState} from "react";
+import {useCallback, useContext, useEffect, useRef, useState} from "react";
 import { ApplicationContext } from "../../AppContext";
 import { BackendError, ISideNav, ISideNavItem } from "../types";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
