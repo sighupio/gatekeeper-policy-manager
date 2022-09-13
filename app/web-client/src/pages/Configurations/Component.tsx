@@ -34,6 +34,7 @@ import { IConfig } from "./types";
 import useScrollToHash from "../../hooks/useScrollToHash";
 import useCurrentElementInView from "../../hooks/useCurrentElementInView";
 import "./Style.scss";
+import clonedeep from "lodash.clonedeep";
 
 function generateSideNav(list: IConfig[]): ISideNav[] {
   const sideBarItems = (list ?? []).map((item, index) => {
@@ -238,7 +239,9 @@ function ConfigurationsComponent() {
 
   useEffect(() => {
     if (currentElementInView) {
-      const newItems = sideNav[0].items.map((item) => {
+      const newSideBar: ISideNav[] = clonedeep(sideNav);
+
+      newSideBar[0].items = newSideBar[0].items.map((item) => {
         if (item.name === currentElementInView) {
           item.isSelected = true;
         } else {
@@ -247,7 +250,8 @@ function ConfigurationsComponent() {
 
         return item;
       });
-      setSideNav([{ ...sideNav[0], items: newItems }]);
+
+      setSideNav(newSideBar);
     }
   }, [currentElementInView]);
 

@@ -25,13 +25,14 @@ import {
   EuiTitle,
   htmlIdGenerator,
 } from "@elastic/eui";
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import {memo, useCallback, useContext, useEffect, useRef, useState} from "react";
 import { ApplicationContext } from "../../AppContext";
 import { BackendError, ISideNav, ISideNavItem } from "../types";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { IConstraint } from "../Constraints/types";
 import { JSONTree } from "react-json-tree";
 import theme from "../theme";
+import clonedeep from "lodash.clonedeep";
 import { scrollToElement } from "../../utils";
 import {
   IConstraintTemplate,
@@ -347,7 +348,9 @@ function ConstraintTemplatesComponent() {
 
   useEffect(() => {
     if (currentElementInView) {
-      const newItems = sideNav[0].items.map((item) => {
+      const newSideBar: ISideNav[] = clonedeep(sideNav);
+
+      newSideBar[0].items = newSideBar[0].items.map((item) => {
         if (item.name === currentElementInView) {
           item.isSelected = true;
         } else {
@@ -356,7 +359,8 @@ function ConstraintTemplatesComponent() {
 
         return item;
       });
-      setSideNav([{ ...sideNav[0], items: newItems }]);
+
+      setSideNav(newSideBar);
     }
   }, [currentElementInView]);
 

@@ -42,6 +42,7 @@ import warnIcon from "../../assets/warn.svg";
 import shieldActive from "../../assets/shield-active.svg";
 import shieldInactive from "../../assets/shield-inactive.svg";
 import "./Style.scss";
+import clonedeep from "lodash.clonedeep";
 
 function generateSideNav(list: IConstraint[]): ISideNav[] {
   const sideBarItems = (list ?? []).map((item, index) => {
@@ -471,7 +472,9 @@ function ConstraintsComponent() {
 
   useEffect(() => {
     if (currentElementInView) {
-      const newItems = sideNav[0].items.map((item) => {
+      const newSideBar: ISideNav[] = clonedeep(sideNav);
+
+      newSideBar[0].items = newSideBar[0].items.map((item) => {
         if (item.name === currentElementInView) {
           item.isSelected = true;
         } else {
@@ -480,7 +483,8 @@ function ConstraintsComponent() {
 
         return item;
       });
-      setSideNav([{ ...sideNav[0], items: newItems }]);
+
+      setSideNav(newSideBar);
     }
   }, [currentElementInView]);
 
