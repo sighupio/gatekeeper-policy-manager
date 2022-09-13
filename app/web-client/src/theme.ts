@@ -5,7 +5,7 @@
  */
 
 export const theme = {
-  themeName: 'THEME_KARRIER',
+  themeName: "THEME_KARRIER",
   colors: {
     LIGHT: {
       primary: "#6b2d9f",
@@ -14,7 +14,7 @@ export const theme = {
     DARK: {
       primary: "#6b2d9f",
       customPrimaryDarkShade: "#421959",
-    }
+    },
   },
   font: {
     family: "'Poppins', BlinkMacSystemFont, Helvetica, Arial, sans-serif",
@@ -25,4 +25,4 @@ export const theme = {
       medium: "8px",
     },
   },
-}
+};
