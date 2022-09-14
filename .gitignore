@@ -2,5 +2,6 @@ env
 .vscode
 __pycache__
 launch.json
-app/static/node_modules
-app/static/webapp
+app/static-content/*
+!app/static-content/logo.svg
+!app/static-content/semantic.min.css

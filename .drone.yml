@@ -31,7 +31,7 @@ steps:
     image: quay.io/sighup/policeman
     pull: always
     environment:
-      FILTER_REGEX_EXCLUDE: (app/static/prism.*|chart/)
+      FILTER_REGEX_EXCLUDE: (app/static-content/semantic.min.css|chart/)
       # Identifies false positives like missing 'selector'.
       # Doing this is valid for Kustomize patches
       VALIDATE_KUBERNETES_KUBEVAL: "false"
@@ -213,7 +213,7 @@ steps:
   - name: prepare-tar-gz
     image: alpine:latest
     pull: always
-    depends_on: [ clone ]
+    depends_on: [clone]
     commands:
       - tar -zcvf gatekeeper-policy-manager-${DRONE_TAG}.tar.gz manifests/ kustomization.yaml LICENSE README.md
     when:
@@ -224,7 +224,7 @@ steps:
   - name: prepare-release-notes
     image: quay.io/sighup/fury-release-notes-plugin:3.7_2.8.4
     pull: always
-    depends_on: [ clone ]
+    depends_on: [clone]
     settings:
       release_notes_file_path: release-notes.md
     when:
@@ -237,7 +237,7 @@ steps:
   - name: registry-sha
     image: docker:dind
     pull: always
-    depends_on: [ clone ]
+    depends_on: [clone]
     environment:
       username:
         from_secret: quay_username
@@ -264,7 +264,7 @@ steps:
   - name: registry-tag
     image: docker:dind
     pull: always
-    depends_on: [ clone ]
+    depends_on: [clone]
     environment:
       username:
         from_secret: quay_username
@@ -361,13 +361,13 @@ trigger:
       - refs/tags/gatekeeper-policy-manager-*
 
 steps:
-  # We need to manually fetch the gh-pages branch because Drone by default 
+  # We need to manually fetch the gh-pages branch because Drone by default
   # only checksout the current branch with a minimal depth
   # see: https://docs.drone.io/pipeline/docker/syntax/cloning/
   - name: fetch-gh-pages-branch
     image: alpine/git
     commands:
-    - git fetch origin gh-pages
+      - git fetch origin gh-pages
 
   # We use GitHub Pages as Helm Repository and `cr` (Chart Releaser)
   # to help us publish the chart.

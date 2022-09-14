@@ -5,11 +5,15 @@
  */
 
 /* stylelint-disable selector-class-pattern, max-line-length */
-.gpm-page .euiPanel.euiPanel--hasShadow {
+.gpm-page {
+  width: 100%;
+}
+
+.gpm-page .euiPanel.euiPanel--plain {
   transition: 0.75s ease-out all;
 }
 
-.gpm-page .euiPanel.euiPanel--hasShadow.highlighted {
+.gpm-page .euiPanel.euiPanel--plain.highlighted {
   background-color: rgb(104 40 140 / 7%);
   box-shadow:
     0 0.9px 4px -1px rgb(104 40 140 / 18%),
@@ -19,7 +23,7 @@
 }
 
 .gpm-page .euiCodeBlock {
-  filter: invert();
+  filter: invert(1);
   background: white;
 }
 

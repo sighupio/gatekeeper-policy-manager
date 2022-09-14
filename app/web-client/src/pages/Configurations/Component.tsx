@@ -15,20 +15,17 @@ import {
   EuiLoadingSpinner,
   EuiPage,
   EuiPageBody,
-  EuiPageContent,
-  EuiPageContentBody,
-  EuiPageSideBar,
+  EuiPageSidebar,
   EuiPanel,
   EuiSideNav,
   EuiSpacer,
   EuiText,
   EuiTitle,
   htmlIdGenerator,
-} from "fury-design-system";
+} from "@elastic/eui";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { BackendError, ISideNav, ISideNavItem } from "../types";
 import { ApplicationContext } from "../../AppContext";
-import "./Style.css";
 import { useLocation, useNavigate } from "react-router-dom";
 import { JSONTree } from "react-json-tree";
 import theme from "../theme";
@@ -36,6 +33,8 @@ import { scrollToElement } from "../../utils";
 import { IConfig } from "./types";
 import useScrollToHash from "../../hooks/useScrollToHash";
 import useCurrentElementInView from "../../hooks/useCurrentElementInView";
+import "./Style.scss";
+import clonedeep from "lodash.clonedeep";
 
 function generateSideNav(list: IConfig[]): ISideNav[] {
   const sideBarItems = (list ?? []).map((item, index) => {
@@ -99,7 +98,10 @@ function SingleConfig(item: IConfig) {
             buttonContent="YAML definition"
             paddingSize="none"
           >
-            <EuiCodeBlock language="json">
+            <EuiCodeBlock
+              lineNumbers
+              language="json"
+            >
               {JSON.stringify(
                 item,
                 (k, v) => {
@@ -237,7 +239,9 @@ function ConfigurationsComponent() {
 
   useEffect(() => {
     if (currentElementInView) {
-      const newItems = sideNav[0].items.map((item) => {
+      const newSideBar: ISideNav[] = clonedeep(sideNav);
+
+      newSideBar[0].items = newSideBar[0].items.map((item) => {
         if (item.name === currentElementInView) {
           item.isSelected = true;
         } else {
@@ -246,7 +250,8 @@ function ConfigurationsComponent() {
 
         return item;
       });
-      setSideNav([{ ...sideNav[0], items: newItems }]);
+
+      setSideNav(newSideBar);
     }
   }, [currentElementInView]);
 
@@ -283,37 +288,33 @@ function ConfigurationsComponent() {
             style={{ position: "relative" }}
             className="gpm-page gpm-page-config"
           >
-            <EuiPageSideBar paddingSize="m" sticky>
+            <EuiPageSidebar paddingSize="m" sticky>
               <EuiSideNav items={sideNav} />
-            </EuiPageSideBar>
-            <EuiPageBody>
-              <EuiPageContent
-                hasBorder={false}
-                hasShadow={false}
-                color="transparent"
-                borderRadius="none"
-              >
-                <EuiPageContentBody restrictWidth style={{ marginBottom: 350 }}>
-                  {items && items.length > 0 ? (
-                    items.map((item, index) => {
-                      return (
-                        <div
-                          id={`${item.metadata.name}`}
-                          key={`${item.metadata.name}`}
-                          ref={(node) => onRefChange(node, index)}
-                        >
-                          {SingleConfig(item)}
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <EuiEmptyPrompt
-                      iconType="alert"
-                      body={<p>No Configuration found</p>}
-                    />
-                  )}
-                </EuiPageContentBody>
-              </EuiPageContent>
+            </EuiPageSidebar>
+            <EuiPageBody
+              paddingSize="m"
+              style={{ marginBottom: 350 }}
+            >
+              <>
+                {items && items.length > 0 ? (
+                  items.map((item, index) => {
+                    return (
+                      <div
+                        id={`${item.metadata.name}`}
+                        key={`${item.metadata.name}`}
+                        ref={(node) => onRefChange(node, index)}
+                      >
+                        {SingleConfig(item)}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <EuiEmptyPrompt
+                    iconType="alert"
+                    body={<p>No Configuration found</p>}
+                  />
+                )}
+              </>
             </EuiPageBody>
           </EuiPage>
         </EuiFlexGroup>

@@ -11,7 +11,7 @@ import {
   EuiPage,
   EuiSpacer,
   EuiText,
-} from "fury-design-system";
+} from "@elastic/eui";
 
 function NotFoundComponent() {
   return (

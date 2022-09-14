@@ -11,16 +11,24 @@ export default function useCurrentElementInView(
   cb: (id: string) => any,
   offset = 0
 ) {
-  const onScroll = () => {
-    const elementVisible = refs.current.filter((element) => {
-      const top = element.getBoundingClientRect().top;
+  const observer = new IntersectionObserver((entries, observer) => {
+    const elementVisible = entries.filter((element) => {
+      const top = element.boundingClientRect.top;
 
       return top + offset >= 0 && top - offset <= window.innerHeight;
-    });
+    })
 
     if (elementVisible.length > 0) {
-      cb(elementVisible[0].id);
+      cb(elementVisible[0].target.id);
     }
+
+    observer.disconnect();
+  });
+
+  const onScroll = () => {
+    refs.current.forEach(el => {
+      observer.observe(el);
+    })
   };
 
   useEffect(() => {

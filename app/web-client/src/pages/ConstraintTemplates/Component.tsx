@@ -17,24 +17,22 @@ import {
   EuiLoadingSpinner,
   EuiPage,
   EuiPageBody,
-  EuiPageContent,
-  EuiPageContentBody,
-  EuiPageSideBar,
+  EuiPageSidebar,
   EuiPanel,
   EuiSideNav,
   EuiSpacer,
   EuiText,
   EuiTitle,
   htmlIdGenerator,
-} from "fury-design-system";
+} from "@elastic/eui";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { ApplicationContext } from "../../AppContext";
 import { BackendError, ISideNav, ISideNavItem } from "../types";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { IConstraint } from "../Constraints/types";
-import "./Style.css";
 import { JSONTree } from "react-json-tree";
 import theme from "../theme";
+import clonedeep from "lodash.clonedeep";
 import { scrollToElement } from "../../utils";
 import {
   IConstraintTemplate,
@@ -43,6 +41,7 @@ import {
 } from "./types";
 import useScrollToHash from "../../hooks/useScrollToHash";
 import useCurrentElementInView from "../../hooks/useCurrentElementInView";
+import "./Style.scss";
 
 function generateSideNav(list: IConstraintTemplate[]): ISideNav[] {
   const sideBarItems = (list ?? []).map((item, index) => {
@@ -105,7 +104,7 @@ function SingleConstraintTemplate(
           </EuiFlexGroup>
         </EuiFlexItem>
       </EuiFlexGroup>
-      {item.metadata.annotations.description &&
+      {item.metadata.annotations?.description &&
         <EuiFlexGroup direction="column" gutterSize="s">
           <EuiFlexItem grow={false}>
             <EuiText size="s">
@@ -134,7 +133,10 @@ function SingleConstraintTemplate(
                 buttonContent="Libs definition"
                 paddingSize="none"
               >
-                <EuiCodeBlock language="rego">
+                <EuiCodeBlock
+                  lineNumbers
+                  language="rego"
+                >
                   {lib}
                 </EuiCodeBlock>
               </EuiAccordion>
@@ -145,7 +147,10 @@ function SingleConstraintTemplate(
             buttonContent="Rego definition"
             paddingSize="none"
           >
-            <EuiCodeBlock language="rego">
+            <EuiCodeBlock
+              lineNumbers
+              language="rego"
+            >
               {item.spec.targets[0].rego}
             </EuiCodeBlock>
           </EuiAccordion>
@@ -343,7 +348,9 @@ function ConstraintTemplatesComponent() {
 
   useEffect(() => {
     if (currentElementInView) {
-      const newItems = sideNav[0].items.map((item) => {
+      const newSideBar: ISideNav[] = clonedeep(sideNav);
+
+      newSideBar[0].items = newSideBar[0].items.map((item) => {
         if (item.name === currentElementInView) {
           item.isSelected = true;
         } else {
@@ -352,7 +359,8 @@ function ConstraintTemplatesComponent() {
 
         return item;
       });
-      setSideNav([{ ...sideNav[0], items: newItems }]);
+
+      setSideNav(newSideBar);
     }
   }, [currentElementInView]);
 
@@ -389,43 +397,39 @@ function ConstraintTemplatesComponent() {
             style={{ position: "relative" }}
             className="gpm-page gpm-page-constraint-templates"
           >
-            <EuiPageSideBar paddingSize="m" sticky>
+            <EuiPageSidebar paddingSize="m" sticky>
               <EuiSideNav items={sideNav} />
-            </EuiPageSideBar>
-            <EuiPageBody>
-              <EuiPageContent
-                hasBorder={false}
-                hasShadow={false}
-                color="transparent"
-                borderRadius="none"
-              >
-                <EuiPageContentBody restrictWidth style={{ marginBottom: 350 }}>
-                  {items && items.length > 0 ? (
-                    items.map((item, index) => {
-                      const relatedConstraintsForItem =
-                        relatedConstraints[item.metadata.name] ?? [];
-                      return (
-                        <div
-                          id={item.spec.crd.spec.names.kind}
-                          key={item.spec.crd.spec.names.kind}
-                          ref={(node) => onRefChange(node, index)}
-                        >
-                          {SingleConstraintTemplate(
-                            item,
-                            relatedConstraintsForItem,
-                            context
-                          )}
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <EuiEmptyPrompt
-                      iconType="alert"
-                      body={<p>No Constraint Template found</p>}
-                    />
-                  )}
-                </EuiPageContentBody>
-              </EuiPageContent>
+            </EuiPageSidebar>
+            <EuiPageBody
+              paddingSize="m"
+              style={{ marginBottom: 350 }}
+            >
+              <>
+                {items && items.length > 0 ? (
+                  items.map((item, index) => {
+                    const relatedConstraintsForItem =
+                      relatedConstraints[item.metadata.name] ?? [];
+                    return (
+                      <div
+                        id={item.spec.crd.spec.names.kind}
+                        key={item.spec.crd.spec.names.kind}
+                        ref={(node) => onRefChange(node, index)}
+                      >
+                        {SingleConstraintTemplate(
+                          item,
+                          relatedConstraintsForItem,
+                          context
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <EuiEmptyPrompt
+                    iconType="alert"
+                    body={<p>No Constraint Template found</p>}
+                  />
+                )}
+              </>
             </EuiPageBody>
           </EuiPage>
         </EuiFlexGroup>

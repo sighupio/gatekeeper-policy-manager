@@ -1,0 +1,136 @@
+/**
+ * Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+ * Use of this source code is governed by a BSD-style
+ * license that can be found in the LICENSE file.
+ */
+
+/* stylelint-disable selector-class-pattern, max-line-length, no-invalid-position-at-import-rule, value-keyword-case */
+@font-face {
+  font-family: Poppins;
+  src: url("./assets/fonts/Poppins-Light.ttf") format("truetype");
+  font-weight: 300;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: Poppins;
+  src: url("./assets/fonts/Poppins-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: Poppins;
+  src: url("./assets/fonts/Poppins-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: Poppins;
+  src: url("./assets/fonts/Poppins-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: Poppins;
+  src: url("./assets/fonts/Poppins-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("./assets/fonts/JetBrainsMono-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("./assets/fonts/JetBrainsMono-Bold.ttf") format("truetype");
+  font-weight: 800;
+  font-style: normal;
+}
+
+$euiColorPrimary: #6b2d9f;
+$euiFontFamily: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+$euiCodeFontFamily: "JetBrains Mono", Consolas, Menlo, Courier, monospace;
+$euiTitle: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+
+.euiTab.euiTab-isSelected {
+  box-shadow: inset 0 -2px 0 $euiColorPrimary;
+
+  &.euiTab.euiTab-isSelected .euiTab__content {
+    color: $euiColorPrimary !important;
+  }
+}
+
+.euiCodeBlock .euiCodeBlock__code {
+  font-family: $euiCodeFontFamily;
+}
+
+.euiFormLabel.euiFormLabel-isFocused {
+  color: $euiColorPrimary;
+}
+
+.euiButton {
+  border-radius: 8px !important;
+}
+
+.euiPagination__compressedText > span:first-of-type {
+  color: $euiColorPrimary;
+}
+
+.euiSideNavItemButton.euiSideNavItemButton-isSelected {
+  color: $euiColorPrimary;
+}
+
+.euiSelect,
+.euiTextArea,
+.euiFieldText,
+.euiFieldNumber,
+.euiFieldSearch,
+.euiButtonEmpty,
+.euiFieldPassword,
+.euiComboBox .euiComboBox__inputWrap {
+  font-family: $euiFontFamily;
+}
+
+.euiFieldText--compressed:focus,
+.euiFieldNumber--compressed:focus,
+.euiFieldPassword--compressed:focus,
+.euiFieldSearch--compressed:focus,
+.euiSuperSelectControl:focus,
+.euiTextArea:focus,
+.euiSelect:focus,
+.euiFieldText:focus,
+.euiSuperSelectControl.euiSuperSelect--isOpen__button,
+.euiFilePicker__input:focus + .euiFilePicker__prompt,
+.euiComboBox.euiComboBox-isOpen .euiComboBox__inputWrap,
+.euiComboBox.euiComboBox-isOpen .euiComboBox__inputWrap--compressed {
+  background-image: linear-gradient(to top, $euiColorPrimary, $euiColorPrimary 2px, transparent 2px, transparent 100%);
+  box-shadow: inset 0 0 0 1px rgb(107 45 159 / 10%);
+}
+
+.euiSuperSelect__item:focus {
+  background-color: rgb(225 213 236 / 50%);
+}
+
+.euiSwitch .euiSwitch__body {
+  background-color: $euiColorPrimary;
+}
+
+/* TODO: bug on modals with red background - check after EUI updates */
+.euiModalBody .euiModalBody__overflow {
+  mask-image: none;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@import "@elastic/eui/dist/eui_theme_light.css";

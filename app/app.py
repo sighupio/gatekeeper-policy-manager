@@ -33,7 +33,7 @@ from kubernetes.client.rest import ApiException
 from kubernetes.config.config_exception import ConfigException
 from urllib3.exceptions import MaxRetryError, NewConnectionError
 
-app = Flask(__name__, static_folder="static/webapp", template_folder="templates")
+app = Flask(__name__, static_folder="static-content", template_folder="templates")
 
 # setup logging
 if "gunicorn" in os.environ.get("SERVER_SOFTWARE", ""):
@@ -317,7 +317,7 @@ def get_constraints(context=None):
             return send_file(
                 buffer,
                 as_attachment=True,
-                attachment_filename="constraints-report.html",
+                download_name="constraints-report.html",
                 mimetype="text/html",
             )
         else:
