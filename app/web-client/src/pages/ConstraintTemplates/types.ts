@@ -29,7 +29,7 @@ export interface IConstraintTemplate {
     labels: {
       [key: string]: string;
     };
-    annotations: {
+    annotations?: {
       [key: string]: string;
     };
   };
