@@ -28,17 +28,16 @@ import {
   EuiTitle,
   htmlIdGenerator,
 } from "@elastic/eui";
-import {useCallback, useContext, useEffect, useRef, useState} from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { ApplicationContext } from "../../AppContext";
 import { BackendError, ISideNav, ISideNavItem } from "../types";
 import { JSONTree } from "react-json-tree";
-import {useLocation, useNavigate, useParams} from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import theme from "../theme";
 import { scrollToElement } from "../../utils";
-import {IConstraint, IConstraintSpec} from "./types";
+import { IConstraint, IConstraintSpec } from "./types";
 import useScrollToHash from "../../hooks/useScrollToHash";
 import useCurrentElementInView from "../../hooks/useCurrentElementInView";
-import warnIcon from "../../assets/warn.svg";
 import shieldActive from "../../assets/shield-active.svg";
 import shieldInactive from "../../assets/shield-inactive.svg";
 import "./Style.scss";
@@ -92,17 +91,17 @@ function getEnforcementActionRenderData(spec?: IConstraintSpec) {
   if (typeof spec !== "undefined") {
     switch (spec.enforcementAction) {
       case "dryrun":
-        icon = "indexRuntime";
+        icon = "play";
         color = "primary";
         mode = "dryrun";
         break;
       case "warn":
-        icon = warnIcon;
+        icon = "alert";
         color = "warning";
         mode = "warn";
         break;
       default:
-        icon = "indexClose";
+        icon = "minusInCircle";
         color = "danger";
         mode = "deny";
         break;
@@ -117,7 +116,7 @@ function getEnforcementActionRenderData(spec?: IConstraintSpec) {
       <EuiBadge
         color={color}
         iconType={icon}
-        style={{fontSize: "10px", textTransform: "uppercase"}}
+        style={{ fontSize: "10px", textTransform: "uppercase" }}
       >
         mode {mode}
       </EuiBadge>
@@ -144,7 +143,7 @@ function SingleConstraint(item: IConstraint, context?: string) {
               {getEnforcementActionRenderData(item.spec).badge}
             </EuiFlexItem>
             <EuiFlexItem grow={false} style={{ marginLeft: "auto" }}>
-              <EuiLink href={`/constrainttemplates${context ? "/"+context : ""}#${item.kind}`}>
+              <EuiLink href={`/constrainttemplates${context ? "/" + context : ""}#${item.kind}`}>
                 <EuiText size="xs">
                   <span>TEMPLATE: {item.kind}</span>
                   <EuiIcon type="link" size="s" style={{ marginLeft: 5 }} />
@@ -256,20 +255,20 @@ function SingleConstraint(item: IConstraint, context?: string) {
                     <EuiFlexItem>
                       {(item.status?.totalViolations ?? 0) >
                         item.status.violations.length && (
-                        <EuiCallOut
-                          title="Not all violations can be shown"
-                          color="warning"
-                          iconType="alert"
-                        >
-                          <p>
-                            Gatekeeper's configuration is limiting the audit
-                            violations per constraint to{" "}
-                            {item.status.violations.length}. See Gatekeeper's
-                            --constraint-violations-limit audit configuration
-                            flag.
-                          </p>
-                        </EuiCallOut>
-                      )}
+                          <EuiCallOut
+                            title="Not all violations can be shown"
+                            color="warning"
+                            iconType="alert"
+                          >
+                            <p>
+                              Gatekeeper's configuration is limiting the audit
+                              violations per constraint to{" "}
+                              {item.status.violations.length}. See Gatekeeper's
+                              --constraint-violations-limit audit configuration
+                              flag.
+                            </p>
+                          </EuiCallOut>
+                        )}
                     </EuiFlexItem>
                   </EuiFlexGroup>
                 </EuiAccordion>
@@ -364,9 +363,8 @@ function SingleConstraint(item: IConstraint, context?: string) {
                 >
                   <EuiBadge
                     iconType={pod.enforced ? shieldActive : shieldInactive}
-                    title={`Constraint is ${
-                      !pod.enforced ? "NOT " : ""
-                    }being ENFORCED by this POD`}
+                    title={`Constraint is ${!pod.enforced ? "NOT " : ""
+                      }being ENFORCED by this POD`}
                     style={{
                       paddingRight: 0,
                       borderRight: 0,
@@ -438,7 +436,7 @@ function ConstraintsComponent() {
     setIsLoading(true);
     fetch(
       `${appContextData.context.apiUrl}api/v1/constraints/${appContextData.context.currentK8sContext ?
-        appContextData.context.currentK8sContext+"/" : ""}`
+        appContextData.context.currentK8sContext + "/" : ""}`
     )
       .then(async (res) => {
         const body: IConstraint[] = await res.json();
@@ -466,7 +464,7 @@ function ConstraintsComponent() {
       .finally(() => setIsLoading(false));
   }, [appContextData.context.currentK8sContext]);
 
-  useScrollToHash(hash, [fullyLoadedRefs, ]);
+  useScrollToHash(hash, [fullyLoadedRefs,]);
 
   useCurrentElementInView(panelsRef, setCurrentElementInView);
 
@@ -534,7 +532,7 @@ function ConstraintsComponent() {
                   iconSide="right"
                   iconSize="s"
                   iconType="popout"
-                  style={{width: "100%"}}
+                  style={{ width: "100%" }}
                   href={`${appContextData.context.apiUrl}api/v1/constraints?report=html`}
                   download
                 >
