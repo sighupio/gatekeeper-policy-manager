@@ -33,7 +33,7 @@ from kubernetes.client.rest import ApiException
 from kubernetes.config.config_exception import ConfigException
 from urllib3.exceptions import MaxRetryError, NewConnectionError
 
-app = Flask(__name__, static_folder="static/webapp", template_folder="templates")
+app = Flask(__name__, static_folder="static-content", template_folder="templates")
 
 # setup logging
 if "gunicorn" in os.environ.get("SERVER_SOFTWARE", ""):
