@@ -317,7 +317,7 @@ def get_constraints(context=None):
             return send_file(
                 buffer,
                 as_attachment=True,
-                attachment_filename="constraints-report.html",
+                download_name="constraints-report.html",
                 mimetype="text/html",
             )
         else:
