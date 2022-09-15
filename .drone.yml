@@ -130,8 +130,8 @@ steps:
     image: docker:dind
     pull: always
     environment:
-      KIND_VERSION: v0.11.1
-      CLUSTER_VERSION: v1.21.2
+      KIND_VERSION: v0.14.0
+      CLUSTER_VERSION: v1.24.0
       LOAD_IMAGE: gatekeeper-policy-manager:test-${DRONE_BUILD_NUMBER}
       CLUSTER_NAME: ${DRONE_REPO_NAME}-${DRONE_BUILD_NUMBER}
     volumes:
@@ -148,7 +148,7 @@ steps:
       - kind get kubeconfig --name $${CLUSTER_NAME} > kubeconfig.yml
 
   - name: tests
-    image: quay.io/sighup/e2e-testing:1.1.0_0.2.2_2.16.1_1.9.4_1.22.0_3.8.7_2.4.1
+    image: quay.io/sighup/e2e-testing:1.1.0_0.7.0_3.1.1_1.9.4_1.24.1_3.8.7_4.21.1
     pull: always
     network_mode: host
     environment:
@@ -165,7 +165,7 @@ steps:
     image: docker:dind
     pull: always
     environment:
-      KIND_VERSION: v0.11.1
+      KIND_VERSION: v0.14.0
       CLUSTER_NAME: ${DRONE_REPO_NAME}-${DRONE_BUILD_NUMBER}
     volumes:
       - name: dockerconfig
