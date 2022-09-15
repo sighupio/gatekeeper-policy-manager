@@ -10,6 +10,6 @@ updates:
       interval: "daily"
 
   - package-ecosystem: "npm" # See documentation for possible values
-    directory: "/app/static" # Location of package manifests
+    directory: "/app/web-client" # Location of package manifests
     schedule:
       interval: "daily"
