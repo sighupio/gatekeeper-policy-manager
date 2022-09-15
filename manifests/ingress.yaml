@@ -9,18 +9,18 @@ metadata:
     kubernetes.io/ingress.class: "nginx"
     forecastle.stakater.com/expose: "true"
     forecastle.stakater.com/appName: "Gatekeeper Policy Manager"
-    forecastle.stakater.com/icon: "https://raw.githubusercontent.com/sighupio/gatekeeper-policy-manager/master/app/static/logo.svg"
+    forecastle.stakater.com/icon: "https://raw.githubusercontent.com/sighupio/gatekeeper-policy-manager/master/app/static-content/logo.svg"
   name: gatekeeper-policy-manager
 spec:
   rules:
-  # Set the HOST accordingly
-  - host: gpm.internal.mycompany.com
-    http:
-      paths:
-      - path: /
-        pathType: ImplementationSpecific
-        backend:
-          service:
-            name: gatekeeper-policy-manager
-            port:
-              name: http
+    # Set the HOST accordingly
+    - host: gpm.internal.mycompany.com
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: gatekeeper-policy-manager
+                port:
+                  name: http
