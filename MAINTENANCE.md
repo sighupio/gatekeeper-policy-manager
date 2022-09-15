@@ -13,16 +13,16 @@ Releasing a new version of GPM is done automatically with our CI, to trigger the
 For example, assuming the latest version is 1.0.0, to release a new patch version run:
 
 ```bash
-bumpversion --dry-run --new-version 1.0.1 bugfix
+bumpversion --dry-run --verbose --new-version 1.0.1 bugfix
 ```
 
 or to release a new minor:
 
 ```bash
-bumpversion --dry-run --new-version 1.1.0 minor
+bumpversion --dry-run --verbose --new-version 1.1.0 minor
 ```
 
-> Notice that the command includes a `--dry-run` flag, drop it to actually perform the change.
+> Notice that the command includes a `--dry-run` flag, drop it to actually perform the change. You can drop the `--verbose` flag too.
 
 1. `bumpversion` will create some commits and tags, you'll need to push the commits and then the tags
 
