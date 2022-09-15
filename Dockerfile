@@ -15,7 +15,7 @@ LABEL org.opencontainers.image.source="https://github.com/sighupio/gatekeeper-po
 RUN groupadd -r gpm && useradd --no-log-init -r -g gpm gpm 
 WORKDIR /app
 COPY --chown=gpm ./app /app
-COPY --from=node --chown=gpm /web-client/build/* /app/static-content/
+COPY --from=node --chown=gpm /web-client/build/ /app/static-content/
 RUN pip install --no-cache-dir -r /app/requirements.txt
 USER 999
 EXPOSE 8080
