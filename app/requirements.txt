@@ -9,7 +9,7 @@ cryptography==37.0.4
 defusedxml==0.7.1
 future==0.18.2
 google-auth==2.11.0
-idna==3.3
+idna==3.4
 importlib-resources==5.9.0
 itsdangerous==2.1.2
 Jinja2==3.1.2
