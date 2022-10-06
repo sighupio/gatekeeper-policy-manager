@@ -533,7 +533,7 @@ function ConstraintsComponent() {
                   iconSize="s"
                   iconType="popout"
                   style={{ width: "100%" }}
-                  href={`${appContextData.context.apiUrl}api/v1/constraints?report=html`}
+                  href={`${appContextData.context.apiUrl}api/v1/constraints/${appContextData.context.currentK8sContext?? "" }?report=html`}
                   download
                 >
                   <EuiText size="xs">Download violations report</EuiText>
