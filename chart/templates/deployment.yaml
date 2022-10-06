@@ -97,7 +97,7 @@ spec:
       volumes:
         - name: kubeconfig
           secret:
-            secretName: kubeconfig
+            secretName: {{ include "gatekeeper-policy-manager.fullname" . }}-multicluster
           {{- end -}}
       {{- with .Values.nodeSelector }}
       nodeSelector:
