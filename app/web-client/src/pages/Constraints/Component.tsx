@@ -505,7 +505,7 @@ function ConstraintsComponent() {
         >
           <EuiPage
             paddingSize="none"
-            restrictWidth={1200}
+            restrictWidth={1440}
             grow={true}
             style={{ position: "relative" }}
             className="gpm-page gpm-page-constraints"
