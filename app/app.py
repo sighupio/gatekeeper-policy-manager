@@ -150,33 +150,6 @@ except config.ConfigException as e:
         exit(1)
 
 
-def dict_to_li(my_dict, html):
-    """Recursive function to convert dict items into <li> html tags"""
-    app.logger.debug(f"looping for {my_dict} and html is:\n{html}")
-    if my_dict is None:
-        return html
-    for k, v in my_dict.items():
-        app.logger.debug("Processing %s, %s" % (k, v))
-        if isinstance(v, dict):
-            html += "<li>%s:</li>\n%s" % (k, dict_to_ul(v))
-        else:
-            html += "<li>%s: %s</li>" % (k, v)
-    html += "</ul>"
-    return html
-
-
-@app.template_filter("dict_to_ul")
-def dict_to_ul(s):
-    """
-    Helper to convert recursively dict elements to an html unsorted list
-    """
-    app.logger.debug("Flattening %s" % s)
-    result = '<ul style="padding-left:2em">'
-    result = dict_to_li(s, result)
-    app.logger.debug("Result of flattening: %s" % result)
-    return str(result)
-
-
 # We have to do this ugly thing in order to apply conditionally the login
 # decorator only when it is enabled from the oonfig.
 def login_required_conditional(f):
@@ -469,7 +442,7 @@ if app.config.get("AUTH_ENABLED") == "OIDC":
             )
             return redirect(user_session._session_storage.get("destination", "/"))
         return {
-            "error": "OIDC Error: " + error,
+            "error": f"OIDC Error: {error}",
             "action": "Something is wrong with your OIDC session. Please try to logout and login again",
             "description": error_description,
         }, 401
@@ -479,7 +452,7 @@ if app.config.get("AUTH_ENABLED") == "OIDC":
 @app.route("/<path:path>")
 @login_required_conditional
 def index(path):
-    if path != "" and os.path.exists(app.static_folder + "/" + path):
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
         return send_from_directory(app.static_folder, path)
     else:
         return send_from_directory(app.static_folder, "index.html")
