@@ -217,37 +217,28 @@ function SingleConstraint(item: IConstraint, context?: string) {
                   <EuiFlexGroup direction="column" gutterSize="s">
                     <EuiFlexItem>
                       <EuiBasicTable
+                        tableLayout="auto"
                         items={item.status.violations}
                         columns={[
                           {
                             field: "enforcementAction",
                             name: "Action",
-                            truncateText: true,
-                            width: "8%",
                           },
                           {
                             field: "kind",
                             name: "Kind",
-                            truncateText: true,
-                            width: "10%",
                           },
                           {
                             field: "namespace",
                             name: "Namespace",
-                            truncateText: true,
-                            width: "10%",
                           },
                           {
                             field: "name",
                             name: "Name",
-                            truncateText: true,
-                            width: "15%",
                           },
                           {
                             field: "message",
                             name: "Message",
-                            truncateText: false,
-                            width: "60%",
                           },
                         ]}
                       />
