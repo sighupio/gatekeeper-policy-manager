@@ -17,6 +17,21 @@ WORKDIR /app
 COPY --chown=gpm ./app /app
 COPY --from=node --chown=gpm /web-client/build/ /app/static-content/
 RUN pip install --no-cache-dir -r /app/requirements.txt
+
+# Remove unused packages
+RUN apt-get purge -y --allow-remove-essential \
+    openssl \
+    gzip
+
+# Remove sensitive data
+RUN rm \
+    /usr/local/lib/python3.10/site-packages/future/backports/test/ssl_key.pem \
+    /usr/local/lib/python3.10/site-packages/future/backports/test/ssl_key.passwd.pem \
+    /usr/local/lib/python3.10/site-packages/future/backports/test/keycert.pem \
+    /usr/local/lib/python3.10/site-packages/future/backports/test/keycert.passwd.pem \
+    /usr/local/lib/python3.10/site-packages/future/backports/test/badcert.pem \
+    /usr/local/lib/python3.10/site-packages/future/backports/test/keycert2.pem
+
 USER 999
 EXPOSE 8080
 CMD ["gunicorn", "--bind=:8080", "--workers=2", "--threads=4", "--worker-class=gthread", "app:app"]
