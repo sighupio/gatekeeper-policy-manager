@@ -157,10 +157,10 @@ def login_required_conditional(f):
     def decorated_function(*args, **kwargs):
         if app.config.get("AUTH_ENABLED") == "OIDC":
             if kwargs.get("path") is not None and (
-                    kwargs.get("path") == "logout"
-                    or kwargs.get("path").startswith("static/")
-                    or kwargs.get("path") == "favicon.ico"
-                    or kwargs.get("path") == "manifest.json"
+                kwargs.get("path") == "logout"
+                or kwargs.get("path").startswith("static/")
+                or kwargs.get("path") == "favicon.ico"
+                or kwargs.get("path") == "manifest.json"
             ):
                 return f(*args, **kwargs)
             return auth.oidc_auth("oidc")(f)(*args, **kwargs)
