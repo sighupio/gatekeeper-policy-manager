@@ -151,7 +151,8 @@ except config.ConfigException as e:
 
 
 # We have to do this ugly thing in order to apply conditionally the login
-# decorator only when it is enabled from the config.
+# decorator only when it is enabled from the config, static resources will
+# be skipped in order to avoid auth requests on unprotected routes
 def login_required_conditional(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
