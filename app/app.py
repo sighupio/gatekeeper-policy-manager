@@ -151,11 +151,18 @@ except config.ConfigException as e:
 
 
 # We have to do this ugly thing in order to apply conditionally the login
-# decorator only when it is enabled from the oonfig.
+# decorator only when it is enabled from the config, static resources will
+# be skipped in order to avoid auth requests on unprotected routes
 def login_required_conditional(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if app.config.get("AUTH_ENABLED") == "OIDC":
+            path = kwargs.get("path")
+            if path is not None and (
+                path.startswith("static/")
+                or path in ["logout", "favicon", "manifests.json"]
+            ):
+                return f(*args, **kwargs)
             return auth.oidc_auth("oidc")(f)(*args, **kwargs)
         return f(*args, **kwargs)
 
@@ -421,11 +428,16 @@ def health():
 # Only set up this routes if authentication has been enabled
 if app.config.get("AUTH_ENABLED") == "OIDC":
 
-    @app.route("/api/v1/auth/logout", methods=["POST"])
+    @app.route("/logout", methods=["POST"])
     @auth.oidc_logout
     def logout():
         """End session locally"""
         return {}
+
+    @app.route("/logout", methods=["GET"])
+    def logout_view():
+        """End session locally"""
+        return send_from_directory(app.static_folder, "index.html")
 
     @auth.error_view
     def error(error=None, error_description=None):
@@ -436,7 +448,7 @@ if app.config.get("AUTH_ENABLED") == "OIDC":
                 f"session has expired for user {user_session.userinfo}. Cleaning session locally."
             )
             user_session.clear()
-            # we should probably redirect to a "You've been loged out, please log in again" page instead
+            # we should probably redirect to a "You've been logged out, please log in again" page instead
             app.logger.debug(
                 "redirecting to previous destination that will request login"
             )
