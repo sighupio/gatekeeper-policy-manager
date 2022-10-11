@@ -25,6 +25,8 @@ serviceAccount:
 
 podAnnotations: {}
 
+podLabels: {}
+
 podSecurityContext:
   runAsNonRoot: true
 
