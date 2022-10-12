@@ -350,8 +350,8 @@ name: release-helm-chart
 kind: pipeline
 type: docker
 
-# depends_on:
-#   - "release"
+depends_on:
+  - "release"
 
 trigger:
   ref:
