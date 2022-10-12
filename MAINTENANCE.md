@@ -35,7 +35,7 @@ git push --tags
 
 You should update the version in `/chart/Chart.yaml` file each time you do a release of GPM and/or when the chart content gets updated.
 
-To release a new Helm Chart version, update the `/chart/Chart.yaml` file accordingly (i.e. bumping the version) and tag and push the commit. This can be done as part of the release of a version of GPM or independently.
+To release a new Helm Chart version, update the `/chart/Chart.yaml` file accordingly (i.e. bumping the version of the Chart) and tag and push the commit. This can be done as part of the release of a version of GPM or independently.
 
 > If you want to release just a new version of the chart, notice that the pipeline by default executes the Helm Release step only if the GPM release has been successful. You might need to disable the dependency between the pipeline steps.
 > This is to avoid publishing a chart that references a failed build of GPM.
