@@ -8,7 +8,7 @@ image:
   repository: quay.io/sighup/gatekeeper-policy-manager
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "v1.0.1"
+  tag: "v1.0.2"
 
 imagePullSecrets: []
 nameOverride: ""
