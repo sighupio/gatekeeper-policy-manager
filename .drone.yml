@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+---
 name: license
 kind: pipeline
 type: docker
@@ -130,8 +131,8 @@ steps:
     image: docker:dind
     pull: always
     environment:
-      KIND_VERSION: v0.14.0
-      CLUSTER_VERSION: v1.24.0
+      KIND_VERSION: v0.17.0
+      CLUSTER_VERSION: v1.24.7
       LOAD_IMAGE: gatekeeper-policy-manager:test-${DRONE_BUILD_NUMBER}
       CLUSTER_NAME: ${DRONE_REPO_NAME}-${DRONE_BUILD_NUMBER}
     volumes:
@@ -232,7 +233,7 @@ steps:
         include:
           - refs/tags/**
         exclude:
-          - refs/tags/gatekeeper-policy-manager-* # Exclude helm chart releases
+          - refs/tags/gatekeeper-policy-manager-*  # Exclude helm chart releases
 
   - name: registry-sha
     image: docker:dind
