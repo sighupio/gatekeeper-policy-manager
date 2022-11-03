@@ -11,7 +11,7 @@ load ./helper
     info
     ns(){
         kubectl create ns gatekeeper-system
-        kubectl apply -f https://raw.githubusercontent.com/sighupio/fury-kubernetes-monitoring/v1.10.2/katalog/prometheus-operator/crd-servicemonitor.yml
+        kubectl apply -f https://raw.githubusercontent.com/sighupio/fury-kubernetes-monitoring/v2.0.0/katalog/prometheus-operator/crds/0servicemonitorCustomResourceDefinition.yaml
     }
     run ns
     [ "$status" -eq 0 ]
@@ -24,6 +24,15 @@ load ./helper
     }
     loop_it deploy 30 5
     status=${loop_it_result}
+    [ "$status" -eq 0 ]
+}
+
+@test "Wait until Gatekeeper Controller is ready" {
+    info
+    ready(){
+        kubectl -n gatekeeper-system wait --for=condition=available --timeout=1200s deployment/gatekeeper-controller-manager
+    }
+    run ready
     [ "$status" -eq 0 ]
 }
 
@@ -52,4 +61,14 @@ load ./helper
     }
     run test
     [ "$status" -eq 0 ]
+}
+
+# Teardown gets called after each test.
+# There's also teardown_file that gets called once but I could not make it work.
+# Leving this for debug purposes
+teardown() {
+    kubectl get pods -A -o wide
+    kubectl get events >&3
+    # Don't fail test if teardown fails for some reason
+    return 0
 }
