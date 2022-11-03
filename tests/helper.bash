@@ -25,11 +25,17 @@ loop_it(){
   loop_it_result=${ko}
   while [[ ko -ne 0 ]]
   do
-    if [ $retry_counter -ge $max_retry ]; then echo "Timeout waiting a condition"; return 1; fi
+    if [ $retry_counter -ge $max_retry ]; then
+	    echo "Timeout waiting for the command to success."
+	    echo "Last command output was:"
+	    echo "${output}"
+	    return 1
+    fi
     sleep ${wait_time} && echo "# waiting..." $retry_counter >&3
     run ${1}
     ko=${status}
     loop_it_result=${ko}
+    loop_it_output=${output}
     retry_counter=$((retry_counter + 1))
   done
   return 0

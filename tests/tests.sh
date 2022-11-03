@@ -11,7 +11,9 @@ load ./helper
     info
     ns(){
         kubectl create ns gatekeeper-system
+	# We create the CRD so the apply doesn't fail. We don't care about the servicemonitor and the rule actually
         kubectl apply -f https://raw.githubusercontent.com/sighupio/fury-kubernetes-monitoring/v2.0.0/katalog/prometheus-operator/crds/0servicemonitorCustomResourceDefinition.yaml
+        kubectl apply -f https://raw.githubusercontent.com/sighupio/fury-kubernetes-monitoring/v2.0.0/katalog/prometheus-operator/crds/0prometheusruleCustomResourceDefinition.yaml
     }
     run ns
     [ "$status" -eq 0 ]
@@ -22,7 +24,7 @@ load ./helper
     deploy(){
         kustomize build --load_restrictor none tests/ | kubectl apply -f -
     }
-    loop_it deploy 30 5
+    loop_it deploy 10 5
     status=${loop_it_result}
     [ "$status" -eq 0 ]
 }
@@ -54,7 +56,7 @@ load ./helper
     [ "$status" -eq 0 ]
 }
 
-@test "Check tests" {
+@test "Check tests result" {
     info
     test(){
         kubectl -n kube-system wait --for=condition=complete --timeout=600s job/e2e-tests
@@ -67,8 +69,10 @@ load ./helper
 # There's also teardown_file that gets called once but I could not make it work.
 # Leving this for debug purposes
 teardown() {
-    kubectl get pods -A -o wide
-    kubectl get events >&3
+    echo "PODS:"
+    kubectl get pods -A
+    echo "EVENTS:"
+    kubectl get events
     # Don't fail test if teardown fails for some reason
     return 0
 }

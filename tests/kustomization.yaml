@@ -6,9 +6,9 @@ namespace: gatekeeper-system
 
 resources:
   # Deploy Gatekeeper from KFD OPA Module
-  - github.com/sighupio/fury-kubernetes-opa/katalog/gatekeeper/core?ref=v1.6.2
-  - github.com/sighupio/fury-kubernetes-opa/katalog/gatekeeper/rules?ref=v1.6.2
-  - github.com/sighupio/fury-kubernetes-opa/katalog/gatekeeper/monitoring?ref=v1.6.2
+  - github.com/sighupio/fury-kubernetes-opa/katalog/gatekeeper/core?ref=v1.7.2
+  - github.com/sighupio/fury-kubernetes-opa/katalog/gatekeeper/rules?ref=v1.7.2
+  - github.com/sighupio/fury-kubernetes-opa/katalog/gatekeeper/monitoring?ref=v1.7.2
 
   # Deploy GPM itself
   - ../manifests/rbac.yaml
