@@ -1,7 +1,9 @@
+<!-- markdownlint-disable MD033 -->
 <h1>
     <img src="app/static-content/logo.svg" align="left" width="90" style="margin-right: 15px"/>
     Gatekeeper Policy Manager (GPM)
 </h1>
+<!-- markdownlint-enable MD033 -->
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/gatekeeper-policy-manager/status.svg)](https://ci.sighup.io/sighupio/gatekeeper-policy-manager)
 ![Release](https://img.shields.io/github/v/release/sighupio/gatekeeper-policy-manager?label=GPM)
