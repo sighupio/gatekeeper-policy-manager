@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# Copyright (c) 2022 SIGHUP s.r.l All rights reserved.
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
@@ -32,7 +32,7 @@ load ./helper
 @test "Wait until Gatekeeper Controller is ready" {
     info
     ready(){
-        kubectl -n gatekeeper-system wait --for=condition=available --timeout=1200s deployment/gatekeeper-controller-manager
+        kubectl -n gatekeeper-system wait --for=condition=available --timeout=120s deployment/gatekeeper-controller-manager
     }
     run ready
     [ "$status" -eq 0 ]
@@ -41,7 +41,7 @@ load ./helper
 @test "Wait until GPM is ready" {
     info
     ready(){
-        kubectl -n gatekeeper-system wait --for=condition=available --timeout=1200s deployment/gatekeeper-policy-manager
+        kubectl -n gatekeeper-system wait --for=condition=available --timeout=120s deployment/gatekeeper-policy-manager
     }
     run ready
     [ "$status" -eq 0 ]
@@ -59,7 +59,7 @@ load ./helper
 @test "Check tests result" {
     info
     test(){
-        kubectl -n kube-system wait --for=condition=complete --timeout=600s job/e2e-tests
+        kubectl -n kube-system wait --for=condition=complete --timeout=300s job/e2e-tests
     }
     run test
     [ "$status" -eq 0 ]
@@ -69,10 +69,19 @@ load ./helper
 # There's also teardown_file that gets called once but I could not make it work.
 # Leving this for debug purposes
 teardown() {
-    echo "PODS:"
-    kubectl get pods -A
-    echo "EVENTS:"
+    echo
+    echo " ---------| EVENTS |-------- "
     kubectl get events
+    echo
+    echo " ---------| PODS |-------- "
+    kubectl get pods -A
+    echo
+    echo " ---------| PODS DESCRIPTION |-------- "
+    kubectl describe pods -n gatekeeper-system
+    echo
+    echo " ---------| GATEKEEPER LOGS |-------- "
+    kubectl logs -n gatekeeper-system --selector gatekeeper.sh/system=yes
+
     # Don't fail test if teardown fails for some reason
     return 0
 }
