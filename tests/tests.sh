@@ -83,10 +83,10 @@ teardown() {
     kubectl logs -n gatekeeper-system --selector gatekeeper.sh/system=yes
     echo
     echo " ---------| KUBEPROXY LOGS |-------- "
-    kubectl logs -n gatekeeper-system --selector k8s-app=kube-proxy
+    kubectl logs -n kube-system --selector k8s-app=kube-proxy
     echo
     echo " ---------| LOCAL STORAGE LOGS |-------- "
-    kubectl logs -n gatekeeper-system --selector app=local-path-provisioner
+    kubectl logs -n local-path-storage --selector app=local-path-provisioner
 
     # Don't fail test if teardown fails for some reason
     return 0
