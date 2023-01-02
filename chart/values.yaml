@@ -91,6 +91,8 @@ tolerations: []
 
 affinity: {}
 
+topologySpreadConstraints: []
+
 config:
   preferredURLScheme: http
   logLevel: info
