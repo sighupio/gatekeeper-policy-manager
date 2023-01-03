@@ -16,7 +16,7 @@ Jinja2==3.1.2
 Mako==1.2.4
 MarkupSafe==2.1.1
 oauthlib==3.2.2
-oic==1.4.0
+oic==1.5.0
 pyasn1==0.4.8
 pyasn1-modules==0.2.8
 pycparser==2.21
