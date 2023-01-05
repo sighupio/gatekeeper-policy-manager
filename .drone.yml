@@ -49,13 +49,15 @@ steps:
     commands:
       - kustomize build . > gpm.yml
 
-  - name: deprek8ion
-    image: eu.gcr.io/swade1987/deprek8ion:1.1.35
+  - name: check-deprecated-apis
+    image: us-docker.pkg.dev/fairwinds-ops/oss/pluto:v5
     pull: always
     depends_on:
       - render
     commands:
-      - /conftest test -p /policies gpm.yml
+      # we use --ignore-deprecations because we don't want the CI to fail when the API has not been removed yet.
+      - /pluto detect gpm.yml --ignore-deprecations --target-versions=k8s=v1.24.0
+
 trigger:
   ref:
     exclude:
