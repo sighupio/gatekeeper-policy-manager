@@ -27,13 +27,24 @@ podAnnotations: {}
 
 podLabels: {}
 
+# Specify security settings for the gatekeeper-policy-manager pod
+# See https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
 podSecurityContext:
   runAsNonRoot: true
 
+# Set the security context for the main gatekeeper-policy-manager container,
+# which override settings made at the Pod level when there is overlap
+# See https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+# and https://kubernetes.io/docs/concepts/security/pod-security-standards/
 securityContext:
   runAsNonRoot: true
   privileged: false
   allowPrivilegeEscalation: false
+  seccompProfile:
+    type: RuntimeDefault
+  capabilities:
+    drop:
+      - ALL
 
 service:
   type: ClusterIP
