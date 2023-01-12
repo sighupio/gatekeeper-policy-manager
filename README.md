@@ -59,7 +59,7 @@ helm repo add gpm https://sighupio.github.io/gatekeeper-policy-manager
 helm upgrade --install --namespace gatekeeper-system --set image.tag=v1.0.2 --values my-values.yaml gatekeeper-policy-manager gpm/gatekeeper-policy-manager
 ```
 
-> don't forget replace `my-values.yaml` with the path to your values file.
+> don't forget to replace `my-values.yaml` with the path to your values file.
 
 ## Running locally
 
