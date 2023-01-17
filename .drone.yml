@@ -352,8 +352,9 @@ name: release-helm-chart
 kind: pipeline
 type: docker
 
-depends_on:
-  - "release"
+# disabling temporary to release a new version of the chart
+# depends_on:
+  # - "release"
 
 trigger:
   ref:
