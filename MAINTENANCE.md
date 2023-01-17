@@ -35,16 +35,21 @@ git push --tags
 
 You should update the version in `/chart/Chart.yaml` file each time you do a release of GPM and/or when the chart content gets updated.
 
-To release a new Helm Chart version, update the `/chart/Chart.yaml` file accordingly (i.e. bumping the version of the Chart) and tag and push the commit. This can be done as part of the release of a version of GPM or independently.
+To release a new Helm Chart version:
 
-> If you want to release just a new version of the chart, notice that the pipeline by default executes the Helm Release step only if the GPM release has been successful. You might need to disable the dependency between the pipeline steps.
-> This is to avoid publishing a chart that references a failed build of GPM.
+1. Update the `/chart/Chart.yaml` file accordingly (i.e. bumping the version of the Chart)
 
-Remember to update the `/chart/README.md` file if you make changes to the chart. You can use [`frigate`](https://frigate.readthedocs.io/) to do it automatically:
+2. Update the `/chart/README.md` file if you made changes to the chart. You can use [`frigate`](https://frigate.readthedocs.io/) to do it automatically:
 
 ```bash
 cd chart
 frigate gen . > README.md
 ```
 
-> Notice that `frigate` will use the temlpate in the file `/chart/.frigate` for formatting.
+> Notice that `frigate` will use the template in the file `/chart/.frigate` for formatting.
+
+3. Tag and push the commit. This can be done as part of the release of a version of GPM or independently.
+
+> If you want to release just a new version of the chart, notice that the pipeline by default executes the Helm Release step only if the GPM release has been successful. You might need to disable the dependency between the pipeline steps.
+> This is to avoid publishing a chart that references a failed build of GPM.
+> You can use a tag like `helm-chart-<version>`. ⚠️ Notice that the tags `gatekeeper-policy-manager-<version>` are used by helm/chart-releaser.
