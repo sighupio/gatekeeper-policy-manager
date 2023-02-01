@@ -52,4 +52,6 @@ frigate gen . > README.md
 
 > If you want to release just a new version of the chart, notice that the pipeline by default executes the Helm Release step only if the GPM release has been successful. You might need to disable the dependency between the pipeline steps.
 > This is to avoid publishing a chart that references a failed build of GPM.
-> You can use a tag like `helm-chart-<version>`. ⚠️ Notice that the tags `gatekeeper-policy-manager-<version>` are used by helm/chart-releaser.
+> You can use a tag like `helm-chart-<version>`.
+>
+> ⚠️ Notice that the tags `gatekeeper-policy-manager-<version>` are used by helm/chart-releaser.

@@ -6,17 +6,18 @@
 <!-- markdownlint-enable MD033 -->
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/gatekeeper-policy-manager/status.svg)](https://ci.sighup.io/sighupio/gatekeeper-policy-manager)
-![Release](https://img.shields.io/github/v/release/sighupio/gatekeeper-policy-manager?label=GPM)
+![GPM Release](https://img.shields.io/badge/GPM-v1.0.3-blue)
+![Helm Chart Release](https://img.shields.io/badge/Helm%20Chart-v0.4.1-blue)
 ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/gatekeeper-policy-manager)
 
 **Gatekeeper Policy Manager** is a simple *read-only* web UI for viewing OPA Gatekeeper policies' status in a Kubernetes Cluster.
 
-The target Kubernetes Cluster can be the same where GPM is running or some other [remote cluster(s) using a `kubeconfig` file](#Multi-cluster-support). You can also run GPM [locally in a client machine](#Running-locally) and connect to a remote cluster.
+The target Kubernetes Cluster can be the same where GPM is running or some other [remote cluster(s) using a `kubeconfig` file](#multi-cluster-support). You can also run GPM [locally in a client machine](#running-locally) and connect to a remote cluster.
 
 GPM can display all the defined **Constraint Templates** with their rego code, all the Gatekeeper Configuration CRDs, and all the **Constraints** with their current status, violations, enforcement action, matches definitions, etc.
 
-[You can see some screenshots below](#Screenshots).
+[You can see some screenshots below](#screenshots).
 
 ## Requirements
 
@@ -71,7 +72,7 @@ docker run -v ~/.kube/config:/home/gpm/.kube/config -p 8080:8080 quay.io/sighup/
 
 Then access it with your browser on: [http://127.0.0.1:8080](http://127.0.0.1:8080)
 
-> You can also run the flask app directly, see the [development section](#Development) for further information.
+> You can also run the flask app directly, see the [development section](#development) for further information.
 
 ## Configuration
 
@@ -173,7 +174,7 @@ $ pip install -r app/requirements-dev.txt
 $ FLASK_APP=app/app.py flask run
 ```
 
-> Access to a Kubernetes cluster with Gatekeeper deployed is recommended to debug the application.
+> Access to a Kubernetes cluster with OPA Gatekeeper deployed is recommended to debug the application.
 >
 > You'll need an OIDC provider to test the OIDC authentication. You can use our [fury-kubernetes-keycloak](https://github.com/sighupio/fury-kubernetes-keycloak) module.
 
