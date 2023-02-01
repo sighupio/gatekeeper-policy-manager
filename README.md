@@ -23,7 +23,7 @@ GPM can display all the defined **Constraint Templates** with their rego code, a
 
 You'll need OPA Gatekeeper running in your cluster and at least some constraint templates and constraints defined to take advantage of this tool.
 
-ℹ You can easily deploy Gatekeeper to your cluster using the (also open source) [Fury Kubernetes OPA](https://github.com/sighupio/fury-kubernetes-opa) module.
+ℹ You can easily deploy Gatekeeper to your cluster using the (also open source) [Kubernetes Fury OPA](https://github.com/sighupio/fury-kubernetes-opa) module.
 
 ## Deploying GPM
 
