@@ -9,7 +9,7 @@ defusedxml==0.7.1
 future==0.18.3
 google-auth==2.16.0
 idna==3.4
-importlib-resources==5.10.0
+importlib-resources==5.10.2
 itsdangerous==2.1.2
 Jinja2==3.1.2
 Mako==1.2.4
