@@ -7,7 +7,7 @@ WORKDIR /web-client
 RUN yarn install && yarn cache clean && yarn build
 
 
-FROM python:3.10-slim
+FROM python:3.11-slim
 LABEL org.opencontainers.vendor="SIGHUP.io"
 LABEL org.opencontainers.image.authors="SIGHUP https://sighup.io"
 LABEL org.opencontainers.image.source="https://github.com/sighupio/gatekeeper-policy-manager"
