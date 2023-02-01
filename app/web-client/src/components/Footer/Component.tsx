@@ -38,7 +38,7 @@ function FooterComponent() {
               </EuiLink>
             </p>
           </EuiText>
-          <EuiFlexGroup justifyContent="flexStart">
+          <EuiFlexGroup justifyContent="flexStart" gutterSize="none" >
             <EuiFlexItem grow={false} style={{ marginRight: 0 }}>
               <EuiIcon type={githubLogo} size="m" />
             </EuiFlexItem>
