@@ -1,0 +1,26 @@
+{
+  "name": "gpm-e2e",
+  "version": "1.0.0",
+  "description": "E2E Testing suite for GPM",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sighupio/gatekeeper-policy-manager.git"
+  },
+  "author": "Ramiro Algozino",
+  "license": " BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/sighupio/gatekeeper-policy-manager/issues"
+  },
+  "homepage": "https://github.com/sighupio/gatekeeper-policy-manager#readme",
+  "dependencies": {
+    "playwright": "^1.30.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.30.0"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "gen:snapshot": "rm -rf tests/*-snapshots && playwright test --update-snapshots --config=playwright.config.js"
+  }
+}
