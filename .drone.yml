@@ -179,7 +179,7 @@ steps:
     pull: always
     network_mode: host
     commands:
-      - cd tests/e2e && yarn test
+      - cd tests/e2e && yarn install && yarn test
 
   - name: kind-destroy
     image: docker:dind
