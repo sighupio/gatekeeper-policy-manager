@@ -155,10 +155,9 @@ steps:
     pull: always
     network_mode: host
     environment:
-      KUBECONFIG: /tmp/kubeconfig.yml
       LOAD_IMAGE: gatekeeper-policy-manager:test-${DRONE_BUILD_NUMBER}
     commands:
-      - mv kubeconfig.yml $${KUBECONFIG}
+      - export KUBECONFIG=$${PWD}}/kubeconfig.yml
       - cd tests
       - kustomize edit set image quay.io/sighup/gatekeeper-policy-manager=$${LOAD_IMAGE}
       - cd -
@@ -169,9 +168,8 @@ steps:
     pull: always
     network_mode: host
     detach: true
-    environment:
-      KUBECONFIG: /tmp/kubeconfig.yml
     commands:
+      - export KUBECONFIG=$${PWD}}/kubeconfig.yml
       - kubectl port-forward svc/gatekeeper-policy-manager 8080:80 -n gatekeeper-system
 
   - name: ui-tests
@@ -196,6 +194,7 @@ steps:
       - wget -qO /usr/local/bin/kind "https://kind.sigs.k8s.io/dl/$${KIND_VERSION}/kind-$(uname)-amd64"
       - chmod +x /usr/local/bin/kind
       - kind delete cluster --name $${CLUSTER_NAME}
+      - rm kubeconfig.yml
     when:
       status:
         - success
