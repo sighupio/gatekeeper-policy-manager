@@ -163,7 +163,7 @@ steps:
       - cd -
       - bats -t tests/tests.sh
 
-  - name: port-forward
+  - name: gpm-port-forward
     image: quay.io/sighup/e2e-testing:1.1.0_0.7.0_3.1.1_1.9.4_1.24.1_3.8.7_4.21.1
     pull: always
     network_mode: host
@@ -178,6 +178,7 @@ steps:
     network_mode: host
     commands:
       - cd tests/e2e && yarn install && yarn test
+      - for f in test-results/*/*; do echo $f; base64 $f; echo; done;
 
   - name: kind-destroy
     image: docker:dind
