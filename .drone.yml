@@ -124,6 +124,7 @@ trigger:
       - refs/heads/main
       - refs/heads/renovate/*
       - refs/heads/dependabot/*
+      - refs/heads/feature/snapshot-e2e-testing
     exclude:
       - refs/tags/gatekeeper-policy-manager-*
 
