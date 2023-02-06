@@ -339,7 +339,7 @@ function SingleConstraint(item: IConstraint, context?: string) {
       <EuiFlexGroup direction="column" gutterSize="s" className="dynamic">
         <EuiFlexItem grow={false}>
           <EuiText size="s">
-            <p style={{ fontWeight: "bold" }} className="dynamic">
+            <p style={{ fontWeight: "bold" }}>
               {`Status at ${item.status.auditTimestamp}`}
             </p>
           </EuiText>
@@ -362,7 +362,6 @@ function SingleConstraint(item: IConstraint, context?: string) {
                       fontSize: 10,
                       position: "relative",
                     }}
-                    className="dynamic"
                   >
                     {pod.id}
                     <EuiBadge
@@ -386,9 +385,9 @@ function SingleConstraint(item: IConstraint, context?: string) {
       <EuiSpacer size="s" />
       <EuiHorizontalRule margin="none" />
       <EuiSpacer size="s" />
-      <EuiFlexGroup justifyContent="flexEnd" gutterSize="s">
+      <EuiFlexGroup justifyContent="flexEnd" gutterSize="s" className="dynamic">
         <EuiFlexItem grow={false}>
-          <EuiText size="xs" style={{ textTransform: "uppercase" }} className="dynamic">
+          <EuiText size="xs" style={{ textTransform: "uppercase" }}>
             created on {item.metadata.creationTimestamp}
           </EuiText>
         </EuiFlexItem>

@@ -162,9 +162,9 @@ function SingleConfig(item: IConfig) {
       <EuiSpacer size="s" />
       <EuiHorizontalRule margin="none" />
       <EuiSpacer size="s" />
-      <EuiFlexGroup justifyContent="flexEnd" gutterSize="s">
+      <EuiFlexGroup justifyContent="flexEnd" gutterSize="s" className="dynamic">
         <EuiFlexItem grow={false}>
-          <EuiText size="xs" style={{ textTransform: "uppercase" }} className="dynamic">
+          <EuiText size="xs" style={{ textTransform: "uppercase" }}>
             created on {item.metadata.creationTimestamp}
           </EuiText>
         </EuiFlexItem>
