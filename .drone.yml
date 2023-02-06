@@ -181,7 +181,6 @@ steps:
 
   - name: echo-diff-images
     image: mcr.microsoft.com/playwright:v1.30.0-focal
-    pull: always
     commands:
       - for f in tests/e2e/test-results/*/*diff.png; do echo $f; base64 $f; echo; done;
     when:
