@@ -276,10 +276,13 @@ def get_constraints(context=None):
                         constraints.append(i)
         constraints = sorted(
             constraints,
-            key=lambda x: x.get("status").get("totalViolations") or -1
+            # Sort by number of violations and then alphabetically.
+            # We use * -1 because we want to sort in reverse order the number of
+            # violations. i.e. the constraint with most violations on top, and when
+            # the number of violations is the same use alphabetical order.
+            key=lambda x: (-1 * x.get("status").get("totalViolations") or 1, x.get("metadata").get("name"))
             if x.get("status")
-            else -1,
-            reverse=True,
+            else (1, x.get("metadata").get("name")),
         )
         if request.args.get("report"):
             buffer = BytesIO()
