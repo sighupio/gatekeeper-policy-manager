@@ -178,7 +178,16 @@ steps:
     network_mode: host
     commands:
       - cd tests/e2e && yarn install && yarn test
+
+  - name: echo-diff-images
+    image: mcr.microsoft.com/playwright:v1.30.0-focal
+    pull: always
+    network_mode: host
+    commands:
       - for f in test-results/*/*; do echo $f; base64 $f; echo; done;
+    when:
+      status:
+        - failure
 
   - name: kind-destroy
     image: docker:dind
