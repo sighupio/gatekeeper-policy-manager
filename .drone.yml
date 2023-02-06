@@ -157,7 +157,7 @@ steps:
     environment:
       LOAD_IMAGE: gatekeeper-policy-manager:test-${DRONE_BUILD_NUMBER}
     commands:
-      - export KUBECONFIG=$${PWD}}/kubeconfig.yml
+      - export KUBECONFIG=$${{PWD}}/kubeconfig.yml
       - cd tests
       - kustomize edit set image quay.io/sighup/gatekeeper-policy-manager=$${LOAD_IMAGE}
       - cd -
@@ -169,7 +169,7 @@ steps:
     network_mode: host
     detach: true
     commands:
-      - export KUBECONFIG=$${PWD}}/kubeconfig.yml
+      - export KUBECONFIG=$${{PWD}}/kubeconfig.yml
       - kubectl port-forward svc/gatekeeper-policy-manager 8080:80 -n gatekeeper-system
 
   - name: ui-tests
