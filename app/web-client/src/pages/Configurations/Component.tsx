@@ -164,7 +164,7 @@ function SingleConfig(item: IConfig) {
       <EuiSpacer size="s" />
       <EuiFlexGroup justifyContent="flexEnd" gutterSize="s">
         <EuiFlexItem grow={false}>
-          <EuiText size="xs" style={{ textTransform: "uppercase" }}>
+          <EuiText size="xs" style={{ textTransform: "uppercase" }} className="dynamic">
             created on {item.metadata.creationTimestamp}
           </EuiText>
         </EuiFlexItem>
@@ -203,7 +203,7 @@ function ConfigurationsComponent() {
     setIsLoading(true);
     fetch(
       `${appContextData.context.apiUrl}api/v1/configs/${appContextData.context.currentK8sContext ?
-        appContextData.context.currentK8sContext+"/" : ""}`
+        appContextData.context.currentK8sContext + "/" : ""}`
     )
       .then(async (res) => {
         const body: IConfig[] = await res.json();

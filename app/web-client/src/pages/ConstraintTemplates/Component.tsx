@@ -249,6 +249,7 @@ function SingleConstraintTemplate(
                       fontSize: 10,
                       position: "relative",
                     }}
+                    className="dynamic"
                   >
                     {pod.id}
                     <EuiBadge

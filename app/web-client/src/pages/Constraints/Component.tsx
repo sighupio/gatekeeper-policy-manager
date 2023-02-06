@@ -339,7 +339,7 @@ function SingleConstraint(item: IConstraint, context?: string) {
       <EuiFlexGroup direction="column" gutterSize="s">
         <EuiFlexItem grow={false}>
           <EuiText size="s">
-            <p style={{ fontWeight: "bold" }}>
+            <p style={{ fontWeight: "bold" }} className="dynamic">
               {`Status at ${item.status.auditTimestamp}`}
             </p>
           </EuiText>
@@ -362,6 +362,7 @@ function SingleConstraint(item: IConstraint, context?: string) {
                       fontSize: 10,
                       position: "relative",
                     }}
+                    className="dynamic"
                   >
                     {pod.id}
                     <EuiBadge
@@ -387,7 +388,7 @@ function SingleConstraint(item: IConstraint, context?: string) {
       <EuiSpacer size="s" />
       <EuiFlexGroup justifyContent="flexEnd" gutterSize="s">
         <EuiFlexItem grow={false}>
-          <EuiText size="xs" style={{ textTransform: "uppercase" }}>
+          <EuiText size="xs" style={{ textTransform: "uppercase" }} className="dynamic">
             created on {item.metadata.creationTimestamp}
           </EuiText>
         </EuiFlexItem>
@@ -435,7 +436,6 @@ function ConstraintsComponent() {
         if (!res.ok) {
           throw new Error(JSON.stringify(body));
         }
-
         setSideNav(generateSideNav(body));
         setItems(body);
       })
