@@ -182,9 +182,8 @@ steps:
   - name: echo-diff-images
     image: mcr.microsoft.com/playwright:v1.30.0-focal
     pull: always
-    network_mode: host
     commands:
-      - for f in test-results/*/*; do echo $f; base64 $f; echo; done;
+      - for f in tests/e2e/test-results/*/*; do echo $f; base64 $f; echo; done;
     when:
       status:
         - failure
