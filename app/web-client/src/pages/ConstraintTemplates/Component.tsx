@@ -228,7 +228,7 @@ function SingleConstraintTemplate(
           <EuiSpacer size="s" />
         </>
       )}
-      <EuiFlexGroup direction="column" gutterSize="s">
+      <EuiFlexGroup direction="column" gutterSize="s" className="dynamic">
         <EuiFlexItem grow={false}>
           <EuiText size="s">
             <p style={{ fontWeight: "bold" }}>Status</p>

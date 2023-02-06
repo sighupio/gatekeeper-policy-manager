@@ -336,7 +336,7 @@ function SingleConstraint(item: IConstraint, context?: string) {
           )}
         </>
       )}
-      <EuiFlexGroup direction="column" gutterSize="s">
+      <EuiFlexGroup direction="column" gutterSize="s" className="dynamic">
         <EuiFlexItem grow={false}>
           <EuiText size="s">
             <p style={{ fontWeight: "bold" }} className="dynamic">
