@@ -31,7 +31,7 @@ steps:
     image: quay.io/sighup/policeman
     pull: always
     environment:
-      FILTER_REGEX_EXCLUDE: (app/static-content/semantic.min.css|chart/)
+      FILTER_REGEX_EXCLUDE: (app/static-content/semantic.min.css|chart/|tests/e2e/)
       # Identifies false positives like missing 'selector'.
       # Doing this is valid for Kustomize patches
       VALIDATE_KUBERNETES_KUBEVAL: "false"

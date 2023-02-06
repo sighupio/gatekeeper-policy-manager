@@ -280,7 +280,10 @@ def get_constraints(context=None):
             # We use * -1 because we want to sort in reverse order the number of
             # violations. i.e. the constraint with most violations on top, and when
             # the number of violations is the same use alphabetical order.
-            key=lambda x: (-1 * x.get("status").get("totalViolations") or 1, x.get("metadata").get("name"))
+            key=lambda x: (
+                -1 * x.get("status").get("totalViolations") or 1,
+                x.get("metadata").get("name"),
+            )
             if x.get("status")
             else (1, x.get("metadata").get("name")),
         )
