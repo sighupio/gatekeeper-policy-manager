@@ -65,6 +65,18 @@ load ./helper
     [ "$status" -eq 0 ]
 }
 
+@test "[AUDIT] check violations are present" {
+  info
+  wait_violations(){
+    kubectl get k8slivenessprobe.constraints.gatekeeper.sh liveness-probe -o go-template="{{.status.totalViolations}}"
+    echo "number of violations for liveness-probe constraint is: ${output}"
+    echo "command status is: ${status}"
+    [[ "$output" -eq 2 ]]
+    [[ "$status" -eq 0 ]]
+  }
+  loop_it wait_violations 10 5
+}
+
 # Teardown gets called after each test.
 # There's also teardown_file that gets called once but I could not make it work.
 # Leving this for debug purposes

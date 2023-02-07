@@ -31,7 +31,7 @@ steps:
     image: quay.io/sighup/policeman
     pull: always
     environment:
-      FILTER_REGEX_EXCLUDE: (app/static-content/semantic.min.css|chart/)
+      FILTER_REGEX_EXCLUDE: (app/static-content/semantic.min.css|chart/|tests/e2e/)
       # Identifies false positives like missing 'selector'.
       # Doing this is valid for Kustomize patches
       VALIDATE_KUBERNETES_KUBEVAL: "false"
@@ -56,7 +56,7 @@ steps:
       - render
     commands:
       # we use --ignore-deprecations because we don't want the CI to fail when the API has not been removed yet.
-      - /pluto detect gpm.yml --ignore-deprecations --target-versions=k8s=v1.24.0
+      - /pluto detect gpm.yml --ignore-deprecations --target-versions=k8s=v1.25.0
 
 trigger:
   ref:
@@ -124,6 +124,7 @@ trigger:
       - refs/heads/main
       - refs/heads/renovate/*
       - refs/heads/dependabot/*
+      - refs/heads/feature/snapshot-e2e-testing
     exclude:
       - refs/tags/gatekeeper-policy-manager-*
 
@@ -154,14 +155,38 @@ steps:
     pull: always
     network_mode: host
     environment:
-      KUBECONFIG: /tmp/kubeconfig.yml
       LOAD_IMAGE: gatekeeper-policy-manager:test-${DRONE_BUILD_NUMBER}
     commands:
-      - mv kubeconfig.yml $${KUBECONFIG}
+      - export KUBECONFIG=$PWD/kubeconfig.yml
       - cd tests
       - kustomize edit set image quay.io/sighup/gatekeeper-policy-manager=$${LOAD_IMAGE}
       - cd -
       - bats -t tests/tests.sh
+
+  - name: gpm-port-forward
+    image: quay.io/sighup/e2e-testing:1.1.0_0.7.0_3.1.1_1.9.4_1.24.1_3.8.7_4.21.1
+    pull: always
+    network_mode: host
+    detach: true
+    commands:
+      - export KUBECONFIG=$PWD/kubeconfig.yml
+      - kubectl port-forward svc/gatekeeper-policy-manager 8080:80 -n gatekeeper-system
+
+  - name: ui-tests
+    image: mcr.microsoft.com/playwright:v1.30.0-focal
+    pull: always
+    network_mode: host
+    commands:
+      - cd tests/e2e && yarn install && yarn test
+
+  - name: echo-diff-images
+    image: mcr.microsoft.com/playwright:v1.30.0-focal
+    commands:
+      - for f in tests/e2e/test-results/*/*diff.png; do echo $f; base64 -w 0 $f; echo; done;
+      - "echo 'Use base64 to decode the images and see the diff'"
+    when:
+      status:
+        - failure
 
   - name: kind-destroy
     image: docker:dind
@@ -178,6 +203,7 @@ steps:
       - wget -qO /usr/local/bin/kind "https://kind.sigs.k8s.io/dl/$${KIND_VERSION}/kind-$(uname)-amd64"
       - chmod +x /usr/local/bin/kind
       - kind delete cluster --name $${CLUSTER_NAME}
+      - rm kubeconfig.yml
     when:
       status:
         - success

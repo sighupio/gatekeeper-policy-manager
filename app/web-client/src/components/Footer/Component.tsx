@@ -20,7 +20,7 @@ function FooterComponent() {
     <footer className="gpm-footer">
       <EuiFlexGroup justifyContent="spaceBetween">
         <EuiFlexItem grow={false}>
-          <EuiText size="s">
+          <EuiText size="s" className="dynamic">
             <p>
               <strong>Gatekeeper Policy Manager v1.0.3</strong>
             </p>
