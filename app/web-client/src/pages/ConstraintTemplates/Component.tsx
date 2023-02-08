@@ -172,7 +172,7 @@ function SingleConstraintTemplate(
                 data={
                   item.spec.crd.spec?.validation?.openAPIV3Schema?.properties
                 }
-                shouldExpandNode={() => true}
+                shouldExpandNodeInitially={() => true}
                 hideRoot={true}
                 theme={theme}
                 invertTheme={false}

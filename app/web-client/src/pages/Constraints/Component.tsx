@@ -322,7 +322,7 @@ function SingleConstraint(item: IConstraint, context?: string) {
                 <EuiFlexItem>
                   <JSONTree
                     data={item?.spec?.parameters}
-                    shouldExpandNode={() => true}
+                    shouldExpandNodeInitially={() => true}
                     hideRoot={true}
                     theme={theme}
                     invertTheme={false}
