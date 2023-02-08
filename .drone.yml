@@ -122,9 +122,8 @@ trigger:
     include:
       - refs/tags/**
       - refs/heads/main
-      - refs/heads/renovate/*
-      - refs/heads/dependabot/*
-      - refs/heads/feature/snapshot-e2e-testing
+      - refs/heads/snyk-**
+      - refs/heads/dependabot/**
     exclude:
       - refs/tags/gatekeeper-policy-manager-*
 
@@ -233,8 +232,8 @@ trigger:
       - refs/tags/**
       - refs/heads/**
     exclude:
-      - refs/heads/dependabot/*
-      - refs/heads/renovate/*
+      - refs/heads/dependabot/**
+      - refs/heads/snyk-**
       - refs/tags/gatekeeper-policy-manager-*
 
 steps:
