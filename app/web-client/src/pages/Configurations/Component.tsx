@@ -148,7 +148,7 @@ function SingleConfig(item: IConfig) {
                 <EuiFlexItem grow={false}>
                   <JSONTree
                     data={item?.spec}
-                    shouldExpandNode={() => true}
+                    shouldExpandNodeInitially={() => true}
                     hideRoot={true}
                     theme={theme}
                     invertTheme={false}
