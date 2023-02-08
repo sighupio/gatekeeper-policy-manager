@@ -148,7 +148,7 @@ function SingleConfig(item: IConfig) {
                 <EuiFlexItem grow={false}>
                   <JSONTree
                     data={item?.spec}
-                    shouldExpandNode={() => true}
+                    shouldExpandNodeInitially={() => true}
                     hideRoot={true}
                     theme={theme}
                     invertTheme={false}
@@ -162,7 +162,7 @@ function SingleConfig(item: IConfig) {
       <EuiSpacer size="s" />
       <EuiHorizontalRule margin="none" />
       <EuiSpacer size="s" />
-      <EuiFlexGroup justifyContent="flexEnd" gutterSize="s">
+      <EuiFlexGroup justifyContent="flexEnd" gutterSize="s" className="dynamic">
         <EuiFlexItem grow={false}>
           <EuiText size="xs" style={{ textTransform: "uppercase" }}>
             created on {item.metadata.creationTimestamp}
@@ -203,7 +203,7 @@ function ConfigurationsComponent() {
     setIsLoading(true);
     fetch(
       `${appContextData.context.apiUrl}api/v1/configs/${appContextData.context.currentK8sContext ?
-        appContextData.context.currentK8sContext+"/" : ""}`
+        appContextData.context.currentK8sContext + "/" : ""}`
     )
       .then(async (res) => {
         const body: IConfig[] = await res.json();

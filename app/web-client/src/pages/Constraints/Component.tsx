@@ -322,7 +322,7 @@ function SingleConstraint(item: IConstraint, context?: string) {
                 <EuiFlexItem>
                   <JSONTree
                     data={item?.spec?.parameters}
-                    shouldExpandNode={() => true}
+                    shouldExpandNodeInitially={() => true}
                     hideRoot={true}
                     theme={theme}
                     invertTheme={false}
@@ -336,7 +336,7 @@ function SingleConstraint(item: IConstraint, context?: string) {
           )}
         </>
       )}
-      <EuiFlexGroup direction="column" gutterSize="s">
+      <EuiFlexGroup direction="column" gutterSize="s" className="dynamic">
         <EuiFlexItem grow={false}>
           <EuiText size="s">
             <p style={{ fontWeight: "bold" }}>
@@ -385,7 +385,7 @@ function SingleConstraint(item: IConstraint, context?: string) {
       <EuiSpacer size="s" />
       <EuiHorizontalRule margin="none" />
       <EuiSpacer size="s" />
-      <EuiFlexGroup justifyContent="flexEnd" gutterSize="s">
+      <EuiFlexGroup justifyContent="flexEnd" gutterSize="s" className="dynamic">
         <EuiFlexItem grow={false}>
           <EuiText size="xs" style={{ textTransform: "uppercase" }}>
             created on {item.metadata.creationTimestamp}
@@ -435,7 +435,6 @@ function ConstraintsComponent() {
         if (!res.ok) {
           throw new Error(JSON.stringify(body));
         }
-
         setSideNav(generateSideNav(body));
         setItems(body);
       })

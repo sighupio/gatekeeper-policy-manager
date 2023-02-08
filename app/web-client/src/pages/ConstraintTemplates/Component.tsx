@@ -172,7 +172,7 @@ function SingleConstraintTemplate(
                 data={
                   item.spec.crd.spec?.validation?.openAPIV3Schema?.properties
                 }
-                shouldExpandNode={() => true}
+                shouldExpandNodeInitially={() => true}
                 hideRoot={true}
                 theme={theme}
                 invertTheme={false}
@@ -228,7 +228,7 @@ function SingleConstraintTemplate(
           <EuiSpacer size="s" />
         </>
       )}
-      <EuiFlexGroup direction="column" gutterSize="s">
+      <EuiFlexGroup direction="column" gutterSize="s" className="dynamic">
         <EuiFlexItem grow={false}>
           <EuiText size="s">
             <p style={{ fontWeight: "bold" }}>Status</p>
@@ -249,6 +249,7 @@ function SingleConstraintTemplate(
                       fontSize: 10,
                       position: "relative",
                     }}
+                    className="dynamic"
                   >
                     {pod.id}
                     <EuiBadge
