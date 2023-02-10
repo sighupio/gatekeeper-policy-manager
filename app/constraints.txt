@@ -29,6 +29,6 @@ rsa==4.9
 six==1.16.0
 typing-extensions==4.4.0
 urllib3==1.26.14
-websocket-client==1.4.2
+websocket-client==1.5.1
 Werkzeug==2.2.2
 zipp==3.11.0
