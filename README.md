@@ -169,7 +169,7 @@ $ python3 -m venv env
 # Activate it
 $ source ./env/bin/activate
 # Install all the dependencies
-$ pip install -r app/requirements-dev.txt
+$ pip install -r app/requirements.txt
 # Run the development server
 $ FLASK_APP=app/app.py flask run
 ```
