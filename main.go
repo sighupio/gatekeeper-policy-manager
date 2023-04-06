@@ -130,7 +130,7 @@ func main() {
 	// This is used later to render templates in the routes.
 	// i.e. to render the HTML report in the `/constraints/?report=html` route.
 	t := &Template{
-		templates: template.Must(template.ParseGlob("templates/*.html")),
+		templates: template.Must(template.ParseGlob("templates/*.html.gotpl")),
 	}
 	e.Renderer = t
 
