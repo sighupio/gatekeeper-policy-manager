@@ -1,6 +1,10 @@
-app/__pycache__
 .git
+.mypy_cache
 .vscode
+chart
+docs
 env
-screenshots
 manifests
+screenshots
+tests
+static-content/static

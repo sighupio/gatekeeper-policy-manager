@@ -1,5 +1,6 @@
 env
 .vscode
+.mypy_cache
 __pycache__
 launch.json
 app/static-content/*
