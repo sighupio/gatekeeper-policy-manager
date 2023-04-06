@@ -88,7 +88,7 @@
             {{- range .status.violations }}
             <tr>
                 <td>{{ $constraint }}</td>
-                <td {{if eq .enforcementAction "deny" }}style="color:red;" {{end}}>{{ .enforcementAction }}</span></td>
+                <td {{if eq .enforcementAction "deny" }}style="color:red;" {{end}}>{{ .enforcementAction }}</td>
                 <td>{{ .kind }}</td>
                 <td>{{ .namespace }}</td>
                 <td>{{ .name }}</td>

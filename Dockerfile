@@ -12,7 +12,9 @@ COPY go.mod ./
 COPY go.sum ./
 COPY *.go ./
 RUN go mod download
+# hadolint ignore=DL3059
 RUN go vet -v
+# hadolint ignore=DL3059
 RUN CGO_ENABLED=0 go build -o gpm
 
 FROM gcr.io/distroless/static-debian11:nonroot
