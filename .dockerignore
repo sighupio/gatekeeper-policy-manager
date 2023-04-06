@@ -7,4 +7,5 @@ env
 manifests
 screenshots
 tests
-static-content/static
+static-content/**
+!static-content/logo.svg

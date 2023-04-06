@@ -31,7 +31,7 @@ steps:
     image: quay.io/sighup/policeman
     pull: always
     environment:
-      FILTER_REGEX_EXCLUDE: (app/static-content/semantic.min.css|chart/|tests/e2e/)
+      FILTER_REGEX_EXCLUDE: (chart/|tests/e2e/)
       # Identifies false positives like missing 'selector'.
       # Doing this is valid for Kustomize patches
       VALIDATE_KUBERNETES_KUBEVAL: "false"
@@ -259,7 +259,7 @@ steps:
         include:
           - refs/tags/**
         exclude:
-          - refs/tags/gatekeeper-policy-manager-*  # Exclude helm chart releases
+          - refs/tags/gatekeeper-policy-manager-* # Exclude helm chart releases
 
   - name: registry-sha
     image: docker:dind
