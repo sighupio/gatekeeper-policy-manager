@@ -39,13 +39,13 @@ By default, this will create a deployment and a service both with the name `gate
 
 > The app can be run as a POD in a Kubernetes cluster or locally with a `kubeconfig` file. It will try its best to autodetect the correct configuration.
 
-Once you've deployed the application, if you haven't set up an ingress, you can access the web-UI using port-forward:
+Once you've deployed the application, if you haven't set up an ingress, you can access the web UI using port-forward:
 
 ```bash
 kubectl -n gatekeeper-system port-forward  svc/gatekeeper-policy-manager 8080:80
 ```
 
-Then access it with your browser on: [http://127.0.0.1:8080](http://127.0.0.1:8080)
+Then access it with your browser by visiting [http://127.0.0.1:8080](http://127.0.0.1:8080).
 
 ### Deploy using Helm
 
@@ -64,15 +64,15 @@ helm upgrade --install --namespace gatekeeper-system --set image.tag=v1.0.3 --va
 
 ## Running locally
 
-GPM can also be run locally using docker and a `kubeconfig`, assuming that the `kubeconfig` file you want to use is located at `~/.kube/config` the command to run GPM locally would be:
+GPM can also be run locally using Docker (or any other container runtime) and a `kubeconfig`. Assuming that the `kubeconfig` file you want to use is located at `~/.kube/config` the command to run GPM locally would be:
 
 ```bash
-docker run -v ~/.kube/config:/home/gpm/.kube/config -p 8080:8080 quay.io/sighup/gatekeeper-policy-manager:v1.0.3
+docker run -v ~/.kube/config:/home/nonroot/.kube/config -p 8080:8080 quay.io/sighup/gatekeeper-policy-manager:v1.0.3
 ```
 
-Then access it with your browser on: [http://127.0.0.1:8080](http://127.0.0.1:8080)
+Then access it with your browser by visiting [http://127.0.0.1:8080](http://127.0.0.1:8080).
 
-> You can also run the flask app directly, see the [development section](#development) for further information.
+> You can also run the app binary directly, see the [development section](#development) for further information.
 
 ## Configuration
 
@@ -102,15 +102,18 @@ GPM is a stateless application, but it can be configured using environment varia
 
 ### Multi-cluster support
 
-Since `v1.0.3` GPM has basic multi-cluster support when using a `kubeconfig` with more than one context. GPM will let you chose the context right from the UI.
+Since `v1.0.3` GPM supports viewing information from more than one cluster. Multi-cluster support is achieved by using a `kubeconfig` with more than one context, where each context points to a different cluster. GPM will let you choose the context (cluster) right from the UI.
 
-If you want to run GPM in a cluster but with multi-cluster support, it's as easy as mounting a `kubeconfig` file in GPM's pod(s) with the cluster access configuration and set the environment variable `KUBECONFIG` with the path to the mounted `kubeconfig` file. Or you can simply mount it in `/home/gpm/.kube/config` and GPM will detect it automatically.
+If you want to run GPM in a cluster but with multi-cluster support, it is as easy as
 
-> Please remember that the user for the clusters should have the right permissions. You can use the [`manifests/rabc.yaml`](manifests/rbac.yaml) file as reference.
+1. Mounting a `kubeconfig` file in GPM's pod(s) with the cluster access configuration.
+2. Setting the environment variable `KUBECONFIG` value with the path to the mounted `kubeconfig` file. Or you can simply mount it in `/home/nonroot/.kube/config` and GPM will detect it automatically.
+
+> ⚠️ Please remember that the user for the clusters should have the right permissions. You can use the [`manifests/rabc.yaml`](manifests/rbac.yaml) file as reference.
 >
-> Also note that the cluster where GPM is running should be able to reach the other clusters.
+> Also note that the cluster where GPM is running should be able to reach the other clusters, i.e. network connectivity.
 
-When you run GPM locally, you are already using a `kubeconfig` file  to connect to the clusters, now you should see all your defined contexts and you can switch between them easily from the UI.
+When you run GPM locally, you are already using a `kubeconfig` file to connect to the clusters, you should see all your defined contexts and be able to switch between them easily from the UI.
 
 #### AWS IAM Authentication
 
@@ -122,15 +125,16 @@ You can customize the container image with a `Dockerfile` like the following:
 FROM curlimages/curl:7.81.0 as downloader
 RUN curl https://github.com/kubernetes-sigs/aws-iam-authenticator/releases/download/v0.5.5/aws-iam-authenticator_0.5.5_linux_amd64 --output /tmp/aws-iam-authenticator
 RUN chmod +x /tmp/aws-iam-authenticator
+
 FROM quay.io/sighup/gatekeeper-policy-manager:v1.0.3
 COPY --from=downloader --chown=root:root /tmp/aws-iam-authenticator /usr/local/bin/
 ```
 
-You may need to add also the `aws` CLI, you can use the same approach as before.
+You may need to add also the `aws` CLI for debugging purposes, you can use the same approach as before.
 
-Make sure that your `kubeconfig` has the `apiVersion` set as `client.authentication.k8s.io/v1beta1`
-
-You can read more [in this issue](https://github.com/sighupio/gatekeeper-policy-manager/issues/330).
+> ℹ️ Make sure that your `kubeconfig` has the `apiVersion` set as `client.authentication.k8s.io/v1beta1`
+>
+> You can read more [in this issue](https://github.com/sighupio/gatekeeper-policy-manager/issues/330).
 
 ## Screenshots
 
@@ -168,7 +172,7 @@ $ go mod download
 $ go run main.go
 ```
 
-> Access to a Kubernetes cluster with OPA Gatekeeper deployed is recommended to debug the application.
+> 💡 Access to a Kubernetes cluster with OPA Gatekeeper deployed is recommended to debug the application.
 >
 > You'll need an OIDC provider to test the OIDC authentication. You can use our [fury-kubernetes-keycloak](https://github.com/sighupio/fury-kubernetes-keycloak) module.
 
@@ -182,7 +186,7 @@ The following is a wishlist of features that we would like to add to GPM (in no 
 - [x] Better syntax highlighting for the rego code snippets
 - [x] Root-less docker image
 - [x] Multi-cluster view
-- [x] Rewrite app in Golang (WIP)
+- [x] Rewrite backend in Golang (WIP)
 - [ ] Minimal write capabilities?
 
 Please, let us know if you are using GPM and what features would you like to have by creating an issue here on GitHub 💪🏻
