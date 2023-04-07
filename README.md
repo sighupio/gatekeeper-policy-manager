@@ -1,6 +1,6 @@
 <!-- markdownlint-disable MD033 -->
 <h1>
-    <img src="app/static-content/logo.svg" align="left" width="90" style="margin-right: 15px"/>
+    <img src="static-content/logo.svg" align="left" width="90" style="margin-right: 15px"/>
     Gatekeeper Policy Manager (GPM)
 </h1>
 <!-- markdownlint-enable MD033 -->
@@ -152,26 +152,20 @@ You can read more [in this issue](https://github.com/sighupio/gatekeeper-policy-
 
 ## Development
 
-GPM is written in Python using the Flask framework for the backend and React with Elastic UI and the Fury theme for the frontend.
+GPM is written in Go using the Echo framework for the backend and React with Elastic UI and the Fury theme for the frontend.
 
-To develop GPM, you'll need to create a Python 3 virtual environment, install all the dependencies specified in the provided `requirements.txt`, build the react frontend and you are good to start hacking.
-
-The following commands should get you up and running:
+To develop GPM, the following commands should get you ready to start hacking:
 
 ```bash
-# Build frontend and copy over to static folder
-$ pushd app/web-client
+# Build Frontend and copy over to static folder
+$ pushd web-client
 $ yarn install && yarn build
 $ cp -r build/* ../static-content/
 $ popd
-# Create a virtualenv
-$ python3 -m venv env
-# Activate it
-$ source ./env/bin/activate
-# Install all the dependencies
-$ pip install -r app/requirements.txt
+# Install the Backend dependencies
+$ go mod download
 # Run the development server
-$ FLASK_APP=app/app.py flask run
+$ go run main.go
 ```
 
 > Access to a Kubernetes cluster with OPA Gatekeeper deployed is recommended to debug the application.
@@ -188,7 +182,7 @@ The following is a wishlist of features that we would like to add to GPM (in no 
 - [x] Better syntax highlighting for the rego code snippets
 - [x] Root-less docker image
 - [x] Multi-cluster view
+- [x] Rewrite app in Golang (WIP)
 - [ ] Minimal write capabilities?
-- [ ] Rewrite app in Golang?
 
 Please, let us know if you are using GPM and what features would you like to have by creating an issue here on GitHub 💪🏻
