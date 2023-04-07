@@ -127,6 +127,7 @@ trigger:
       - refs/heads/main
       - refs/heads/snyk-**
       - refs/heads/dependabot/**
+      - refs/heads/featuer/go-backend
     exclude:
       - refs/tags/gatekeeper-policy-manager-*
 
@@ -238,6 +239,7 @@ trigger:
       - refs/heads/dependabot/**
       - refs/heads/snyk-**
       - refs/tags/gatekeeper-policy-manager-*
+      - refs/heads/featuer/go-backend
 
 steps:
   - name: prepare-tar-gz
