@@ -127,7 +127,7 @@ trigger:
       - refs/heads/main
       - refs/heads/snyk-**
       - refs/heads/dependabot/**
-      - refs/heads/featuer/go-backend
+      - refs/heads/feature/go-backend
     exclude:
       - refs/tags/gatekeeper-policy-manager-*
 
