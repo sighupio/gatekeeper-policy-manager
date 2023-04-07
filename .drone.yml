@@ -37,6 +37,9 @@ steps:
       VALIDATE_KUBERNETES_KUBEVAL: "false"
       # Some duplicated code is intended.
       VALIDATE_JSCPD: "false"
+      # The included version of golang-ci at the time os this writing has issues
+      # with Go +1.18
+      VALIDATE_GO: "false"
       TYPESCRIPT_DEFAULT_STYLE: "prettier"
     depends_on:
       - clone
