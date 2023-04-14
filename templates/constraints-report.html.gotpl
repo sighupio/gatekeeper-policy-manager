@@ -36,7 +36,7 @@
             border-collapse: collapse;
         }
 
-        tr:hover {
+        tbody>tr:hover {
             background-color: whitesmoke;
         }
 
