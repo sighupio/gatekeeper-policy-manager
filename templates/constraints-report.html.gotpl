@@ -105,7 +105,7 @@
             {{- else }}
             <tr>
                 <td>{{ $constraint }}</td>
-                <td colspan="5">no violations for this constraint</td>
+                <td colspan="5">there are no violations for this constraint</td>
             </tr>
             {{- end }}
             {{- end }}
