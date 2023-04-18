@@ -12,11 +12,12 @@ import {
   EuiPage,
   EuiSpacer,
   EuiText,
+  EuiCallOut,
 } from "@elastic/eui";
-import {useContext, useEffect, useState} from "react";
-import {useLocation, useNavigate} from "react-router-dom";
+import { useContext, useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ErrorPageState } from "./types";
-import {ApplicationContext} from "../../AppContext";
+import { ApplicationContext } from "../../AppContext";
 
 function ErrorComponent() {
   const { state } = useLocation();
@@ -28,7 +29,7 @@ function ErrorComponent() {
     if (
       initialContext === undefined &&
       appContextData.context.currentK8sContext !== undefined
-    ){
+    ) {
       setInitialContext(appContextData.context.currentK8sContext);
     }
 
@@ -78,6 +79,9 @@ function ErrorComponent() {
             <h4>{(state as ErrorPageState)?.error?.action}</h4>
           </EuiText>
         </EuiFlexItem>
+        <EuiCallOut title="Error details" color="danger" iconType="error">
+          <p>{(state as ErrorPageState)?.error?.description}</p>
+        </EuiCallOut>
         <EuiFlexItem grow={false}>
           <EuiButton
             href={`/${(state as ErrorPageState)?.entity ?? ""}`}
