@@ -82,6 +82,215 @@ func getCustomResources(clientset dynamic.DynamicClient, group string, version s
 	return res, nil
 }
 
+func getContexts(c echo.Context) error {
+	// v1 answer is formed like this:
+	// [
+	//     [
+	//         {
+	//             "context": {
+	//                 "cluster": "kind-gpm",
+	//                 "user": "kind-gpm"
+	//             },
+	//             "name": "kind-gpm"
+	//         }
+	//     ],
+	//     {
+	//         "context": {
+	//             "cluster": "kind-gpm",
+	//             "user": "kind-gpm"
+	//         },
+	//         "name": "kind-gpm"
+	//     }
+	// ]
+	//
+	// where the [0] is a list of available contexts and [1] is the current context.
+	// We need to format the response to align with the python version (API v1)
+
+	type context struct {
+		Cluster string `json:"cluster"`
+		User    string `json:"user"`
+	}
+
+	type kubeconfigContext struct {
+		Name    string  `json:"name"`
+		Context context `json:"context"`
+	}
+
+	kubeconfigContexts := []kubeconfigContext{}
+	var currentKubeconfigContext kubeconfigContext
+	for kc := range k8sctxs {
+		c := context{
+			Cluster: k8sctxs[kc].Cluster,
+			User:    k8sctxs[kc].AuthInfo,
+		}
+		fullContext := kubeconfigContext{
+			Name:    kc,
+			Context: c,
+		}
+		kubeconfigContexts = append(kubeconfigContexts, fullContext)
+		if kc == k8sctx {
+			currentKubeconfigContext = fullContext
+		}
+	}
+	v1Answer := []interface{}{kubeconfigContexts, currentKubeconfigContext}
+
+	return c.JSON(http.StatusOK, v1Answer)
+}
+
+func getConfigs(c echo.Context) error {
+	if c.Param("context") != "" {
+		c.Echo().Logger.Debug("switching to custom context ", c.Param("context"))
+		err := switchKubernetesContext(c.Echo(), c.Param("context"))
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, ErrorMessage{
+				ErrorMessage: fmt.Sprintf("Got an error while trying to switch to context %s", c.Param("context")),
+				Action:       "Please check the context definition in the Kubeconfig file.",
+				Description:  err.Error(),
+			})
+		}
+	}
+	configResources, err := getCustomResources(*clientset, "config.gatekeeper.sh", "v1alpha1", "configs")
+	if err != nil {
+		c.Echo().Logger.Debug("got error while getting config resources: ", err)
+		return c.JSON(http.StatusInternalServerError, ErrorMessage{
+			ErrorMessage: "An error ocurred while getting config objects from Kubernetes API.",
+			Description:  err.Error(),
+			Action:       "Check that the Kubconfig file is correct and the Kubernetes API accessible."})
+	}
+	return c.JSON(http.StatusOK, configResources.Items)
+}
+
+func getConstraintTemplates(c echo.Context) error {
+	if c.Param("context") != "" {
+		c.Echo().Logger.Debug("switching to custom context ", c.Param("context"))
+		err := switchKubernetesContext(c.Echo(), c.Param("context"))
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, ErrorMessage{
+				ErrorMessage: fmt.Sprintf("Got an error while trying to switch to context %s", c.Param("context")),
+				Action:       "Please check the context definition in the Kubeconfig file.",
+				Description:  err.Error(),
+			})
+		}
+	}
+	var response struct {
+		Constrainttemplates                []unstructured.Unstructured            `json:"constrainttemplates"`
+		Constraints_by_constrainttemplates map[string][]unstructured.Unstructured `json:"constraints_by_constrainttemplates"`
+	}
+	// we need to initialize the variable otherwise assigning to a map memeber panics
+	response.Constraints_by_constrainttemplates = make(map[string][]unstructured.Unstructured)
+
+	constrainttemplates, err := getCustomResources(*clientset, "templates.gatekeeper.sh", "v1beta1", "constrainttemplates")
+	if err != nil {
+		c.Echo().Logger.Error("Got error while getting constraint templates resources: ", err)
+		return c.JSON(http.StatusInternalServerError, ErrorMessage{
+			ErrorMessage: "An error ocurred while getting Constraint Templates objects from Kubernetes API",
+			Action:       "Is Gatekeeper properly installed in the cluster?",
+			Description:  err.Error(),
+		})
+	}
+	c.Echo().Logger.Debugf("got %d constraint templates. Asking constraints for each one.", len(constrainttemplates.Items))
+	c.Echo().Logger.Debug("getting Constraints for each Constraint Templates")
+	for _, ct := range constrainttemplates.Items {
+		ctName := ct.GetName()
+		constraints, err := getCustomResources(*clientset, "constraints.gatekeeper.sh", "v1beta1", ctName)
+		if err != nil {
+			c.Echo().Logger.Debug("got error while trying to get constraints for template: ", ctName)
+		}
+		// e.Logger.Debugf("mapping constraint '%s' to '%s' template ", constraints.Items, ctName)
+		response.Constraints_by_constrainttemplates[ctName] = constraints.Items
+	}
+	// FIXME: check for 404 errors when the resoruces does not exists (e.g. CRD has not been applied yet).
+	response.Constrainttemplates = constrainttemplates.Items
+	return c.JSON(http.StatusOK, response)
+}
+
+func getConstraints(c echo.Context) error {
+	if c.Param("context") != "" {
+		c.Echo().Logger.Debug("switching to custom context ", c.Param("context"))
+		err := switchKubernetesContext(c.Echo(), c.Param("context"))
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, ErrorMessage{
+				ErrorMessage: fmt.Sprintf("Got an error while trying to switch to context %s", c.Param("context")),
+				Action:       "Please check the context definition in the Kubeconfig file.",
+				Description:  err.Error(),
+			})
+		}
+	}
+	var response []map[string]interface{}
+
+	// constraints are a kind by themselves. The resource Kind is created dynamically by Gateeeper for each template.
+	// we need to discover the available Kinds for the constraints first.
+	dc, err := discovery.NewDiscoveryClientForConfig(config)
+	if err != nil {
+		c.Echo().Logger.Error("Error while creating constraints discovery client: ", err)
+		return c.JSON(http.StatusInternalServerError, ErrorMessage{
+			ErrorMessage: "An error ocurred while creating Constraints Discovery Client",
+			Action:       "Is Gatekeeper properly installed in the cluster?",
+			Description:  err.Error(),
+		})
+	}
+
+	availableConstraints, err := dc.ServerResourcesForGroupVersion("constraints.gatekeeper.sh/v1beta1")
+	if err != nil {
+		c.Echo().Logger.Error("Error while listing constraints kinds from Kubernetes API server: ", err)
+		// If there are no constraints deployed we get an error from the API server.
+		// we return an emtpy list instead
+		// return c.JSON(http.StatusOK, []string{})
+		return c.JSON(http.StatusInternalServerError, ErrorMessage{
+			ErrorMessage: "An error ocurred while trying to list the Constraints",
+			Action:       "Is Gatekeeper properly installed in the target Kubernetes cluster?",
+			Description:  err.Error(),
+		})
+	}
+
+	for _, constraintKind := range availableConstraints.APIResources {
+		// we are interested in the root resources only.
+		// subresources (like <kind>/status) seem to have categories emtpy, so we can check for that to skip them.
+		if constraintKind.Categories != nil {
+			constraints, err := getCustomResources(*clientset, "constraints.gatekeeper.sh", "v1beta1", constraintKind.SingularName)
+			if err != nil {
+				c.Echo().Logger.Error("Got error while getting constraint resources: ", err)
+				return c.JSON(http.StatusInternalServerError, ErrorMessage{ErrorMessage: "An error ocurred while getting constraint objects from Kubernetes API", Action: "Is Gatekeeper properly deployed in the target cluster?", Description: err.Error()})
+			}
+			// c.Echo().Logger.Debugf("found %d constraints for kind %s", len(constraints.Items), constraintKind.SingularName)
+			for _, i := range constraints.Items {
+				response = append(response, i.Object)
+			}
+		}
+	}
+
+	// we sort the constraints by 1. totalViolations and 2. by name
+	sort.Slice(response, func(i, j int) bool {
+		// FIXME: this will fail when Gatekeeper hasn't created the status field yet (i.e. in the first minutes after the constraint is created).
+		// FIXME: check for a better way to do this instead of type assertions.
+		iViolations := int64(response[i]["status"].(map[string]interface{})["totalViolations"].(int64))
+		jViolations := int64(response[j]["status"].(map[string]interface{})["totalViolations"].(int64))
+		iName := string(response[i]["metadata"].(map[string]interface{})["name"].(string))
+		jName := string(response[j]["metadata"].(map[string]interface{})["name"].(string))
+		if iViolations == jViolations {
+			return strings.Compare(iName, jName) < 0
+		}
+		return iViolations > jViolations
+	})
+
+	// we support HTML reports only for now, so we don't the param value
+	if c.QueryParam("report") != "" {
+		var data = map[string]interface{}{
+			"constraints": response,
+			"timestamp":   time.Now().Format(time.ANSIC),
+		}
+
+		return c.Render(http.StatusOK, "report", data)
+	}
+
+	// v1 API compatibility:
+	// we need to return an empty list instead of null when there are no objects, otherwise the frontend breaks
+	if len(response) == 0 {
+		return c.JSON(http.StatusOK, []string{})
+	}
+	return c.JSON(http.StatusOK, response)
+}
+
 // getKubernetesEvents return a slice of unstructured objects with all the events generated by 'gatekeeper-wbhook'
 // if namespace is empty, returns events in all namespaces.
 func getKubernetesEvents(clientset dynamic.DynamicClient, namespace string) (*[]unstructured.Unstructured, error) {
@@ -197,10 +406,11 @@ func switchKubernetesContext(e *echo.Echo, c string) error {
 
 func main() {
 	e := echo.New()
-	p := prometheus.NewPrometheus("echo", nil)
-	p.Use(e)
 	e.HideBanner = true
 	e.Use(middleware.Logger())
+	e.Pre(middleware.AddTrailingSlash()) // so we don't have to consider both routes with and without trailing slash.
+	p := prometheus.NewPrometheus("echo", nil)
+	p.Use(e)
 
 	e.Logger.SetLevel(log.DEBUG) // FIXME: DEFAULT TO INFO INSTEAD
 	// e.Logger.SetLevel(log.INFO)
@@ -214,13 +424,6 @@ func main() {
 		}
 	}
 
-	var err error
-	// we start with the default context ""
-	clientset, config, err = kubeClient(e, "")
-	if err != nil {
-		e.Logger.Fatalf("Got an error while initializating the Kubernetes cilent: %s", err)
-	}
-
 	// This is used later to render templates in the routes.
 	// i.e. to render the HTML report in the `/constraints/?report=html` route.
 	t := &Template{
@@ -228,14 +431,20 @@ func main() {
 	}
 	e.Renderer = t
 
-	// routes start here
-	// FIXME: map routes to functions instead of inline
+	var err error
+	// we start with the default context from the kubeconfig file: ""
+	clientset, config, err = kubeClient(e, "")
+	if err != nil {
+		e.Logger.Fatalf("Got an error while initializating the Kubernetes cilent: %s", err)
+	}
+
+	// Routes
 
 	e.Static("/static/", "./static-content/static")
 
+	// We need to serve the static files using this approach because of the React routes.
+	// TODO: improve this approach. Ideally, having /static/ should be enough.
 	e.GET("/*", func(c echo.Context) error {
-		// We need to serve the static files using this approach because of the React routes.
-		// TODO: improve this approach. Ideally, having /static/ should be enough.
 		path := c.Request().RequestURI
 		static_path := "./static-content"
 		index_path := filepath.Join(static_path, "index.html")
@@ -251,79 +460,19 @@ func main() {
 		}
 	})
 
-	e.GET("/health", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, "{\"status\": \"ok\"}")
+	e.GET("/health/", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 	})
 
 	e.GET("/api/v1/auth/", func(c echo.Context) error {
-		type Auth struct {
-			AuthEnabled bool `json:"auth_enabled"`
-		}
-		authResponse := &Auth{
-			AuthEnabled: false,
-		}
 		// FIXME: actually implement auth :o)
-		return c.JSON(http.StatusOK, authResponse)
+		return c.JSON(http.StatusOK, map[string]bool{"auth_enabled": false})
 	})
 
-	e.GET("/api/v1/contexts/", func(c echo.Context) error {
-		// v1 answer is formed like this:
-		// [
-		//     [
-		//         {
-		//             "context": {
-		//                 "cluster": "kind-gpm",
-		//                 "user": "kind-gpm"
-		//             },
-		//             "name": "kind-gpm"
-		//         }
-		//     ],
-		//     {
-		//         "context": {
-		//             "cluster": "kind-gpm",
-		//             "user": "kind-gpm"
-		//         },
-		//         "name": "kind-gpm"
-		//     }
-		// ]
-		//
-		// where the [0] is a list of available contexts and [1] is the current context.
-		// We need to format the response to align with the python version (API v1)
+	e.GET("/api/v1/contexts/", getContexts)
 
-		type context struct {
-			Cluster string `json:"cluster"`
-			User    string `json:"user"`
-		}
-
-		type kubeconfigContext struct {
-			Name    string  `json:"name"`
-			Context context `json:"context"`
-		}
-
-		kubeconfigContexts := []kubeconfigContext{}
-		var currentKubeconfigContext kubeconfigContext
-		for kc := range k8sctxs {
-			c := context{
-				Cluster: k8sctxs[kc].Cluster,
-				User:    k8sctxs[kc].AuthInfo,
-			}
-			fullContext := kubeconfigContext{
-				Name:    kc,
-				Context: c,
-			}
-			kubeconfigContexts = append(kubeconfigContexts, fullContext)
-			if kc == k8sctx {
-				currentKubeconfigContext = fullContext
-			}
-		}
-		v1Answer := []interface{}{kubeconfigContexts, currentKubeconfigContext}
-
-		return c.JSON(http.StatusOK, v1Answer)
-	})
-
+	// Returns an object with the list of available contets and the currently selected context
 	e.GET("/api/v2/contexts/", func(c echo.Context) error {
-		// Returns an objecto with the list of available contets and the currently selected context
-
 		// TODO: maybe Contexts could be a []string instead of the full context information
 		type v2Answer struct {
 			Current  string                  `json:"currentContext"`
@@ -333,163 +482,18 @@ func main() {
 		return c.JSON(http.StatusOK, v2Answer{k8sctx, k8sctxs})
 	})
 
-	e.GET("/api/v1/configs/*", func(c echo.Context) error {
-		e.Logger.Debug("got params: ", c.ParamValues())
-		if customContext := strings.Trim(c.ParamValues()[0], "/"); customContext != "" {
-			e.Logger.Debug("switching to custom context ", customContext)
-			err = switchKubernetesContext(e, customContext)
-			if err != nil {
-				return c.JSON(http.StatusInternalServerError, ErrorMessage{
-					ErrorMessage: fmt.Sprintf("Got an error while trying to switch to context %s", customContext),
-					Action:       "Please check the context definition in the Kubeconfig file.",
-					Description:  err.Error(),
-				})
-			}
-		}
-		configResources, err := getCustomResources(*clientset, "config.gatekeeper.sh", "v1alpha1", "configs")
-		if err != nil {
-			e.Logger.Debug("got error while getting config resources: ", err)
-			return c.JSON(http.StatusInternalServerError, ErrorMessage{ErrorMessage: "An error ocurred while getting config objects from Kubernetes API.", Description: err.Error(), Action: "Check that the Kubconfig file is correct and the Kubernetes API accessible."})
-		}
-		return c.JSON(http.StatusOK, configResources.Items)
-	})
+	e.GET("/api/v1/configs/", getConfigs)
+	e.GET("/api/v1/configs/:context/", getConfigs)
 
-	e.GET("/api/v1/constrainttemplates/*", func(c echo.Context) error {
-		e.Logger.Debug("got params: ", c.ParamValues())
-		if customContext := strings.Trim(c.ParamValues()[0], "/"); customContext != "" {
-			e.Logger.Debug("switching to custom context ", customContext)
-			err = switchKubernetesContext(e, customContext)
-			if err != nil {
-				return c.JSON(http.StatusInternalServerError, ErrorMessage{
-					ErrorMessage: fmt.Sprintf("Got an error while trying to switch to context %s", customContext),
-					Action:       "Please check the context definition in the Kubeconfig file.",
-					Description:  err.Error(),
-				})
-			}
-		}
-		var response struct {
-			Constrainttemplates                []unstructured.Unstructured            `json:"constrainttemplates"`
-			Constraints_by_constrainttemplates map[string][]unstructured.Unstructured `json:"constraints_by_constrainttemplates"`
-		}
-		// we need to initialize the variable otherwise assigning to a map memeber panics
-		response.Constraints_by_constrainttemplates = make(map[string][]unstructured.Unstructured)
+	e.GET("/api/v1/constrainttemplates/", getConstraintTemplates)
+	e.GET("/api/v1/constrainttemplates/:context/", getConstraintTemplates)
 
-		constrainttemplates, err := getCustomResources(*clientset, "templates.gatekeeper.sh", "v1beta1", "constrainttemplates")
-		if err != nil {
-			e.Logger.Error("Got error while getting constraint templates resources: ", err)
-			return c.JSON(http.StatusInternalServerError, ErrorMessage{
-				ErrorMessage: "An error ocurred while getting Constraint Templates objects from Kubernetes API",
-				Action:       "Is Gatekeeper properly installed in the cluster?",
-				Description:  err.Error(),
-			})
-		}
-		e.Logger.Debugf("got %d constraint templates. Asking constraints for each one.", len(constrainttemplates.Items))
-		e.Logger.Debug("getting Constraints for each Constraint Templates")
-		for _, ct := range constrainttemplates.Items {
-			ctName := ct.GetName()
-			constraints, err := getCustomResources(*clientset, "constraints.gatekeeper.sh", "v1beta1", ctName)
-			if err != nil {
-				e.Logger.Debug("got error while trying to get constraints for template: ", ctName)
-			}
-			// e.Logger.Debugf("mapping constraint '%s' to '%s' template ", constraints.Items, ctName)
-			response.Constraints_by_constrainttemplates[ctName] = constraints.Items
-		}
-		// FIXME: check for 404 errors when the resoruces does not exists (e.g. CRD has not been applied yet).
-		response.Constrainttemplates = constrainttemplates.Items
-		return c.JSON(http.StatusOK, response)
-	})
-
-	e.GET("/api/v1/constraints/*", func(c echo.Context) error {
-		e.Logger.Debug("got params: ", c.ParamValues())
-		if customContext := strings.Trim(c.ParamValues()[0], "/"); customContext != "" {
-			e.Logger.Debug("switching to custom context ", customContext)
-			err = switchKubernetesContext(e, customContext)
-			if err != nil {
-				return c.JSON(http.StatusInternalServerError, ErrorMessage{
-					ErrorMessage: fmt.Sprintf("Got an error while trying to switch to context %s", customContext),
-					Action:       "Please check the context definition in the Kubeconfig file.",
-					Description:  err.Error(),
-				})
-			}
-		}
-		var response []map[string]interface{}
-
-		// constraints are a kind by themselves. The resource Kind is created dynamically by Gateeeper for each template.
-		// we need to discover the available Kinds for the constraints first.
-		dc, err := discovery.NewDiscoveryClientForConfig(config)
-		if err != nil {
-			e.Logger.Error("Error while creating constraints discovery client: ", err)
-			return c.JSON(http.StatusInternalServerError, ErrorMessage{
-				ErrorMessage: "An error ocurred while creating Constraints Discovery Client",
-				Action:       "Is Gatekeeper properly installed in the cluster?",
-				Description:  err.Error(),
-			})
-		}
-
-		availableConstraints, err := dc.ServerResourcesForGroupVersion("constraints.gatekeeper.sh/v1beta1")
-		if err != nil {
-			e.Logger.Error("Error while listing constraints kinds from Kubernetes API server: ", err)
-			// If there are no constraints deployed we get an error from the API server.
-			// we return an emtpy list instead
-			// return c.JSON(http.StatusOK, []string{})
-			return c.JSON(http.StatusInternalServerError, ErrorMessage{
-				ErrorMessage: "An error ocurred while trying to list the Constraints",
-				Action:       "Is Gatekeeper properly installed in the target Kubernetes cluster?",
-				Description:  err.Error(),
-			})
-		}
-
-		for _, constraintKind := range availableConstraints.APIResources {
-			// we are interested in the root resources only.
-			// subresources (like <kind>/status) seem to have categories emtpy, so we can check for that to skip them.
-			if constraintKind.Categories != nil {
-				constraints, err := getCustomResources(*clientset, "constraints.gatekeeper.sh", "v1beta1", constraintKind.SingularName)
-				if err != nil {
-					e.Logger.Error("Got error while getting constraint resources: ", err)
-					return c.JSON(http.StatusInternalServerError, ErrorMessage{ErrorMessage: "An error ocurred while getting constraint objects from Kubernetes API", Action: "Is Gatekeeper properly deployed in the target cluster?", Description: err.Error()})
-				}
-				// e.Logger.Debugf("found %d constraints for kind %s", len(constraints.Items), constraintKind.SingularName)
-				for _, i := range constraints.Items {
-					response = append(response, i.Object)
-				}
-			}
-		}
-
-		// we sort the constraints by 1. totalViolations and 2. by name
-		sort.Slice(response, func(i, j int) bool {
-			// FIXME: this will fail when Gatekeeper hasn't created the status field yet (i.e. in the first minutes after the constraint is created).
-			// FIXME: check for a better way to do this instead of type assertions.
-			iViolations := int64(response[i]["status"].(map[string]interface{})["totalViolations"].(int64))
-			jViolations := int64(response[j]["status"].(map[string]interface{})["totalViolations"].(int64))
-			iName := string(response[i]["metadata"].(map[string]interface{})["name"].(string))
-			jName := string(response[j]["metadata"].(map[string]interface{})["name"].(string))
-			if iViolations == jViolations {
-				return strings.Compare(iName, jName) < 0
-			}
-			return iViolations > jViolations
-		})
-
-		// we support HTML reports only for now, so we don't the param value
-		if c.QueryParam("report") != "" {
-			var data = map[string]interface{}{
-				"constraints": response,
-				"timestamp":   time.Now().Format(time.ANSIC),
-			}
-
-			return c.Render(http.StatusOK, "report", data)
-		}
-
-		// v1 API compatibility:
-		// we need to return an empty list instead of null when there are no objects, otherwise the frontend breaks
-		if len(response) == 0 {
-			return c.JSON(http.StatusOK, []string{})
-		}
-		return c.JSON(http.StatusOK, response)
-	})
+	e.GET("/api/v1/constraints/", getConstraints)
+	e.GET("/api/v1/constraints/:context/", getConstraints)
 
 	e.GET("/api/v1/events/:context/", getEvents)
 	e.GET("/api/v1/events/", getEvents)
-	// e.GET("/api/v1/events/:context/:namespace", getEvents)
+	// e.GET("/api/v1/events/:context/:namespace/", getEvents)
 	// having the namespace in the path makes it difficult when there's only
 	// one context, we can't differentiate between namespace and no context (like in-cluster mode)
 	// and context with namespace not set.
