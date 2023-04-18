@@ -188,8 +188,7 @@ func getConstraintTemplates(c echo.Context) error {
 			Description:  err.Error(),
 		})
 	}
-	c.Echo().Logger.Debugf("got %d constraint templates. Asking constraints for each one.", len(constrainttemplates.Items))
-	c.Echo().Logger.Debug("getting Constraints for each Constraint Templates")
+	c.Echo().Logger.Debugf("got %d constraint templates. Searching constraints for each one.", len(constrainttemplates.Items))
 	for _, ct := range constrainttemplates.Items {
 		ctName := ct.GetName()
 		constraints, err := getCustomResources(*clientset, "constraints.gatekeeper.sh", "v1beta1", ctName)
@@ -430,6 +429,14 @@ func main() {
 		templates: template.Must(template.ParseGlob("templates/*.html.gotpl")),
 	}
 	e.Renderer = t
+
+	if os.Getenv("APP_ENV") == "development" {
+		e.Logger.Warn("Running in development mode, allowing CORS from other origins")
+		e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+			AllowOrigins: []string{"http://localhost:3000"},
+			AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept},
+		}))
+	}
 
 	var err error
 	// we start with the default context from the kubeconfig file: ""
