@@ -118,7 +118,7 @@ function getEnforcementActionRenderData(spec?: IConstraintSpec) {
         iconType={icon}
         style={{ fontSize: "10px", textTransform: "uppercase" }}
       >
-        {mode} mode
+        mdoe {mode}
       </EuiBadge>
     ),
   };
