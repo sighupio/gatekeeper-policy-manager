@@ -82,6 +82,14 @@ func getCustomResources(clientset dynamic.DynamicClient, group string, version s
 	return res, nil
 }
 
+func getHealth(c echo.Context) error {
+	return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func getAuth(c echo.Context) error {
+	return c.JSON(http.StatusOK, map[string]bool{"auth_enabled": false})
+}
+
 func getContexts(c echo.Context) error {
 	// v1 answer is formed like this:
 	// [
@@ -365,7 +373,10 @@ func kubeClient(e *echo.Echo, context string) (*dynamic.DynamicClient, *rest.Con
 		e.Logger.Infof("Using KUBECONFIG from path: %s", kubeconfig)
 	}
 
-	// FIXME: This needs to be refactored, we can't change the current context because we still use the other client
+	// FIXME: This needs to be refactored 👇🏻
+	// we use the config2 to get all the context information, beacuse
+	// I did not find a way to get it from the config that we use for the
+	// dynamic client.
 	e.Logger.Debug("HERE BE DRAGONS --- config2 for detecting contexts")
 	configaccess := clientcmd.NewDefaultPathOptions()
 	config2, err := configaccess.GetStartingConfig()
@@ -380,7 +391,7 @@ func kubeClient(e *echo.Echo, context string) (*dynamic.DynamicClient, *rest.Con
 	// 	k8sctxs = append(k8sctxs, k)
 	// }
 	e.Logger.Debugf("current context is: %s. Available contexts are: %s", k8sctx, k8sctxs)
-	// end refactor
+	// end refactor 👆🏻
 
 	// Use when context is different than default
 	config, err := buildConfigWithContextFromFlags(context, kubeconfig)
@@ -418,8 +429,6 @@ func main() {
 	e := echo.New()
 	e.HideBanner = true
 	e.Use(middleware.Logger())
-	e.Pre(middleware.AddTrailingSlash()) // so we don't have to consider both routes with and without trailing slash.
-	// FIXME: prometheus is not working because it adds the '/metrics' endpoint and we are using AddTrailingSlash option, so it does not match: `/metrics != /metrics/`
 	p := prometheus.NewPrometheus("echo", nil)
 	p.Use(e)
 
@@ -479,15 +488,13 @@ func main() {
 		}
 	})
 
-	e.GET("/health/", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
-	})
+	e.GET("/health", getHealth)
+	e.GET("/health/", getHealth)
 
-	e.GET("/api/v1/auth/", func(c echo.Context) error {
-		// FIXME: actually implement auth :o)
-		return c.JSON(http.StatusOK, map[string]bool{"auth_enabled": false})
-	})
+	e.GET("/api/v1/auth", getAuth)
+	e.GET("/api/v1/auth/", getAuth)
 
+	e.GET("/api/v1/contexts", getContexts)
 	e.GET("/api/v1/contexts/", getContexts)
 
 	// Returns an object with the list of available contets and the currently selected context
@@ -501,22 +508,25 @@ func main() {
 		return c.JSON(http.StatusOK, v2Answer{k8sctx, k8sctxs})
 	})
 
+	e.GET("/api/v1/configs", getConfigs)
 	e.GET("/api/v1/configs/", getConfigs)
+	e.GET("/api/v1/configs/:context", getConfigs)
 	e.GET("/api/v1/configs/:context/", getConfigs)
 
+	e.GET("/api/v1/constrainttemplates", getConstraintTemplates)
 	e.GET("/api/v1/constrainttemplates/", getConstraintTemplates)
+	e.GET("/api/v1/constrainttemplates/:context", getConstraintTemplates)
 	e.GET("/api/v1/constrainttemplates/:context/", getConstraintTemplates)
 
+	e.GET("/api/v1/constraints", getConstraints)
 	e.GET("/api/v1/constraints/", getConstraints)
+	e.GET("/api/v1/constraints/:context", getConstraints)
 	e.GET("/api/v1/constraints/:context/", getConstraints)
 
-	e.GET("/api/v1/events/:context/", getEvents)
+	e.GET("/api/v1/events", getEvents)
 	e.GET("/api/v1/events/", getEvents)
-	// e.GET("/api/v1/events/:context/:namespace/", getEvents)
-	// having the namespace in the path makes it difficult when there's only
-	// one context, we can't differentiate between namespace and no context (like in-cluster mode)
-	// and context with namespace not set.
-	// We need to use URL Query params instead for the namespace.
+	e.GET("/api/v1/events/:context", getEvents)
+	e.GET("/api/v1/events/:context/", getEvents)
 
 	// start the web server
 	e.Logger.Fatal(e.Start(":8080"))
