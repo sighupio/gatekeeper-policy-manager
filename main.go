@@ -260,12 +260,22 @@ func getConstraints(c echo.Context) error {
 
 	// we sort the constraints by 1. totalViolations and 2. by name
 	sort.Slice(response, func(i, j int) bool {
-		// FIXME: this will fail when Gatekeeper hasn't created the status field yet (i.e. in the first minutes after the constraint is created).
-		// FIXME: check for a better way to do this instead of type assertions.
-		iViolations := int64(response[i]["status"].(map[string]interface{})["totalViolations"].(int64))
-		jViolations := int64(response[j]["status"].(map[string]interface{})["totalViolations"].(int64))
-		iName := string(response[i]["metadata"].(map[string]interface{})["name"].(string))
-		jName := string(response[j]["metadata"].(map[string]interface{})["name"].(string))
+		iName, _, err := unstructured.NestedString(response[i], "metadata", "name")
+		if err != nil {
+			c.Echo().Logger.Errorf("Got error while trying to get object name for %s: %s", response[i], err)
+		}
+		iViolations, _, err := unstructured.NestedInt64(response[i], "status", "totalViolations")
+		if err != nil {
+			c.Echo().Logger.Errorf("Got error while trying to get the total violations counts for %s: %s", iName, err)
+		}
+		jName, _, err := unstructured.NestedString(response[j], "metadata", "name")
+		if err != nil {
+			c.Echo().Logger.Errorf("Got error while trying to get object name for %s: %s", response[i], err)
+		}
+		jViolations, _, err := unstructured.NestedInt64(response[j], "status", "totalViolations")
+		if err != nil {
+			c.Echo().Logger.Errorf("Got error while trying to get the total violations counts for %s: %s", jName, err)
+		}
 		if iViolations == jViolations {
 			return strings.Compare(iName, jName) < 0
 		}
@@ -306,6 +316,7 @@ func getKubernetesEvents(clientset dynamic.DynamicClient, namespace string) (*[]
 	var filteredList []unstructured.Unstructured
 	for i := range events.Items {
 		source, found, err := unstructured.NestedString(events.Items[i].Object, "source", "component")
+		// TODO: maybe source should be configurable?
 		if found && err == nil && source == "gatekeeper-webhook" {
 			filteredList = append(filteredList, events.Items[i])
 		} else if err != nil {
@@ -408,6 +419,7 @@ func main() {
 	e.HideBanner = true
 	e.Use(middleware.Logger())
 	e.Pre(middleware.AddTrailingSlash()) // so we don't have to consider both routes with and without trailing slash.
+	// FIXME: prometheus is not working because it adds the '/metrics' endpoint and we are using AddTrailingSlash option, so it does not match: `/metrics != /metrics/`
 	p := prometheus.NewPrometheus("echo", nil)
 	p.Use(e)
 
