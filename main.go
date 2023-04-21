@@ -36,11 +36,10 @@ import (
 )
 
 var (
-	k8sctx    string
-	k8sctxs   map[string]*api.Context
-	clientset *dynamic.DynamicClient
-	config    *rest.Config
-	// Why I can't say this is constant, I don't know.
+	k8sctx             string
+	k8sctxs            map[string]*api.Context
+	clientset          *dynamic.DynamicClient
+	config             *rest.Config
 	logLevelFromString = map[string]log.Lvl{
 		"DEBUG": log.DEBUG,
 		"INFO":  log.INFO,
@@ -301,7 +300,8 @@ func getConstraints(c echo.Context) error {
 	}
 
 	// v1 API compatibility:
-	// we need to return an empty list instead of null when there are no objects, otherwise the frontend breaks
+	// we need to return an empty list instead of null when there are no objects
+	// as the Python backend did, otherwise the frontend breaks
 	if len(response) == 0 {
 		return c.JSON(http.StatusOK, []string{})
 	}
@@ -361,7 +361,7 @@ func getEvents(c echo.Context) error {
 func kubeClient(e *echo.Echo, context string) (*dynamic.DynamicClient, *rest.Config, error) {
 	kubeconfig, ok := os.LookupEnv("KUBECONFIG")
 	if !ok {
-		e.Logger.Debug("KUBECONFIG environment variable is not set, falling back to $HOME/.kube/config")
+		e.Logger.Info("KUBECONFIG environment variable is not set, falling back to $HOME/.kube/config")
 		if home := homedir.HomeDir(); home != "" {
 			kubeconfig = filepath.Join(home, ".kube", "config")
 			if _, err := os.Stat(kubeconfig); os.IsNotExist(err) {
@@ -370,7 +370,7 @@ func kubeClient(e *echo.Echo, context string) (*dynamic.DynamicClient, *rest.Con
 			}
 		}
 	} else {
-		e.Logger.Infof("Using KUBECONFIG from path: %s", kubeconfig)
+		e.Logger.Infof("Using kubeconfig from path: %s", kubeconfig)
 	}
 
 	// FIXME: This needs to be refactored 👇🏻
@@ -432,8 +432,7 @@ func main() {
 	p := prometheus.NewPrometheus("echo", nil)
 	p.Use(e)
 
-	e.Logger.SetLevel(log.DEBUG) // FIXME: DEFAULT TO INFO INSTEAD
-	// e.Logger.SetLevel(log.INFO)
+	e.Logger.SetLevel(log.INFO)
 	e.Logger.SetPrefix("gpm")
 	if logLevelString, ok := os.LookupEnv("GPM_LOG_LEVEL"); ok {
 		logLevel, ok := logLevelFromString[strings.ToUpper(logLevelString)]
