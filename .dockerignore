@@ -1,11 +1,12 @@
 .git
-.mypy_cache
+.github
 .vscode
 chart
 docs
-env
 manifests
 screenshots
-tests
 static-content/**
 !static-content/logo.svg
+tests
+web-client/build
+web-client/node_modules
