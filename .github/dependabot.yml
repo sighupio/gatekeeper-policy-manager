@@ -7,9 +7,9 @@ updates:
   - package-ecosystem: "pip" # See documentation for possible values
     directory: "/app" # Location of package manifests
     schedule:
-      interval: "daily"
+      interval: "weekly"
 
   - package-ecosystem: "npm" # See documentation for possible values
     directory: "/app/web-client" # Location of package manifests
     schedule:
-      interval: "daily"
+      interval: "weekly"
