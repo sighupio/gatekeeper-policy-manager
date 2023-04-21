@@ -35,10 +35,9 @@ import (
 )
 
 var (
-	k8sctx             string
-	k8sctxs            map[string]*api.Context
 	clientset          *dynamic.DynamicClient
 	config             *rest.Config
+	startingConfig     *api.Config
 	logLevelFromString = map[string]log.Lvl{
 		"DEBUG": log.DEBUG,
 		"INFO":  log.INFO,
@@ -116,17 +115,17 @@ func getContexts(c echo.Context) error {
 
 	kubeconfigContexts := []kubeconfigContext{}
 	var currentKubeconfigContext kubeconfigContext
-	for kc := range k8sctxs {
+	for kc := range startingConfig.Contexts {
 		c := context{
-			Cluster: k8sctxs[kc].Cluster,
-			User:    k8sctxs[kc].AuthInfo,
+			Cluster: startingConfig.Contexts[kc].Cluster,
+			User:    startingConfig.Contexts[kc].AuthInfo,
 		}
 		fullContext := kubeconfigContext{
 			Name:    kc,
 			Context: c,
 		}
 		kubeconfigContexts = append(kubeconfigContexts, fullContext)
-		if kc == k8sctx {
+		if kc == startingConfig.CurrentContext {
 			currentKubeconfigContext = fullContext
 		}
 	}
@@ -284,6 +283,7 @@ func getConstraints(c echo.Context) error {
 	if c.QueryParam("report") != "" {
 		var data = map[string]interface{}{
 			"constraints": response,
+			"serverName":  config.Host,
 			"timestamp":   time.Now().Format(time.ANSIC),
 		}
 
@@ -353,17 +353,14 @@ func getEvents(c echo.Context) error {
 	return c.JSON(http.StatusOK, events)
 }
 
-func kubeClient(e *echo.Echo, context string) (*dynamic.DynamicClient, *rest.Config, error) {
+func kubeClient(e *echo.Echo, context string) (*dynamic.DynamicClient, *rest.Config, *api.Config, error) {
 
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-
 	configOverrides := &clientcmd.ConfigOverrides{CurrentContext: context}
-
 	kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
 
 	config, err := kubeConfig.ClientConfig()
 	if err != nil {
-		// Do something
 		e.Logger.Error("Got error while creating Kubernetes client config", err)
 	}
 
@@ -372,36 +369,27 @@ func kubeClient(e *echo.Echo, context string) (*dynamic.DynamicClient, *rest.Con
 		e.Logger.Error("Got error while getting contexts information from Kubeconfig:", err)
 	}
 
-	k8sctx = startingConfig.CurrentContext
-	k8sctxs = startingConfig.Contexts
-	// To have a list of strings wiht the available contexts insteda
-	// for k := range config2.Contexts {
-	// 	k8sctxs = append(k8sctxs, k)
-	// }
-	e.Logger.Debugf("Current context is: %s. Available contexts are: %s", k8sctx, k8sctxs)
-
 	// create the dynamic Kubernetes client
 	clientset, err := dynamic.NewForConfig(config)
 	if err != nil {
 		e.Logger.Fatal("Got error while creating Kubernetes client: ", err)
 	}
-	return clientset, config, err
+	return clientset, config, startingConfig, err
 }
 
 func switchKubernetesContext(e *echo.Echo, c string) error {
 	var err error
-	if c == k8sctx {
+	if c == startingConfig.CurrentContext {
 		return nil
 	}
-	if _, ok := k8sctxs[c]; !ok {
+	if _, ok := startingConfig.Contexts[c]; !ok {
 		return fmt.Errorf("context %s does not exist in the Kubeconfig file", c)
 	}
-	clientset, config, err = kubeClient(e, c)
+	clientset, config, startingConfig, err = kubeClient(e, c)
 	if err != nil {
 		e.Logger.Errorf("Got error initializating the Kubernetes cilent with custom context %s: %s", c, err)
 		return err
 	}
-	k8sctx = c
 	return nil
 }
 
@@ -440,7 +428,7 @@ func main() {
 
 	var err error
 	// we start with the default context from the kubeconfig file: ""
-	clientset, config, err = kubeClient(e, "")
+	clientset, config, startingConfig, err = kubeClient(e, "")
 	if err != nil {
 		e.Logger.Fatalf("Got an error while initializating the Kubernetes cilent: %s", err)
 	}
@@ -478,13 +466,12 @@ func main() {
 
 	// Returns an object with the list of available contets and the currently selected context
 	e.GET("/api/v2/contexts/", func(c echo.Context) error {
-		// TODO: maybe Contexts could be a []string instead of the full context information
 		type v2Answer struct {
 			Current  string                  `json:"currentContext"`
 			Contexts map[string]*api.Context `json:"contexts"`
 		}
 
-		return c.JSON(http.StatusOK, v2Answer{k8sctx, k8sctxs})
+		return c.JSON(http.StatusOK, v2Answer{startingConfig.CurrentContext, startingConfig.Contexts})
 	})
 
 	e.GET("/api/v1/configs", getConfigs)
