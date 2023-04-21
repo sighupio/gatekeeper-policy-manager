@@ -390,7 +390,7 @@ func main() {
 	p := prometheus.NewPrometheus("echo", nil)
 	p.Use(e)
 
-	// setup logging
+	// Setup logging
 	e.Logger.SetLevel(log.INFO)
 	e.Logger.SetPrefix("gpm")
 	if logLevelString, ok := os.LookupEnv("GPM_LOG_LEVEL"); ok {
@@ -428,21 +428,23 @@ func main() {
 
 	e.Static("/static/", "./static-content/static")
 
-	// We need to serve the static files using this approach because of the React routes.
-	// TODO: improve this approach. Ideally, having /static/ should be enough.
+	// Fallback route for all non-matching URLs.
+	// We need to serve index.html for react routing to work. See:
+	// https://create-react-app.dev/docs/deployment#serving-apps-with-client-side-routing.
 	e.GET("/*", func(c echo.Context) error {
 		path := c.Request().RequestURI
-		static_path := "./static-content"
-		index_path := filepath.Join(static_path, "index.html")
-		file_path := filepath.Join(static_path, path)
-		path_err, _ := os.Stat(file_path)
+		staticPath := "./static-content"
+		indexPath := filepath.Join(staticPath, "index.html")
+		filePath := filepath.Join(staticPath, path)
+		_, fileError := os.Stat(filePath)
 
-		if path != "/" && path_err != nil {
-			e.Logger.Debug("found file, serving it from ", file_path)
-			return c.File(file_path)
+		// try to serve the static file, if not found serve index.html
+		if path != "/" && fileError == nil {
+			e.Logger.Debug("found file, serving it from ", filePath)
+			return c.File(filePath)
 		} else {
-			e.Logger.Debug("file not found, falling back to ", index_path)
-			return c.File(index_path)
+			e.Logger.Debug("file not found, falling back to ", indexPath)
+			return c.File(indexPath)
 		}
 	})
 

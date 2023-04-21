@@ -1,6 +1,6 @@
 <!-- markdownlint-disable MD033 -->
 <h1>
-    <img src="static-content/logo.svg" align="left" width="90" style="margin-right: 15px"/>
+    <img src="docs/assets/logo.svg" align="left" width="90" style="margin-right: 15px"/>
     Gatekeeper Policy Manager (GPM)
 </h1>
 <!-- markdownlint-enable MD033 -->

@@ -5,8 +5,7 @@ chart
 docs
 manifests
 screenshots
-static-content/**
-!static-content/logo.svg
+static-content
 tests
 web-client/build
 web-client/node_modules
