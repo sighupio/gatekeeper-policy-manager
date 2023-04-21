@@ -282,9 +282,9 @@ func getConstraints(c echo.Context) error {
 	// we support HTML reports only for now, so we don't the param value
 	if c.QueryParam("report") != "" {
 		var data = map[string]interface{}{
-			"constraints": response,
-			"serverName":  config.Host,
-			"timestamp":   time.Now().Format(time.ANSIC),
+			"constraints":   response,
+			"apiServerHost": config.Host,
+			"timestamp":     time.Now().Format(time.ANSIC),
 		}
 
 		return c.Render(http.StatusOK, "report", data)
