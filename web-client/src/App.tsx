@@ -20,6 +20,7 @@ import { NotFound } from "./pages/NotFound";
 import { theme } from "./theme";
 import "./App.scss";
 import { Events } from "./pages/Events";
+import { Mutations } from "./pages/Mutations";
 
 function App() {
   const { pathname } = useLocation();
@@ -39,6 +40,10 @@ function App() {
           <Route path={`/constraints`}>
             <Route path=":context" element={<Constraints />} />
             <Route path="" element={<Constraints />} />
+          </Route>
+          <Route path={`/mutations`}>
+            <Route path=":context" element={<Mutations />} />
+            <Route path="" element={<Mutations />} />
           </Route>
           <Route path={`/events`}>
             <Route path=":context" element={<Events />} />

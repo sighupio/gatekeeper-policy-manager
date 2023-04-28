@@ -50,6 +50,10 @@ function HeaderComponent() {
       name: "Constraints",
     },
     {
+      path: "/mutations",
+      name: "Mutations",
+    },
+    {
       path: "/events",
       name: "Events",
     },
