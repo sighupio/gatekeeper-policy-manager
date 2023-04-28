@@ -50,6 +50,10 @@ function HeaderComponent() {
       name: "Constraints",
     },
     {
+      path: "/events",
+      name: "Events",
+    },
+    {
       path: "/configurations",
       name: "Configurations",
     },

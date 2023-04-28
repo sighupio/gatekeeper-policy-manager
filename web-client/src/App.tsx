@@ -15,10 +15,11 @@ import { ConstraintTemplates } from "./pages/ConstraintTemplates";
 import { Constraints } from "./pages/Constraints";
 import { Configurations } from "./pages/Configurations";
 import { Error } from "./pages/Error";
-import {Logout} from "./pages/Logout";
+import { Logout } from "./pages/Logout";
 import { NotFound } from "./pages/NotFound";
-import {theme} from "./theme";
+import { theme } from "./theme";
 import "./App.scss";
+import { Events } from "./pages/Events";
 
 function App() {
   const { pathname } = useLocation();
@@ -29,7 +30,7 @@ function App() {
       modify={theme}
     >
       <ContextProvider>
-        { pathname === "/logout" ? null : <Header />  }
+        {pathname === "/logout" ? null : <Header />}
         <Routes>
           <Route path={`/constrainttemplates`}>
             <Route path=":context" element={<ConstraintTemplates />} />
@@ -38,6 +39,10 @@ function App() {
           <Route path={`/constraints`}>
             <Route path=":context" element={<Constraints />} />
             <Route path="" element={<Constraints />} />
+          </Route>
+          <Route path={`/events`}>
+            <Route path=":context" element={<Events />} />
+            <Route path="" element={<Events />} />
           </Route>
           <Route path={`/configurations`}>
             <Route path=":context" element={<Configurations />} />
