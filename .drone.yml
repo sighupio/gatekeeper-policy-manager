@@ -98,7 +98,9 @@ steps:
         path: /var/run/docker.sock
     commands:
       - apk add git
-      - docker buildx create --name sighup-builder --use
+      - docker buildx create
+        --name sighup-builder
+        --use
       - docker buildx build
         --platform linux/amd64,linux/arm64,linux/arm/v7
         --pull=true
@@ -292,7 +294,9 @@ steps:
     commands:
       - apk add git
       - docker login $${registry} -u $${username} -p $${password}
-      - docker buildx create --name sighup-builder --use
+      - docker buildx create
+        --name sighup-builder
+        --use
       - docker buildx build
         --platform linux/amd64,linux/arm64,linux/arm/v7
         --pull=true
@@ -324,7 +328,9 @@ steps:
     commands:
       - apk add git
       - docker login $${registry} -u $${username} -p $${password}
-      - docker buildx create --name sighup-builder --use
+      - docker buildx create
+        --name sighup-builder
+        --use
       - docker buildx build
         --platform linux/amd64,linux/arm64,linux/arm/v7
         --pull=true
