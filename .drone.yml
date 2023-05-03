@@ -97,10 +97,11 @@ steps:
       - name: dockersock
         path: /var/run/docker.sock
     commands:
+      - docker buildx create --use
       - docker buildx build
+        --load
         --platform linux/amd64,linux/arm64,linux/arm/v7
         --pull=true
-        --rm=true
         -f $${DOCKERFILE}
         -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG}
         $${BUILD_CONTEXT}
