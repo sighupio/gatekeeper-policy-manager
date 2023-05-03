@@ -340,7 +340,7 @@ func getKubernetesEvents(clientset dynamic.DynamicClient, namespace string) (*[]
 		if found && err == nil && source == "gatekeeper-webhook" {
 			filteredList = append(filteredList, events.Items[i])
 		} else if err != nil {
-			// TOOD: not sure we should return here, but leaving the return for testing purposes
+			// TODO: not sure we should return here, but leaving the return for testing purposes
 			return nil, err
 		}
 	}
@@ -478,6 +478,7 @@ func main() {
 	// Fallback route for all non-matching URLs.
 	// We need to serve index.html for react routing to work. See:
 	// https://create-react-app.dev/docs/deployment#serving-apps-with-client-side-routing.
+	// We could avoid this by serving the frontend from another process/container instead of from the backend
 	e.GET("/*", func(c echo.Context) error {
 		path := c.Request().RequestURI
 		staticPath := "./static-content"
