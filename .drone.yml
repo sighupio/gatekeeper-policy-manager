@@ -97,7 +97,8 @@ steps:
       - name: dockersock
         path: /var/run/docker.sock
     commands:
-      - docker build
+      - docker buildx build
+        --platform linux/amd64,linux/arm64,linux/arm/v7
         --pull=true
         --rm=true
         -f $${DOCKERFILE}
