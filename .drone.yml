@@ -11,7 +11,7 @@ steps:
     image: docker.io/library/golang:1.20
     pull: always
     commands:
-      - go get -u github.com/google/addlicense
+      - go install github.com/google/addlicense@v1.1.1
       - addlicense -c "SIGHUP s.r.l" -v -l bsd -check -ignore 'chart/**' .
 trigger:
   ref:
