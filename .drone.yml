@@ -99,12 +99,15 @@ steps:
     commands:
       - docker buildx create --use
       - docker buildx build
-        --load
         --platform linux/amd64,linux/arm64,linux/arm/v7
         --pull=true
         -f $${DOCKERFILE}
         -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG}
         $${BUILD_CONTEXT}
+      - docker buildx build
+        --load
+        --platform linux/amd64
+        -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG}
 
 volumes:
   - name: dockerconfig
@@ -188,7 +191,6 @@ steps:
     image: mcr.microsoft.com/playwright:v1.30.0-focal
     commands:
       - for f in tests/e2e/test-results/*/*diff.png; do echo $f; base64 -w 0 $f; echo; done;
-      - for f in tests/e2e/test-results/*/*actual.png; do echo $f; base64 -w 0 $f; echo; done;
       - "echo 'Use base64 to decode the images and see the diff'"
     when:
       status:
