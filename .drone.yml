@@ -105,12 +105,12 @@ steps:
         --platform linux/amd64,linux/arm64,linux/arm/v7
         --pull
         -f $${DOCKERFILE}
-        -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG}
+        -t "$${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG}"
         $${BUILD_CONTEXT}
       - docker buildx build
         --load
         --platform linux/amd64
-        -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG}
+        -t "$${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG}"
         $${BUILD_CONTEXT}
 
 volumes:
