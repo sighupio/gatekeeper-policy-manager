@@ -97,21 +97,10 @@ steps:
       - name: dockersock
         path: /var/run/docker.sock
     commands:
-      - apk add git
-      - docker buildx create
-        --name sighup-builder
-        --use
-      - docker buildx build
-        --platform linux/amd64,linux/arm64,linux/arm/v7
-        --pull=true
-        -f $${DOCKERFILE}
-        -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG}
-        $${BUILD_CONTEXT}
-      - docker buildx build
-        --load
-        --platform linux/amd64
-        -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG}
-        $${BUILD_CONTEXT}
+      - "apk add git"
+      - "docker buildx create --name sighup-builder --use"
+      - "docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 --pull=true -f $${DOCKERFILE} -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG} $${BUILD_CONTEXT}"
+      - "docker buildx build --load --platform linux/amd64 -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG} $${BUILD_CONTEXT}"
 
 volumes:
   - name: dockerconfig
