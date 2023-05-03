@@ -20,9 +20,9 @@ export interface IMutation {
   apiVersion: string;
   kind: string;
   metadata: {
-    name: string,
-    creationTimestamp: string,
-    annotations?: any,
+    name: string;
+    creationTimestamp: string;
+    annotations?: any;
   };
   spec?: IMutationSpec;
   status?: any;
