@@ -4,12 +4,10 @@
  * license that can be found in the LICENSE file.
  */
 
-
 export interface IMutationSpecMatch {
   kinds: string[];
   scope: string;
 }
-
 
 export interface IMutationSpec {
   parameters?: any;
@@ -22,9 +20,9 @@ export interface IMutation {
   apiVersion: string;
   kind: string;
   metadata: {
-    name: string;
-    creationTimestamp: string;
-    annotations?: any;
+    name: string,
+    creationTimestamp: string,
+    annotations?: any,
   };
   spec?: IMutationSpec;
   status?: any;

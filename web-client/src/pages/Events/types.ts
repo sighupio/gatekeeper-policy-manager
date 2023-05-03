@@ -13,7 +13,7 @@ export interface IEvent {
   message: string;
   reason: string;
   type: string;
-  involvedObject: IInvolvedObject
+  involvedObject: IInvolvedObject;
   metadata: {
     name: string;
     creationTimestamp: string;
@@ -21,7 +21,6 @@ export interface IEvent {
     labels?: any;
   };
 }
-
 
 export interface IInvolvedObject {
   kind: string;
