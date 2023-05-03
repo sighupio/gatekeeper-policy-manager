@@ -6,6 +6,7 @@
 
 import {
   EuiAccordion,
+  EuiBadge,
   EuiCodeBlock,
   EuiEmptyPrompt,
   EuiFlexGroup,
@@ -75,15 +76,13 @@ function SingleMutation(item: IMutation) {
                 </h4>
               </EuiText>
             </EuiFlexItem>
-            <EuiFlexItem grow={false} style={{ marginLeft: "10px" }}>
-              <EuiText size="xs">
-                <span
-                  style={{ textTransform: "uppercase", fontWeight: "bold" }}
-                >
-                  Kind:{" "}
-                </span>{" "}
-                {item.kind}
-              </EuiText>
+            <EuiFlexItem grow={false} style={{ marginLeft: "auto" }}>
+              <EuiBadge
+                color={"primary"}
+                title={"Mutator Kind: " + item.kind}
+              >
+                <p>{item.kind}</p>
+              </EuiBadge>
             </EuiFlexItem>
           </EuiFlexGroup>
           {item.metadata.annotations?.description &&
@@ -96,7 +95,7 @@ function SingleMutation(item: IMutation) {
             </EuiFlexGroup>
           }
         </EuiFlexItem>
-      </EuiFlexGroup>
+      </EuiFlexGroup >
       <EuiSpacer size="s" />
       <EuiHorizontalRule margin="none" />
       <EuiSpacer size="s" />
@@ -178,7 +177,7 @@ function SingleMutation(item: IMutation) {
           </EuiText>
         </EuiFlexItem>
       </EuiFlexGroup>
-    </EuiPanel>
+    </EuiPanel >
   );
 }
 
