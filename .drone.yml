@@ -97,10 +97,20 @@ steps:
       - name: dockersock
         path: /var/run/docker.sock
     commands:
-      - "apk add git"
-      - "docker buildx create --name sighup-builder --use"
-      - "docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 --pull -f $${DOCKERFILE} -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG} $${BUILD_CONTEXT}"
-      - "docker buildx build --load --platform linux/amd64 -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG} $${BUILD_CONTEXT}"
+      - apk add git
+      - docker buildx create
+        --name sighup-builder
+        --use
+      - docker buildx build
+        --platform linux/amd64,linux/arm64,linux/arm/v7
+        --pull -f $${DOCKERFILE}
+        -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG}
+        $${BUILD_CONTEXT}
+      - docker buildx build
+        --load
+        --platform linux/amd64
+        -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG}
+        $${BUILD_CONTEXT}
 
 volumes:
   - name: dockerconfig
@@ -277,14 +287,25 @@ steps:
       repo: quay.io/sighup/gatekeeper-policy-manager
       container_image_name: gatekeeper-policy-manager
       container_image_tag: test-${DRONE_BUILD_NUMBER}
+      DOCKERFILE: Dockerfile
+      BUILD_CONTEXT: "."
     volumes:
       - name: dockersock
         path: /var/run/docker.sock
     commands:
-      - "apk add git"
-      - "docker login $${registry} -u $${username} -p $${password}"
-      - "docker buildx create --name sighup-builder --use"
-      - "docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 --pull --push -f $${DOCKERFILE} -t $${repo}:unstable -t $${repo}:${DRONE_COMMIT_SHA} $${BUILD_CONTEXT}"
+      - apk add git
+      - docker login $${registry} -u $${username} -p $${password}
+      - docker buildx create
+        --name sighup-builder
+        --use
+      - docker buildx build
+        --platform linux/amd64,linux/arm64,linux/arm/v7
+        --pull
+        --push
+        -f $${DOCKERFILE}
+        -t $${repo}:unstable
+        -t $${repo}:${DRONE_COMMIT_SHA}
+        $${BUILD_CONTEXT}
     when:
       event:
         - push
@@ -302,14 +323,25 @@ steps:
       repo: quay.io/sighup/gatekeeper-policy-manager
       container_image_name: gatekeeper-policy-manager
       container_image_tag: test-${DRONE_BUILD_NUMBER}
+      DOCKERFILE: Dockerfile
+      BUILD_CONTEXT: "."
     volumes:
       - name: dockersock
         path: /var/run/docker.sock
     commands:
-      - "apk add git"
-      - "docker login $${registry} -u $${username} -p $${password}"
-      - "docker buildx create --name sighup-builder --use"
-      - "docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 --pull --push -f $${DOCKERFILE} -t $${repo}:latest -t $${repo}:${DRONE_TAG} $${BUILD_CONTEXT}"
+      - apk add git
+      - docker login $${registry} -u $${username} -p $${password}
+      - docker buildx create
+        --name sighup-builder
+        --use
+      - docker buildx build
+        --platform linux/amd64,linux/arm64,linux/arm/v7
+        --pull
+        --push
+        -f $${DOCKERFILE}
+        -t $${repo}:latest
+        -t $${repo}:${DRONE_TAG}
+        $${BUILD_CONTEXT}
     when:
       event:
         - tag
