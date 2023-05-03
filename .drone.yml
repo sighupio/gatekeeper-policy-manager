@@ -300,10 +300,10 @@ steps:
       - docker buildx build
         --platform linux/amd64,linux/arm64,linux/arm/v7
         --pull=true
+        --push
         -f $${DOCKERFILE}
         -t $${repo}:unstable
         -t $${repo}:${DRONE_COMMIT_SHA}
-        --push
         $${BUILD_CONTEXT}
     when:
       event:
@@ -334,10 +334,10 @@ steps:
       - docker buildx build
         --platform linux/amd64,linux/arm64,linux/arm/v7
         --pull=true
+        --push
         -f $${DOCKERFILE}
         -t $${repo}:latest
         -t $${repo}:${DRONE_TAG}
-        --push
         $${BUILD_CONTEXT}
     when:
       event:
