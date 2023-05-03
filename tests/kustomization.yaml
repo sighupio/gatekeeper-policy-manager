@@ -9,6 +9,7 @@ resources:
   - github.com/sighupio/fury-kubernetes-opa/katalog/gatekeeper/core?ref=v1.8.0
   - github.com/sighupio/fury-kubernetes-opa/katalog/gatekeeper/rules?ref=v1.8.0
   - github.com/sighupio/fury-kubernetes-opa/katalog/gatekeeper/monitoring?ref=v1.8.0
+  - mutation.yaml
 
   # Deploy GPM itself
   - ../manifests/rbac.yaml
