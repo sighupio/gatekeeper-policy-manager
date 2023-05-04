@@ -34,16 +34,10 @@ import (
 )
 
 var (
-	config             *rest.Config
-	startingConfig     *api.Config
-	clientset          *dynamic.DynamicClient
-	discoveryClient    *discovery.DiscoveryClient
-	logLevelFromString = map[string]log.Lvl{
-		"DEBUG": log.DEBUG,
-		"INFO":  log.INFO,
-		"WARN":  log.WARN,
-		"ERROR": log.ERROR,
-	}
+	config          *rest.Config
+	startingConfig  *api.Config
+	clientset       *dynamic.DynamicClient
+	discoveryClient *discovery.DiscoveryClient
 )
 
 type ErrorAnswer struct {
@@ -438,6 +432,12 @@ func main() {
 	p.Use(e)
 
 	// Setup logging
+	var logLevelFromString = map[string]log.Lvl{
+		"DEBUG": log.DEBUG,
+		"INFO":  log.INFO,
+		"WARN":  log.WARN,
+		"ERROR": log.ERROR,
+	}
 	e.Logger.SetLevel(log.INFO)
 	e.Logger.SetPrefix("gpm")
 	if logLevelString, ok := os.LookupEnv("GPM_LOG_LEVEL"); ok {
