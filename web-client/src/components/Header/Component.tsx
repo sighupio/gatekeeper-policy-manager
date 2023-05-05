@@ -77,6 +77,7 @@ function HeaderComponent() {
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
             }}
+            title={k8sContext}
           >
             {k8sContext}
           </EuiText>
