@@ -17,7 +17,11 @@ import (
 	"text/template"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -26,11 +30,8 @@ import (
 	"github.com/labstack/echo-contrib/prometheus"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/labstack/gommon/log"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
+
+	"golang.org/x/exp/slog"
 )
 
 var (
@@ -116,7 +117,7 @@ func getContexts(c echo.Context) error {
 // Gatekeeper only supports a single configuration object defined in the cluster but we return a list for future proofing.
 func getConfigs(c echo.Context) error {
 	if c.Param("context") != "" {
-		c.Echo().Logger.Debug("switching to custom context ", c.Param("context"))
+		slog.Debug("switching to custom context", "context", c.Param("context"))
 		err := switchKubernetesContext(c.Echo(), c.Param("context"))
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, ErrorAnswer{
@@ -128,11 +129,11 @@ func getConfigs(c echo.Context) error {
 	}
 	configResources, err := getCustomResources(*clientset, "config.gatekeeper.sh", "v1alpha1", "configs")
 	if err != nil {
-		c.Echo().Logger.Debug("got error while getting config resources: ", err)
+		slog.Debug("getting config resources failed", "error", err)
 		return c.JSON(http.StatusInternalServerError, ErrorAnswer{
 			ErrorMessage: "An error ocurred while getting config objects from Kubernetes API.",
 			Description:  err.Error(),
-			Action:       "Check that the Kubconfig file is correct and the Kubernetes API accessible."})
+			Action:       "Check that the Kubeconfig file is correct and that the Kubernetes API is accessible."})
 	}
 	return c.JSON(http.StatusOK, configResources.Items)
 }
@@ -141,7 +142,7 @@ func getConfigs(c echo.Context) error {
 // for each Constraint Template.
 func getConstraintTemplates(c echo.Context) error {
 	if c.Param("context") != "" {
-		c.Echo().Logger.Debug("switching to custom context ", c.Param("context"))
+		slog.Debug("switching to custom context", "context", c.Param("context"))
 		err := switchKubernetesContext(c.Echo(), c.Param("context"))
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, ErrorAnswer{
@@ -160,19 +161,18 @@ func getConstraintTemplates(c echo.Context) error {
 
 	constrainttemplates, err := getCustomResources(*clientset, "templates.gatekeeper.sh", "v1beta1", "constrainttemplates")
 	if err != nil {
-		c.Echo().Logger.Error("got error while getting constraint templates resources: ", err)
+		slog.Error("getting Constraint Templates resources failed", "error", err)
 		return c.JSON(http.StatusInternalServerError, ErrorAnswer{
 			ErrorMessage: "An error ocurred while getting Constraint Templates objects from Kubernetes API",
 			Action:       "Is Gatekeeper properly installed in the cluster?",
 			Description:  err.Error(),
 		})
 	}
-	c.Echo().Logger.Debugf("got %d constraint templates. Searching constraints for each one.", len(constrainttemplates.Items))
 	for _, ct := range constrainttemplates.Items {
 		ctName := ct.GetName()
 		constraints, err := getCustomResources(*clientset, "constraints.gatekeeper.sh", "v1beta1", ctName)
 		if err != nil {
-			c.Echo().Logger.Debug("got error while trying to get constraints for template: ", ctName)
+			slog.Debug("trying to get Constraints for template failed", "template", ctName, "error", err)
 		}
 		response.Constraints_by_constrainttemplates[ctName] = constraints.Items
 	}
@@ -185,7 +185,7 @@ func getConstraintTemplates(c echo.Context) error {
 // - when a "report" Query parameter is present in the URL: an HTML report of the violations made from a template.
 func getConstraints(c echo.Context) error {
 	if c.Param("context") != "" {
-		c.Echo().Logger.Debug("switching to custom context ", c.Param("context"))
+		slog.Debug("switching to custom context", "context", c.Param("context"))
 		err := switchKubernetesContext(c.Echo(), c.Param("context"))
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, ErrorAnswer{
@@ -201,7 +201,7 @@ func getConstraints(c echo.Context) error {
 	// we need to discover the available Kinds for the constraints first.
 	availableConstraints, err := discoveryClient.ServerResourcesForGroupVersion("constraints.gatekeeper.sh/v1beta1")
 	if err != nil {
-		c.Echo().Logger.Error("error while listing constraints kinds from Kubernetes API server: ", err)
+		slog.Error("listing constraints kinds from Kubernetes API server failed", "error", err)
 		return c.JSON(http.StatusInternalServerError, ErrorAnswer{
 			ErrorMessage: "An error ocurred while trying to list the Constraints",
 			Action:       "Is Gatekeeper properly installed in the target Kubernetes cluster?",
@@ -215,8 +215,11 @@ func getConstraints(c echo.Context) error {
 		if constraintKind.Categories != nil {
 			constraints, err := getCustomResources(*clientset, "constraints.gatekeeper.sh", "v1beta1", constraintKind.SingularName)
 			if err != nil {
-				c.Echo().Logger.Error("got error while getting constraint resources: ", err)
-				return c.JSON(http.StatusInternalServerError, ErrorAnswer{ErrorMessage: "An error ocurred while getting constraint objects from Kubernetes API", Action: "Is Gatekeeper properly deployed in the target cluster?", Description: err.Error()})
+				slog.Error("getting Constraint resources failed", "error", err)
+				return c.JSON(http.StatusInternalServerError, ErrorAnswer{
+					ErrorMessage: "An error ocurred while getting constraint objects from Kubernetes API",
+					Action:       "Is Gatekeeper properly deployed in the target cluster?",
+					Description:  err.Error()})
 			}
 			for _, i := range constraints.Items {
 				response = append(response, i.Object)
@@ -228,19 +231,19 @@ func getConstraints(c echo.Context) error {
 	sort.Slice(response, func(i, j int) bool {
 		iName, _, err := unstructured.NestedString(response[i], "metadata", "name")
 		if err != nil {
-			c.Echo().Logger.Errorf("got error while trying to get object name for %s: %s", response[i], err)
+			slog.Error("trying to get object name failed", "object", response[i], "error", err)
 		}
 		iViolations, _, err := unstructured.NestedInt64(response[i], "status", "totalViolations")
 		if err != nil {
-			c.Echo().Logger.Errorf("got error while trying to get the total violations counts for %s: %s", iName, err)
+			slog.Error("trying to get the total violations counts failed", "constraint", iName, "error", err)
 		}
 		jName, _, err := unstructured.NestedString(response[j], "metadata", "name")
 		if err != nil {
-			c.Echo().Logger.Errorf("got error while trying to get object name for %s: %s", response[i], err)
+			slog.Error("trying to get object name failed", "object", response[i], "error", err)
 		}
 		jViolations, _, err := unstructured.NestedInt64(response[j], "status", "totalViolations")
 		if err != nil {
-			c.Echo().Logger.Errorf("got error while trying to get the total violations counts for %s: %s", jName, err)
+			slog.Error("trying to get the total violations counts failed", "constraint", jName, "error", err)
 		}
 		if iViolations == jViolations {
 			return strings.Compare(iName, jName) < 0
@@ -272,7 +275,7 @@ func getConstraints(c echo.Context) error {
 // for each Constraint Template.
 func getMutations(c echo.Context) error {
 	if c.Param("context") != "" {
-		c.Echo().Logger.Debug("switching to custom context ", c.Param("context"))
+		slog.Debug("switching to custom context", "context", c.Param("context"))
 		err := switchKubernetesContext(c.Echo(), c.Param("context"))
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, ErrorAnswer{
@@ -290,11 +293,11 @@ func getMutations(c echo.Context) error {
 
 	for _, mutator := range mutators {
 		res := fmt.Sprintf("%s.mutations.gatekeeper.sh", mutator)
-		c.Echo().Logger.Debug("Getting mutations of kind: ", res)
+		slog.Debug("getting mutations", "kind", res)
 		mutations, err := getCustomResources(*clientset, "mutations.gatekeeper.sh", "v1", mutator)
 		if err != nil {
 			// We get an error when there are no mutations defined in the cluster also
-			c.Echo().Logger.Errorf("got error while getting mutator '%s' resources: %s", mutator, err)
+			slog.Error("getting mutator resources failed", "mutator", mutator, "error", err)
 			// return c.JSON(http.StatusInternalServerError, ErrorAnswer{
 			// 	ErrorMessage: "An error ocurred while getting mutation objects from Kubernetes API",
 			// 	Action:       "Is Gatekeeper properly deployed in the target cluster?",
@@ -302,7 +305,6 @@ func getMutations(c echo.Context) error {
 			// })
 		} else {
 			for _, i := range mutations.Items {
-				c.Echo().Logger.Debugf("adding %s to response", i)
 				response = append(response, i.Object)
 			}
 		}
@@ -316,7 +318,7 @@ func getMutations(c echo.Context) error {
 
 // Returns a slice of unstructured objects with all the events generated by the 'gatekeeper-wbhook' source
 // If namespace is an empty string, it returns the events from all namespaces.
-func getKubernetesEvents(clientset dynamic.DynamicClient, namespace string) (*[]unstructured.Unstructured, error) {
+func getKubernetesEvents(clientset dynamic.DynamicClient, namespace string, eventsSource string) (*[]unstructured.Unstructured, error) {
 	// FieldSeletor is very limited in the supported fields, we can't filter like this:
 	// listOptions := metav1.ListOptions{
 	// 	FieldSelector: "involvedObject.metadata.source.component=gatekeeper-webhook", //Filter events related to Pods
@@ -328,13 +330,12 @@ func getKubernetesEvents(clientset dynamic.DynamicClient, namespace string) (*[]
 		return nil, err
 	}
 	var filteredList []unstructured.Unstructured
+
 	for i := range events.Items {
 		source, found, err := unstructured.NestedString(events.Items[i].Object, "source", "component")
-		// TODO: maybe source should be configurable?
-		if found && err == nil && source == "gatekeeper-webhook" {
+		if found && err == nil && source == eventsSource {
 			filteredList = append(filteredList, events.Items[i])
 		} else if err != nil {
-			// TODO: not sure we should return here, but leaving the return for testing purposes
 			return nil, err
 		}
 	}
@@ -347,7 +348,7 @@ func getKubernetesEvents(clientset dynamic.DynamicClient, namespace string) (*[]
 //	See: https://v1-25.docs.kubernetes.io/docs/reference/kubernetes-api/cluster-resources/event-v1/
 func getEvents(c echo.Context) error {
 	if c.Param("context") != "" {
-		c.Echo().Logger.Debug("switching to custom context ", c.Param("context"))
+		slog.Debug("switching to custom context", "context", c.Param("context"))
 		err := switchKubernetesContext(c.Echo(), c.Param("context"))
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, ErrorAnswer{
@@ -357,16 +358,22 @@ func getEvents(c echo.Context) error {
 			})
 		}
 	}
-	events, err := getKubernetesEvents(*clientset, c.QueryParam("namespace"))
 
+	// TODO: maybe we should Looup this once at start-time and save it instead of on each call to this
+	eventsSource, ok := os.LookupEnv("GPM_EVENTS_SOURCE")
+	if !ok {
+		eventsSource = "gatekeeper-webhook"
+	}
+	events, err := getKubernetesEvents(*clientset, c.QueryParam("namespace"), eventsSource)
 	if err != nil {
-		c.Echo().Logger.Errorf("got error while getting events namespace '%s': %s", c.QueryParam("namespace"), err)
+		slog.Error("got error while getting namespace events", "namespace", c.QueryParam("namespace"), "source", eventsSource, "error", err)
 		return c.JSON(http.StatusInternalServerError, ErrorAnswer{
 			ErrorMessage: "An error ocurred while getting events from Kubernetes API.",
 			Description:  err.Error(),
 			Action:       "Check that the Kubconfig file is correct and the Kubernetes API accessible.",
 		})
 	}
+
 	return c.JSON(http.StatusOK, events)
 }
 
@@ -377,28 +384,28 @@ func kubeClient(e *echo.Echo, context string) (*dynamic.DynamicClient, *rest.Con
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
 	configOverrides := &clientcmd.ConfigOverrides{CurrentContext: context}
 	kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
-	e.Logger.Info("trying to load kubeconfigs from ", kubeConfig.ConfigAccess().GetLoadingPrecedence())
+	slog.Info("trying to load kubeconfigs", "paths", kubeConfig.ConfigAccess().GetLoadingPrecedence())
 
 	config, err := kubeConfig.ClientConfig()
 	if err != nil {
-		e.Logger.Fatal("got error while creating Kubernetes client config: ", err)
+		return nil, nil, nil, fmt.Errorf("creating Kubernetes client failed: %s", err)
 	}
 
 	startingConfig, err := kubeConfig.ConfigAccess().GetStartingConfig()
 	if err != nil {
-		e.Logger.Fatal("got error while getting contexts information from Kubeconfig: ", err)
+		return nil, nil, nil, fmt.Errorf("getting contexts information from Kubeconfig failed: %s", err)
 	}
 
 	// create the dynamic Kubernetes client
 	clientset, err := dynamic.NewForConfig(config)
 	if err != nil {
-		e.Logger.Fatal("got error while creating Kubernetes client: ", err)
+		return nil, nil, nil, fmt.Errorf("creating dynamic Kubernetes client failed: %s", err)
 	}
 
 	// discoveryClient is used to discover Cosntrains Kinds
 	discoveryClient, err = discovery.NewDiscoveryClientForConfig(config)
 	if err != nil {
-		e.Logger.Fatal("error while creating constraints discovery Kubernetes client: ", err)
+		return nil, nil, nil, fmt.Errorf("creating constraints discovery Kubernetes client failed: %s", err)
 	}
 
 	return clientset, config, startingConfig, err
@@ -413,11 +420,11 @@ func switchKubernetesContext(e *echo.Echo, c string) error {
 		return nil
 	}
 	if _, ok := startingConfig.Contexts[c]; !ok {
-		return fmt.Errorf("context %s does not exist in the Kubeconfig file", c)
+		return fmt.Errorf("context '%s' not found in Kubeconfig file", c)
 	}
 	clientset, config, startingConfig, err = kubeClient(e, c)
 	if err != nil {
-		e.Logger.Errorf("got error initializating the Kubernetes cilent with custom context %s: %s", c, err)
+		slog.Error("initializating the Kubernetes cilent with custom context failed", "context", c, "error", err)
 		return err
 	}
 	return nil
@@ -427,26 +434,57 @@ func main() {
 	// Initilize Echo HTTP server
 	e := echo.New()
 	e.HideBanner = true
-	e.Use(middleware.Logger())
+	e.HidePort = true
 	p := prometheus.NewPrometheus("echo", nil)
 	p.Use(e)
 
 	// Setup logging
-	var logLevelFromString = map[string]log.Lvl{
-		"DEBUG": log.DEBUG,
-		"INFO":  log.INFO,
-		"WARN":  log.WARN,
-		"ERROR": log.ERROR,
-	}
-	e.Logger.SetLevel(log.INFO)
-	e.Logger.SetPrefix("gpm")
-	if logLevelString, ok := os.LookupEnv("GPM_LOG_LEVEL"); ok {
-		logLevel, ok := logLevelFromString[strings.ToUpper(logLevelString)]
-		if !ok {
-			e.Logger.Warnf("the specified log level '%s' is not a valid option, defaulting to INFO.", logLevelString)
-		} else {
-			e.Logger.SetLevel(logLevel)
-		}
+	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+		LogURI:           true,
+		LogStatus:        true,
+		LogRemoteIP:      true,
+		LogHost:          true,
+		LogUserAgent:     true,
+		LogError:         true,
+		LogLatency:       true,
+		LogContentLength: true,
+		LogResponseSize:  true,
+		LogMethod:        true,
+		LogValuesFunc: func(c echo.Context, values middleware.RequestLoggerValues) error {
+			slog.Info(
+				"received request",
+				"remote_ip", values.RemoteIP,
+				"host", values.Host,
+				"method", values.Method,
+				"uri", values.URI,
+				"user_agent", values.UserAgent,
+				"status", values.Status,
+				"error", values.Error,
+				"latency", values.Latency,
+				"latency_human", values.Latency.Microseconds(),
+				"bytes_in", values.ContentLength,
+				"bytes_out", values.ResponseSize,
+			)
+			return nil
+		},
+	}))
+
+	var logOptions = slog.HandlerOptions{}
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &logOptions))
+	slog.SetDefault(logger)
+
+	switch strings.ToLower(os.Getenv("GPM_LOG_LEVEL")) {
+	case "debug":
+		logOptions.Level = slog.LevelDebug
+	case "info":
+		logOptions.Level = slog.LevelInfo
+	case "warn":
+		logOptions.Level = slog.LevelWarn
+	case "error":
+		logOptions.Level = slog.LevelError
+	default:
+		slog.Warn("the specified log level is not a valid option, defaulting to INFO.", "level", os.Getenv("GPM_LOG_LEVEL"))
+		logOptions.Level = slog.LevelInfo
 	}
 
 	// We compile the HTML templates here
@@ -458,17 +496,20 @@ func main() {
 	e.Renderer = t
 
 	if os.Getenv("APP_ENV") == "development" {
-		e.Logger.Warn("running in development mode, allowing CORS from other origins")
+		origins := []string{"http://localhost:3000"}
+		headers := []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept}
+		slog.Warn("running in development mode, allowing CORS from other origins", "origins", origins, "headers", headers)
 		e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-			AllowOrigins: []string{"http://localhost:3000"},
-			AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept},
+			AllowOrigins: origins,
+			AllowHeaders: headers,
 		}))
 	}
 
 	var err error
 	clientset, config, startingConfig, err = kubeClient(e, "")
 	if err != nil {
-		e.Logger.Fatalf("got an error while initializating the Kubernetes cilent: %s", err)
+		slog.Error("Kubernetes cilent initialization failed", "error", err)
+		os.Exit(1)
 	}
 
 	// Routes configuration
@@ -488,10 +529,10 @@ func main() {
 
 		// try to serve the static file, if not found serve index.html
 		if path != "/" && fileError == nil {
-			e.Logger.Debug("found file, serving it from ", filePath)
+			slog.Debug("found file, serving it", "path", filePath)
 			return c.File(filePath)
 		} else {
-			e.Logger.Debug("file not found, falling back to ", indexPath)
+			slog.Debug("file not found, falling back to index.html", "index_path", indexPath)
 			return c.File(indexPath)
 		}
 	})
@@ -541,5 +582,6 @@ func main() {
 	e.GET("/api/v1/events/:context/", getEvents)
 
 	// start the web server
-	e.Logger.Fatal(e.Start(":8080"))
+	slog.Error("starting HTTP server failed", "error", e.Start(":8080"))
+	os.Exit(1)
 }
