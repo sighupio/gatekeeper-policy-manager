@@ -582,6 +582,12 @@ func main() {
 	e.GET("/api/v1/events/:context/", getEvents)
 
 	// start the web server
-	slog.Error("starting HTTP server failed", "error", e.Start(":8080"))
+	address, ok := os.LookupEnv("GPM_LISTEN_ADDRESS")
+	if !ok {
+		address = ":8080"
+	}
+	e.Server.Addr = address
+	slog.Info("starting HTTP server", "address", address)
+	slog.Error("starting HTTP server failed", "error", e.Start(address))
 	os.Exit(1)
 }

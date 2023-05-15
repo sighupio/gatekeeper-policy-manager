@@ -84,11 +84,12 @@ Then access it with your browser by visiting [http://127.0.0.1:8080](http://127.
 
 GPM is a stateless application, but it can be configured using environment variables. The possible configurations are:
 
-| Env Var Name        | Description                                                                                                                                                                                                                       | Default              |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
-| `GPM_LOG_LEVEL`     | Log level (`DEBUG`, `INFO`, `WARN`, `ERROR`, `OFF`)                                                                                                                                                                               | `INFO`               |
-| `GPM_EVENTS_SOURCE` | Used to filter out events by the defined source                                                                                                                                                                                   | `gatekeeper-webhook` |
-| `KUBECONFIG`        | Path to a [kubeconfig](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/) file, if provided while running inside a cluster this configuration file will be used instead of the cluster's API. | `$HOME/.kube/config` |
+| Env Var Name         | Description                                                                                                                                                                                                                       | Default              |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| `GPM_LISTEN_ADDRESS` | Server listen address                                                                                                                                                                                                             | `:8080`              |
+| `GPM_LOG_LEVEL`      | Log level (`DEBUG`, `INFO`, `WARN`, `ERROR`, `OFF`)                                                                                                                                                                               | `INFO`               |
+| `GPM_EVENTS_SOURCE`  | Used to filter out events by the defined source                                                                                                                                                                                   | `gatekeeper-webhook` |
+| `KUBECONFIG`         | Path to a [kubeconfig](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/) file, if provided while running inside a cluster this configuration file will be used instead of the cluster's API. | `$HOME/.kube/config` |
 
 ### Multi-cluster support
 
