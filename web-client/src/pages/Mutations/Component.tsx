@@ -171,12 +171,65 @@ function SingleMutation(item: IMutation) {
       <EuiHorizontalRule margin="none" />
       <EuiSpacer size="s" />
       <EuiFlexGroup justifyContent="flexEnd" gutterSize="s" className="dynamic">
-        <EuiFlexItem grow={false}>
-          <EuiText size="xs" style={{ textTransform: "uppercase" }}>
-            created on {item.metadata.creationTimestamp}
-          </EuiText>
+        <EuiFlexItem>
+          <EuiFlexGroup direction="row" wrap={true} gutterSize="xs">
+            {item.status.byPod.map((pod) => {
+              return (
+                <EuiFlexItem
+                  grow={false}
+                  key={`${item.metadata.name}-${pod.id}`}
+                >
+                  <EuiBadge
+                    style={{
+                      paddingRight: 0,
+                      borderRight: 0,
+                      fontSize: 10,
+                      position: "relative",
+                    }}
+                    className="dynamic"
+                  >
+                    {pod.id}
+                    <EuiBadge
+                      style={{
+                        fontSize: 10,
+                        margin: "0px",
+                        borderRadius: 0,
+                        verticalAlign: "baseline",
+                      }}>&nbsp;</EuiBadge>
+                    {pod.operations.map((operation: string) => {
+                      return (
+                        <EuiBadge
+                          color="#ccc"
+                          key={`${item.metadata.name}-${pod.id}-${operation}`}
+                          style={{
+                            fontSize: 10,
+                            margin: "0px",
+                            borderRadius: 0,
+                            verticalAlign: "baseline",
+                          }}> {operation}
+                        </EuiBadge>
+                      );
+                    })}
+                    <EuiBadge
+                      color="#666"
+                      style={{
+                        fontSize: 10,
+                        margin: "0px",
+                        borderBottomLeftRadius: 0,
+                        borderTopLeftRadius: 0,
+                        marginRight: "1px",
+                        verticalAlign: "baseline",
+                      }}
+                    >
+                      {`GENERATION ${pod.observedGeneration}`}
+                    </EuiBadge>
+                  </EuiBadge>
+                </EuiFlexItem>
+              );
+            })}
+          </EuiFlexGroup>
         </EuiFlexItem>
-      </EuiFlexGroup>
+      </EuiFlexGroup >
     </EuiPanel >
   );
 }
