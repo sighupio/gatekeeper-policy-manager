@@ -253,9 +253,33 @@ function SingleConstraintTemplate(
                   >
                     {pod.id}
                     <EuiBadge
+                      style={{
+                        fontSize: 10,
+                        margin: "0px",
+                        borderRadius: 0,
+                        padding: 0,
+                        verticalAlign: "baseline",
+                      }}>&nbsp;</EuiBadge>
+                    {pod.operations.map((operation: string) => {
+                      return (
+                        <EuiBadge
+                          color="#ccc"
+                          key={`${item.metadata.name}-${pod.id}-${operation}`}
+                          style={{
+                            fontSize: 10,
+                            margin: "0px",
+                            borderRadius: 0,
+                            verticalAlign: "baseline",
+                          }}> {operation}
+                        </EuiBadge>
+                      );
+                    })}
+                    <EuiBadge
                       color="#666"
                       style={{
-                        marginLeft: "8px",
+                        fontSize: 10,
+                        margin: "0px",
+                        marginRight: "1px",
                         borderBottomLeftRadius: 0,
                         borderTopLeftRadius: 0,
                         verticalAlign: "baseline",

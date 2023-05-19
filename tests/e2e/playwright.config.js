@@ -11,6 +11,6 @@ export default defineConfig({
         headless: true,
         browserName: "chromium",
         ignoreHTTPSErrors: true,
-        baseURL: "http://localhost:8080",
+        baseURL: "http://ramiros-mbp.milano.algozino.com.ar:8080",
     },
 });

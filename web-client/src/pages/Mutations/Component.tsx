@@ -194,6 +194,7 @@ function SingleMutation(item: IMutation) {
                         fontSize: 10,
                         margin: "0px",
                         borderRadius: 0,
+                        padding: 0,
                         verticalAlign: "baseline",
                       }}>&nbsp;</EuiBadge>
                     {pod.operations.map((operation: string) => {
@@ -215,9 +216,9 @@ function SingleMutation(item: IMutation) {
                       style={{
                         fontSize: 10,
                         margin: "0px",
+                        marginRight: "1px",
                         borderBottomLeftRadius: 0,
                         borderTopLeftRadius: 0,
-                        marginRight: "1px",
                         verticalAlign: "baseline",
                       }}
                     >
@@ -229,8 +230,8 @@ function SingleMutation(item: IMutation) {
             })}
           </EuiFlexGroup>
         </EuiFlexItem>
-      </EuiFlexGroup >
-    </EuiPanel >
+      </EuiFlexGroup>
+    </EuiPanel>
   );
 }
 
