@@ -183,9 +183,9 @@ steps:
   - name: echo-diff-images
     image: mcr.microsoft.com/playwright:v1.30.0-focal
     commands:
-      # - for f in tests/e2e/test-results/*/*diff.png; do echo $f; base64 -w 0 $f; echo; done;
+      - for f in tests/e2e/test-results/*/*diff.png; do echo $f; base64 -w 0 $f; echo; done;
       # - for f in tests/e2e/test-results/*/*expected.png; do echo $f; base64 -w 0 $f; echo; done;
-      - for f in tests/e2e/test-results/*/*actual.png; do echo $f; base64 -w 0 $f; echo; done;
+      # - for f in tests/e2e/test-results/*/*actual.png; do echo $f; base64 -w 0 $f; echo; done;
       - "echo 'Use base64 to decode the images and see the diff'"
     when:
       status:
