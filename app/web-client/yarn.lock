@@ -1198,13 +1198,13 @@
   dependencies:
     tslib "^1.9.3"
 
-"@elastic/eui@^78.0.0":
-  version "78.0.0"
-  resolved "https://registry.yarnpkg.com/@elastic/eui/-/eui-78.0.0.tgz#8baebdff833725f2750ec3d9f1d933748caad7eb"
-  integrity sha512-2OZVdLHpQPm8CWpOqnBI0XisohlTtsuDub1r90UTsIZCrwevK3aBrLb8DibpggRfaXXE4QtALYpN8+JoEu8dWw==
+"@elastic/eui@^81.0.0":
+  version "81.0.0"
+  resolved "https://registry.yarnpkg.com/@elastic/eui/-/eui-81.0.0.tgz#819cedbd837ae96c05aed79c285f7b98f079dbf0"
+  integrity sha512-S7KaB5PhpY4KBIQT5pdtUukeSt2xsheWhl98FAEbVIcII1YUfOaGbk2rZC50Z7jn8t8KKQidjehCiLhxaYZTrA==
   dependencies:
     "@types/chroma-js" "^2.0.0"
-    "@types/lodash" "^4.14.160"
+    "@types/lodash" "^4.14.194"
     "@types/numeral" "^0.0.28"
     "@types/react-beautiful-dnd" "^13.1.2"
     "@types/react-input-autosize" "^2.2.1"
@@ -2180,10 +2180,10 @@
   dependencies:
     "@types/lodash" "*"
 
-"@types/lodash@*", "@types/lodash@^4.14.160", "@types/lodash@^4.14.178", "@types/lodash@^4.14.191":
-  version "4.14.191"
-  resolved "https://registry.yarnpkg.com/@types/lodash/-/lodash-4.14.191.tgz#09511e7f7cba275acd8b419ddac8da9a6a79e2fa"
-  integrity sha512-BdZ5BCCvho3EIXw6wUCXHe7rS53AIDPLE+JzwgT+OsJk53oBfbSmZZ7CX4VaRoN78N+TJpFi9QPlfIVNmJYWxQ==
+"@types/lodash@*", "@types/lodash@^4.14.178", "@types/lodash@^4.14.191", "@types/lodash@^4.14.194":
+  version "4.14.194"
+  resolved "https://registry.yarnpkg.com/@types/lodash/-/lodash-4.14.194.tgz#b71eb6f7a0ff11bff59fc987134a093029258a76"
+  integrity sha512-r22s9tAS7imvBt2lyHC9B8AGwWnXaYb1tY09oyLkXDs4vArpYJzw09nj8MLx5VfciBPGIb+ZwG0ssYnEPJxn/g==
 
 "@types/mdast@^3.0.0":
   version "3.0.10"
