@@ -434,13 +434,8 @@ def health():
 # Only set up this routes if authentication has been enabled
 if app.config.get("AUTH_ENABLED") == "OIDC":
 
-    @app.route("/logout", methods=["POST"])
-    @auth.oidc_logout
-    def logout():
-        """End session locally"""
-        return {}
-
     @app.route("/logout", methods=["GET"])
+    @auth.oidc_logout
     def logout_view():
         """End session locally"""
         return send_from_directory(app.static_folder, "index.html")

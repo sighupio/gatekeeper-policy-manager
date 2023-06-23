@@ -90,14 +90,7 @@ function HeaderComponent() {
     event: MouseEvent<HTMLButtonElement>
   ): void => {
     event.preventDefault();
-
-    fetch(`${context.apiUrl}logout`, { method: "POST" }).finally(
-      () => {
-        setTimeout(() => {
-          window.location.replace("/logout");
-        }, 1000);
-      }
-    );
+    window.location.replace("/logout");
   };
 
   const onChangeContext = (value: string) => {
