@@ -15,9 +15,9 @@ import { ConstraintTemplates } from "./pages/ConstraintTemplates";
 import { Constraints } from "./pages/Constraints";
 import { Configurations } from "./pages/Configurations";
 import { Error } from "./pages/Error";
-import {Logout} from "./pages/Logout";
+import { Logout } from "./pages/Logout";
 import { NotFound } from "./pages/NotFound";
-import {theme} from "./theme";
+import { theme } from "./theme";
 import "./App.scss";
 
 function App() {
@@ -29,7 +29,7 @@ function App() {
       modify={theme}
     >
       <ContextProvider>
-        { pathname === "/logout" ? null : <Header />  }
+        {pathname === "/logout" ? null : <Header />}
         <Routes>
           <Route path={`/constrainttemplates`}>
             <Route path=":context" element={<ConstraintTemplates />} />
