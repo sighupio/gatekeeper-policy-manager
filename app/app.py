@@ -98,15 +98,30 @@ if app.config.get("AUTH_ENABLED") == "OIDC":
             "Authentication is enabled with OIDC but GPM_OIDC_REDIRECT_DOMAIN environment variable has not been set."
         )
 
-    provider_metadata = ProviderMetadata(
-        issuer=os.environ.get("GPM_OIDC_ISSUER"),
-        authorization_endpoint=os.environ.get("GPM_OIDC_AUTHORIZATION_ENDPOINT"),
-        jwks_uri=os.environ.get("GPM_OIDC_JWKS_URI"),
-        token_endpoint=os.environ.get("GPM_OIDC_TOKEN_ENDPOINT"),
-        token_introspection_endpoint=os.environ.get("GPM_OIDC_INTROSPECTION_ENDPOINT"),
-        userinfo_endpoint=os.environ.get("GPM_OIDC_USERINFO_ENDPOINT"),
-        end_session_endpoint=os.environ.get("GPM_OIDC_END_SESSION_ENDPOINT"),
+    manual_oidc_provider = (
+        "GPM_OIDC_AUTHORIZATION_ENDPOINT",
+        "GPM_OIDC_JWKS_URI",
+        "GPM_OIDC_TOKEN_ENDPOINT",
+        "GPM_OIDC_INTROSPECTION_ENDPOINT",
+        "GPM_OIDC_USERINFO_ENDPOINT",
+        "GPM_OIDC_END_SESSION_ENDPOINT",
     )
+    if not all(v is None for v in [os.environ.get(x) for x in manual_oidc_provider]):
+        # use manual configuration if one of the env vars is set
+        provider_metadata = ProviderMetadata(
+            issuer=os.environ.get("GPM_OIDC_ISSUER"),
+            authorization_endpoint=os.environ.get("GPM_OIDC_AUTHORIZATION_ENDPOINT"),
+            jwks_uri=os.environ.get("GPM_OIDC_JWKS_URI"),
+            token_endpoint=os.environ.get("GPM_OIDC_TOKEN_ENDPOINT"),
+            token_introspection_endpoint=os.environ.get(
+                "GPM_OIDC_INTROSPECTION_ENDPOINT"
+            ),
+            userinfo_endpoint=os.environ.get("GPM_OIDC_USERINFO_ENDPOINT"),
+            end_session_endpoint=os.environ.get("GPM_OIDC_END_SESSION_ENDPOINT"),
+        )
+    else:
+        # use the .well-known endpoint to confiugre the provider
+        provider_metadata = None
 
     provider_config = ProviderConfiguration(
         issuer=os.environ.get("GPM_OIDC_ISSUER"),
