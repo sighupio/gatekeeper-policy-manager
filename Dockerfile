@@ -12,7 +12,7 @@ LABEL org.opencontainers.vendor="SIGHUP.io"
 LABEL org.opencontainers.image.authors="SIGHUP https://sighup.io"
 LABEL org.opencontainers.image.source="https://github.com/sighupio/gatekeeper-policy-manager"
 
-RUN groupadd -r gpm && useradd --no-log-init -r -g gpm gpm 
+RUN groupadd -r gpm && useradd --no-log-init -r -g gpm gpm
 WORKDIR /app
 COPY --chown=gpm ./app /app
 COPY --from=node --chown=gpm /web-client/build/ /app/static-content/

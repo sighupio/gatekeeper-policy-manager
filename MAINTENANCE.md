@@ -8,7 +8,8 @@ Releasing a new version of GPM is done automatically with our CI, to trigger the
 
 1. Be sure that the current state of `main` branch is ready to be released.
 2. Be sure that you don't have any local modifications to the files
-3. Run [`bumpversion`](https://github.com/c4urself/bump2version/#installation) to update the version strings automatically everywhere.
+3. [Bump the chart version](#releasing-a-new-helm-chart-version)
+4. Run [`bumpversion`](https://github.com/c4urself/bump2version/#installation) to update the version strings automatically everywhere.
 
 For example, assuming the latest version is 1.0.0, to release a new patch version run:
 
@@ -24,7 +25,7 @@ bumpversion --dry-run --verbose --new-version 1.1.0 minor
 
 > Notice that the command includes a `--dry-run` flag, drop it to actually perform the change. You can drop the `--verbose` flag too.
 
-1. `bumpversion` will create some commits and tags, you'll need to push the commits and then the tags
+5. `bumpversion` will create some commits and tags, you'll need to push the commits and then the tags
 
 ```bash
 git push
@@ -51,6 +52,7 @@ frigate gen . > README.md
 3. Tag and push the commit. This can be done as part of the release of a version of GPM or independently.
 
 > If you want to release just a new version of the chart, notice that the pipeline by default executes the Helm Release step only if the GPM release has been successful. You might need to disable the dependency between the pipeline steps.
+>
 > This is to avoid publishing a chart that references a failed build of GPM.
 > You can use a tag like `helm-chart-<version>`.
 >
