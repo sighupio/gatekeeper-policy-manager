@@ -6,3 +6,6 @@ app/static-content/*
 !app/static-content/logo.svg
 !app/static-content/semantic.min.css
 tests/e2e/test-results
+build/
+node_modules/
+static-content/
