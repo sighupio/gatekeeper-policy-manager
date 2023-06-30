@@ -1198,10 +1198,10 @@
   dependencies:
     tslib "^1.9.3"
 
-"@elastic/eui@^82.2.0":
-  version "82.2.0"
-  resolved "https://registry.yarnpkg.com/@elastic/eui/-/eui-82.2.0.tgz#cb9b584b07ac8f6880534278249ab6222e80e65f"
-  integrity sha512-Xx5u2aHdfhiskNTEi+dZ0GWU2x1cygMgotnIIZcjqxKrOu/PY6s3xzNwYx2fJhBczyL+s0C8XqCxPe5+Dw2CdA==
+"@elastic/eui@^83.0.0":
+  version "83.0.0"
+  resolved "https://registry.yarnpkg.com/@elastic/eui/-/eui-83.0.0.tgz#32d6a4516ff4bbc058cf604cf323536ce57748e7"
+  integrity sha512-xoGa/+WmqNV4+GwM7k9u610nAzL4MiWLns55qZdkftuN0zOwFjlnQS2bd+NJlNNXVB9PfeOIKfpvdB4iMIRsFA==
   dependencies:
     "@types/chroma-js" "^2.0.0"
     "@types/lodash" "^4.14.194"
