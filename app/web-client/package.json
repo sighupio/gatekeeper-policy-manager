@@ -9,7 +9,7 @@
     "url": "https://github.com/sighupio/gatekeeper-policy-manager"
   },
   "dependencies": {
-    "@elastic/eui": "^83.0.0",
+    "@elastic/eui": "^83.1.0",
     "@emotion/css": "^11.11.2",
     "@emotion/react": "^11.11.1",
     "@testing-library/jest-dom": "^5.14.1",
