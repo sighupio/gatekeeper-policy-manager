@@ -47,6 +47,7 @@ securityContext:
       - ALL
 
 service:
+  annotations: {}
   type: ClusterIP
   port: 80
 
