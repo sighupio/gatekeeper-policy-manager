@@ -29,7 +29,7 @@ bumpversion --dry-run --verbose --new-version 1.1.0 minor
 
 ```bash
 git push
-git push --tags
+git push origin <TAG>
 ```
 
 ## Releasing a new Helm Chart version
