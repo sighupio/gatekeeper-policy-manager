@@ -2,6 +2,6 @@
 Flask==2.3.2
 Flask-pyoidc==3.14.2
 flask-cors==4.0.0
-gunicorn==20.1.0
+gunicorn==21.2.0
 kubernetes==27.2.0
 setuptools>=65.5.1 # not directly required, pinned by Snyk to avoid a vulnerability
