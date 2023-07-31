@@ -10,6 +10,15 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: "v1.0.6"
 
+# command: [gunicorn]
+# args: [
+#   --bind=:8080,
+#   --workers=2,
+#   --threads=4,
+#   --worker-class=gthread,
+#   app:app
+# ]
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
