@@ -10,6 +10,8 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: "v1.0.6"
 
+# # Override gatekeeper-policy-manager container entrypoint/args
+# # See https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/
 # command: ["gunicorn"]
 # args:
 # - --bind=:8080
@@ -62,23 +64,7 @@ service:
 ingress:
   enabled: false
   # ingressClassName: "nginx"
-  annotations:
-    {}
-    #kubernetes.io/ingress.class: "nginx"
-    #nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-    #nginx.ingress.kubernetes.io/auth-signin: https://$host/oauth2/start?rd=https://$host$request_uri$is_args$args
-    #nginx.ingress.kubernetes.io/auth-url: https://$host/oauth2/auth
-    #nginx.ingress.kubernetes.io/proxy-buffer-size: "8k"
-    #nginx.ingress.kubernetes.io/secure-backends: "true"
-    #nginx.ingress.kubernetes.io/configuration-snippet: |
-    # auth_request_set $token $upstream_http_authorization;
-    # proxy_set_header Authorization $token;
-    #forecastle.stakater.com/expose: "true"
-    #forecastle.stakater.com/appName: "Gatekeeper Policy Manager"
-    #forecastle.stakater.com/icon: "https://raw.githubusercontent.com/sighupio/gatekeeper-policy-manager/master/app/static-content/logo.svg"
-  labels: {}
-  hosts:
-    - host: gpm.local
+  annotations:#
       paths: []
       # pathType: ImplementationSpecific
   tls: []
