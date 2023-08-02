@@ -12,8 +12,9 @@ image:
 
 # # Override gatekeeper-policy-manager container entrypoint/args
 # # See https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/
-# command: ["gunicorn"]
-# args:
+command:
+# - gunicorn
+args:
 # - --bind=:8080
 # - --workers=2
 # - --threads=4
