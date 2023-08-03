@@ -43,7 +43,7 @@ function generateSideNav(list: IConfig[]): ISideNav[] {
       name: item.metadata.name,
       id: htmlIdGenerator("constraints")(),
       onClick: () => {
-        scrollToElement(`#${item.metadata.name}`, true);
+        scrollToElement(`${item.metadata.name}`, true);
       },
       isSelected: index === 0,
     } as ISideNavItem;
