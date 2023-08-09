@@ -296,7 +296,7 @@ def get_constraints(context=None):
             # violations. i.e. the constraint with most violations on top, and when
             # the number of violations is the same use alphabetical order.
             key=lambda x: (
-                -1 * x.get("status").get("totalViolations") or 1,
+                -1 * x.get("status").get("totalViolations", 0) or 1,
                 x.get("metadata").get("name"),
             )
             if x.get("status")
