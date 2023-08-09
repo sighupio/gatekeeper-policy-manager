@@ -50,7 +50,7 @@ function generateSideNav(list: IConstraintTemplate[]): ISideNav[] {
       name: item.spec.crd.spec.names.kind,
       id: htmlIdGenerator("constraint-templates")(),
       onClick: () => {
-        scrollToElement(`${item.spec.crd.spec.names.kind}`, true);
+        scrollToElement(`#${item.spec.crd.spec.names.kind}`, true);
       },
       isSelected: index === 0,
     } as ISideNavItem;

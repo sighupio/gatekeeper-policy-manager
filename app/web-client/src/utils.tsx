@@ -5,7 +5,7 @@
  */
 
 export function scrollToElement(hash: string, smooth: boolean = false) {
-  const element = document.querySelector(`[id="${hash}"]`);
+  const element = document.querySelector(hash.replace(/\./g, '\\.'));
 
   if (!element) {
     return;
