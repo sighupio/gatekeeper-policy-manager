@@ -2,6 +2,35 @@ apiVersion: v1
 entries:
   gatekeeper-policy-manager:
   - apiVersion: v2
+    appVersion: v1.0.8
+    created: "2023-08-10T09:37:16.411744098Z"
+    description: A Helm chart for Gatekeeper Policy Manager, a simple to use, read-only
+      web UI for viewing OPA Gatekeeper policies' status in a Kubernetes Cluster.
+    digest: 316763c73cf3d8e382eb3614cd4834b60b35fd77b0bffd67dfb3ccbd67a2641b
+    home: https://sighup.io
+    icon: https://raw.githubusercontent.com/sighupio/gatekeeper-policy-manager/master/app/static-content/logo.svg
+    keywords:
+    - opa
+    - gatekeeper
+    - policy
+    - ui
+    - dashboard
+    - web
+    - rego
+    - webapp
+    maintainers:
+    - email: ramiro@sighup.io
+      name: Ramiro Algozino
+    - email: alessio.pragliola@sighup.io
+      name: Alessio Pragliola
+    name: gatekeeper-policy-manager
+    sources:
+    - https://github.com/sighupio/gatekeeper-policy-manager/
+    type: application
+    urls:
+    - https://github.com/sighupio/gatekeeper-policy-manager/releases/download/gatekeeper-policy-manager-0.7.0/gatekeeper-policy-manager-0.7.0.tgz
+    version: 0.7.0
+  - apiVersion: v2
     appVersion: v1.0.7
     created: "2023-08-03T08:26:51.416008935Z"
     description: A Helm chart for Gatekeeper Policy Manager, a simple to use, read-only
@@ -260,4 +289,4 @@ entries:
     urls:
     - https://github.com/sighupio/gatekeeper-policy-manager/releases/download/gatekeeper-policy-manager-0.2.0/gatekeeper-policy-manager-0.2.0.tgz
     version: 0.2.0
-generated: "2023-08-03T08:26:51.416086584Z"
+generated: "2023-08-10T09:37:16.411894802Z"
