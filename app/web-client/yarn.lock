@@ -1205,13 +1205,12 @@
   dependencies:
     tslib "^1.9.3"
 
-"@elastic/eui@^86.0.0":
-  version "86.0.0"
-  resolved "https://registry.yarnpkg.com/@elastic/eui/-/eui-86.0.0.tgz#52137f914b4b50566c5169c23a82bd4ed0f2ed0b"
-  integrity sha512-+0/BggLqlZFxYI/HPikfu8lh8ejl7RIOikgxVq1hQuXqjp+cqeJL5R2OcUHQVHBwYy/FdDiQkMHA0Vg/itp4Vw==
+"@elastic/eui@^87.0.0":
+  version "87.0.0"
+  resolved "https://registry.yarnpkg.com/@elastic/eui/-/eui-87.0.0.tgz#53ddf41387af80f83d436242fc92cddfc2d08eb5"
+  integrity sha512-61Mn3ejfnsPT2nRtzz7xc97wWK+yJeMqidgxS+JNNB3iysjGLQ06cR5NiK9Uvsis80D6qUqa2f3KeGRzQU6ovg==
   dependencies:
     "@hello-pangea/dnd" "^16.2.0"
-    "@types/chroma-js" "^2.0.0"
     "@types/lodash" "^4.14.194"
     "@types/numeral" "^0.0.28"
     "@types/react-input-autosize" "^2.2.1"
@@ -1220,10 +1219,10 @@
     "@types/refractor" "^3.0.0"
     "@types/resize-observer-browser" "^0.1.5"
     "@types/vfile-message" "^2.0.0"
-    chroma-js "^2.1.0"
+    chroma-js "^2.4.2"
     classnames "^2.2.6"
     lodash "^4.17.21"
-    mdast-util-to-hast "^10.0.0"
+    mdast-util-to-hast "^10.2.0"
     numeral "^2.0.6"
     prop-types "^15.6.0"
     react-dropzone "^11.5.3"
@@ -2045,11 +2044,6 @@
   integrity sha512-p7ienRMiS41Nu2/igbJxxLDWrSZ0WxM8UQgCeO9KhoVF7cOVFkrKsiDr1EsJIla8vV3oEEjGcz11jc5yimhzZw==
   dependencies:
     "@types/node" "*"
-
-"@types/chroma-js@^2.0.0":
-  version "2.1.4"
-  resolved "https://registry.yarnpkg.com/@types/chroma-js/-/chroma-js-2.1.4.tgz#52e3a8453000cdb9ad76357c2c47dbed702d136f"
-  integrity sha512-l9hWzP7cp7yleJUI7P2acmpllTJNYf5uU6wh50JzSIZt3fFHe+w2FM6w9oZGBTYzjjm2qHdnQvI+fF/JF/E5jQ==
 
 "@types/connect-history-api-fallback@^1.3.5":
   version "1.3.5"
@@ -3402,7 +3396,7 @@ check-types@^11.1.1:
   optionalDependencies:
     fsevents "~2.3.2"
 
-chroma-js@^2.1.0:
+chroma-js@^2.4.2:
   version "2.4.2"
   resolved "https://registry.yarnpkg.com/chroma-js/-/chroma-js-2.4.2.tgz#dffc214ed0c11fa8eefca2c36651d8e57cbfb2b0"
   integrity sha512-U9eDw6+wt7V8z5NncY2jJfZa+hUH8XEj8FQHgFJTrUFnJfXYf4Ml4adI2vXZOjqRDpFWtYVWypDfZwnJ+HIR4A==
@@ -6813,7 +6807,7 @@ mdast-util-definitions@^4.0.0:
   dependencies:
     unist-util-visit "^2.0.0"
 
-mdast-util-to-hast@^10.0.0, mdast-util-to-hast@^10.2.0:
+mdast-util-to-hast@^10.2.0:
   version "10.2.0"
   resolved "https://registry.yarnpkg.com/mdast-util-to-hast/-/mdast-util-to-hast-10.2.0.tgz#61875526a017d8857b71abc9333942700b2d3604"
   integrity sha512-JoPBfJ3gBnHZ18icCwHR50orC9kNH81tiR1gs01D8Q5YpV6adHNO9nKNuFBCJQ941/32PT1a63UF/DitmS3amQ==
