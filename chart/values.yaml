@@ -8,7 +8,18 @@ image:
   repository: quay.io/sighup/gatekeeper-policy-manager
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "v1.0.3"
+  tag: "v1.0.7"
+
+# # Override gatekeeper-policy-manager container entrypoint/args
+# # See https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/
+command:
+# - gunicorn
+args:
+# - --bind=:8080
+# - --workers=2
+# - --threads=4
+# - --worker-class=gthread
+# - app:app
 
 imagePullSecrets: []
 nameOverride: ""
@@ -47,6 +58,7 @@ securityContext:
       - ALL
 
 service:
+  annotations: {}
   type: ClusterIP
   port: 80
 
