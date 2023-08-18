@@ -3,7 +3,7 @@ cachetools==5.3.1
 certifi==2023.7.22
 cffi==1.15.1
 charset-normalizer==3.2.0
-click==8.1.6
+click==8.1.7
 cryptography==41.0.3
 defusedxml==0.7.1
 future==0.18.3
