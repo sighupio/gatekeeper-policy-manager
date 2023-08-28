@@ -6,7 +6,7 @@
 <!-- markdownlint-enable MD033 -->
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/gatekeeper-policy-manager/status.svg)](https://ci.sighup.io/sighupio/gatekeeper-policy-manager)
-![GPM Release](https://img.shields.io/badge/GPM-v1.0.3-blue)
+![GPM Release](https://img.shields.io/badge/GPM-v2.0.0-alpha1-blue)
 ![Helm Chart Release](https://img.shields.io/badge/Helm%20Chart-v0.4.1-blue)
 ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/gatekeeper-policy-manager)
@@ -63,7 +63,7 @@ Then, execute:
 
 ```bash
 helm repo add gpm https://sighupio.github.io/gatekeeper-policy-manager
-helm upgrade --install --namespace gatekeeper-system --set image.tag=v1.0.3 --values my-values.yaml gatekeeper-policy-manager gpm/gatekeeper-policy-manager
+helm upgrade --install --namespace gatekeeper-system --set image.tag=v2.0.0-alpha1 --values my-values.yaml gatekeeper-policy-manager gpm/gatekeeper-policy-manager
 ```
 
 > don't forget to replace `my-values.yaml` with the path to your values file.
@@ -73,7 +73,7 @@ helm upgrade --install --namespace gatekeeper-system --set image.tag=v1.0.3 --va
 GPM can also be run locally using Docker (or any other container runtime) and a `kubeconfig`. Assuming that the `kubeconfig` file you want to use is located at `~/.kube/config` the command to run GPM locally would be:
 
 ```bash
-docker run -v ~/.kube/config:/home/nonroot/.kube/config -p 8080:8080 quay.io/sighup/gatekeeper-policy-manager:v1.0.3
+docker run -v ~/.kube/config:/home/nonroot/.kube/config -p 8080:8080 quay.io/sighup/gatekeeper-policy-manager:v2.0.0-alpha1
 ```
 
 Then access it with your browser by visiting [http://127.0.0.1:8080](http://127.0.0.1:8080).
@@ -93,7 +93,7 @@ GPM is a stateless application, but it can be configured using environment varia
 
 ### Multi-cluster support
 
-Since `v1.0.3` GPM supports viewing information from more than one cluster. Multi-cluster support is achieved by using a `kubeconfig` with more than one context, where each context points to a different cluster. GPM will let you choose the context (cluster) from the UI.
+GPM supports viewing information from more than one cluster. Multi-cluster support is achieved by using a `kubeconfig` with more than one context, where each context points to a different cluster. GPM will let you choose the context (cluster) from the UI.
 
 If you want to run GPM in a cluster but with multi-cluster support, do as follows:
 
@@ -117,7 +117,7 @@ FROM curlimages/curl:7.81.0 as downloader
 RUN curl https://github.com/kubernetes-sigs/aws-iam-authenticator/releases/download/v0.5.5/aws-iam-authenticator_0.5.5_linux_amd64 --output /tmp/aws-iam-authenticator
 RUN chmod +x /tmp/aws-iam-authenticator
 
-FROM quay.io/sighup/gatekeeper-policy-manager:v1.0.3
+FROM quay.io/sighup/gatekeeper-policy-manager:v2.0.0-alpha1
 COPY --from=downloader --chown=root:root /tmp/aws-iam-authenticator /usr/local/bin/
 ```
 
@@ -170,4 +170,4 @@ To contribute to GPM's development you can pick one of the open issues and work 
 
 Once you are happy with your work, feel free to open a Pull Request.
 
-> We try to stick to [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) when writing the commit messages.
+> We try to stick to [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) when writing commit messages.

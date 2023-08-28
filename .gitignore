@@ -1,3 +1,5 @@
 .vscode
 static-content/*
 tests/e2e/test-results
+node_modules
+web-client/build
