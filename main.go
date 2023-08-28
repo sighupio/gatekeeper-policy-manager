@@ -474,21 +474,24 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: programLevel}))
 	slog.SetDefault(logger)
 
+	slog.Info("starting Gatekeeper Policy Manager", "version", "v2.0.0-alpha")
 	switch strings.ToLower(os.Getenv("GPM_LOG_LEVEL")) {
+	case "":
+		// if not specified, just use the default
 	case "debug":
-		slog.Info("log level is now DEBUG")
+		slog.Info("changed log level", "log_level", "DEBUG")
 		programLevel.Set(slog.LevelDebug)
 	case "info":
-		slog.Info("log level is now INFO")
+		slog.Info("changed log level", "log_level", "INFO")
 		programLevel.Set(slog.LevelInfo)
 	case "warn":
-		slog.Info("log level is now WARN")
+		slog.Info("changed log level", "log_level", "WARN")
 		programLevel.Set(slog.LevelWarn)
 	case "error":
-		slog.Info("log level is now ERROR")
+		slog.Info("changed log level", "log_level", "ERROR")
 		programLevel.Set(slog.LevelError)
 	default:
-		slog.Warn("the specified log level is not a valid option, defaulting to INFO.", "level", os.Getenv("GPM_LOG_LEVEL"))
+		slog.Warn("the requested log level is not a valid option", "log_level", "INFO", "requested_level", os.Getenv("GPM_LOG_LEVEL"))
 		programLevel.Set(slog.LevelInfo)
 	}
 
