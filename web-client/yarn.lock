@@ -1198,18 +1198,18 @@
   dependencies:
     tslib "^1.9.3"
 
-"@elastic/eui@^87.2.0":
-  version "87.2.0"
-  resolved "https://registry.yarnpkg.com/@elastic/eui/-/eui-87.2.0.tgz#6feabaea7daa03c1d9a906ed2f97312eec12bfe0"
-  integrity sha512-U4pDkDHTgYf39/D4o9inOcKMedDf+Y4sv42fRydg/blBYNbDCTlU/3z4fhpO2rA03kDyMFohMmRMt4aBrirBTA==
+"@elastic/eui@^88.0.0":
+  version "88.0.0"
+  resolved "https://registry.yarnpkg.com/@elastic/eui/-/eui-88.0.0.tgz#2f82c4552068c1a8b665250bd1c61a1418fb5f5c"
+  integrity sha512-kQbYPVg4CU5HvSykgMLPdMLzQG6IG6YOGADF0tFaNIicRlbY6O/DfNQa0VyhOULPgV21BxnGYT+RImy6Gm54ug==
   dependencies:
     "@hello-pangea/dnd" "^16.2.0"
     "@types/lodash" "^4.14.194"
-    "@types/numeral" "^0.0.28"
+    "@types/numeral" "^2.0.2"
     "@types/react-input-autosize" "^2.2.1"
     "@types/react-window" "^1.8.5"
-    "@types/refractor" "^3.0.0"
-    "@types/resize-observer-browser" "^0.1.5"
+    "@types/refractor" "^3.0.2"
+    "@types/resize-observer-browser" "^0.1.7"
     "@types/vfile-message" "^2.0.0"
     chroma-js "^2.4.2"
     classnames "^2.3.2"
@@ -1227,7 +1227,7 @@
     react-window "^1.8.9"
     refractor "^3.5.0"
     rehype-raw "^5.0.0"
-    rehype-react "^6.0.0"
+    rehype-react "^6.2.1"
     rehype-stringify "^8.0.0"
     remark-breaks "^2.0.2"
     remark-emoji "^2.1.0"
@@ -1235,7 +1235,7 @@
     remark-rehype "^8.0.0"
     tabbable "^5.3.3"
     text-diff "^1.0.1"
-    unified "^9.2.0"
+    unified "^9.2.2"
     unist-util-visit "^2.0.3"
     url-parse "^1.5.10"
     uuid "^8.3.0"
@@ -2159,10 +2159,10 @@
   dependencies:
     "@types/istanbul-lib-report" "*"
 
-"@types/jest@^29.5.3":
-  version "29.5.3"
-  resolved "https://registry.yarnpkg.com/@types/jest/-/jest-29.5.3.tgz#7a35dc0044ffb8b56325c6802a4781a626b05777"
-  integrity sha512-1Nq7YrO/vJE/FYnqYyw0FS8LdrjExSgIiHyKg7xPpn+yi8Q4huZryKnkJatN1ZRH89Kw2v33/8ZMB7DuZeSLlA==
+"@types/jest@^29.5.4":
+  version "29.5.4"
+  resolved "https://registry.yarnpkg.com/@types/jest/-/jest-29.5.4.tgz#9d0a16edaa009a71e6a71a999acd582514dab566"
+  integrity sha512-PhglGmhWeD46FYOVLt3X7TiWjzwuVGW9wG/4qocPevXMjCmrIc5b6db9WjeGE4QYVpUAWMDv3v0IiBwObY289A==
   dependencies:
     expect "^29.0.0"
     pretty-format "^29.0.0"
@@ -2201,15 +2201,15 @@
   resolved "https://registry.yarnpkg.com/@types/mime/-/mime-3.0.1.tgz#5f8f2bca0a5863cb69bc0b0acd88c96cb1d4ae10"
   integrity sha512-Y4XFY5VJAuw0FgAqPNd6NNoV44jbq9Bz2L7Rh/J6jLTiHBSBJa9fxqQIvkIld4GsoDOcCbvzOUAbLPsSKKg+uA==
 
-"@types/node@*", "@types/node@^20.5.6":
-  version "20.5.6"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-20.5.6.tgz#5e9aaa86be03a09decafd61b128d6cec64a5fe40"
-  integrity sha512-Gi5wRGPbbyOTX+4Y2iULQ27oUPrefaB0PxGQJnfyWN3kvEDGM3mIB5M/gQLmitZf7A9FmLeaqxD3L1CXpm3VKQ==
+"@types/node@*", "@types/node@^20.5.7":
+  version "20.5.7"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-20.5.7.tgz#4b8ecac87fbefbc92f431d09c30e176fc0a7c377"
+  integrity sha512-dP7f3LdZIysZnmvP3ANJYTSwg+wLLl8p7RqniVlV7j+oXSXAbt9h0WIBFmJy5inWZoX9wZN6eXx+YXd9Rh3RBA==
 
-"@types/numeral@^0.0.28":
-  version "0.0.28"
-  resolved "https://registry.yarnpkg.com/@types/numeral/-/numeral-0.0.28.tgz#e43928f0bda10b169b6f7ecf99e3ddf836b8ebe4"
-  integrity sha512-Sjsy10w6XFHDktJJdXzBJmoondAKW+LcGpRFH+9+zXEDj0cOH8BxJuZA9vUDSMAzU1YRJlsPKmZEEiTYDlICLw==
+"@types/numeral@^2.0.2":
+  version "2.0.2"
+  resolved "https://registry.yarnpkg.com/@types/numeral/-/numeral-2.0.2.tgz#8ea2c4f4e64c0cc948ad7da375f6f827778a7912"
+  integrity sha512-A8F30k2gYJ/6e07spSCPpkuZu79LCnkPTvqmIWQzNGcrzwFKpVOydG41lNt5wZXjSI149qjyzC2L1+F2PD/NUA==
 
 "@types/parse-json@^4.0.0":
   version "4.0.0"
@@ -2307,14 +2307,14 @@
     "@types/scheduler" "*"
     csstype "^3.0.2"
 
-"@types/refractor@^3.0.0":
+"@types/refractor@^3.0.2":
   version "3.0.2"
   resolved "https://registry.yarnpkg.com/@types/refractor/-/refractor-3.0.2.tgz#2d42128d59f78f84d2c799ffc5ab5cadbcba2d82"
   integrity sha512-2HMXuwGuOqzUG+KUTm9GDJCHl0LCBKsB5cg28ujEmVi/0qgTb6jOmkVSO5K48qXksyl2Fr3C0Q2VrgD4zbwyXg==
   dependencies:
     "@types/prismjs" "*"
 
-"@types/resize-observer-browser@^0.1.5":
+"@types/resize-observer-browser@^0.1.7":
   version "0.1.7"
   resolved "https://registry.yarnpkg.com/@types/resize-observer-browser/-/resize-observer-browser-0.1.7.tgz#294aaadf24ac6580b8fbd1fe3ab7b59fe85f9ef3"
   integrity sha512-G9eN0Sn0ii9PWQ3Vl72jDPgeJwRWhv2Qk/nQkJuWmRmOB4HX3/BhD5SE1dZs/hzPZL/WKnvF0RHdTSG54QJFyg==
@@ -8536,7 +8536,7 @@ rehype-raw@^5.0.0:
   dependencies:
     hast-util-raw "^6.1.0"
 
-rehype-react@^6.0.0:
+rehype-react@^6.2.1:
   version "6.2.1"
   resolved "https://registry.yarnpkg.com/rehype-react/-/rehype-react-6.2.1.tgz#9b9bf188451ad6f63796b784fe1f51165c67b73a"
   integrity sha512-f9KIrjktvLvmbGc7si25HepocOg4z0MuNOtweigKzBcDjiGSTGhyz6VSgaV5K421Cq1O+z4/oxRJ5G9owo0KVg==
@@ -9659,7 +9659,7 @@ unicode-property-aliases-ecmascript@^2.0.0:
   resolved "https://registry.yarnpkg.com/unicode-property-aliases-ecmascript/-/unicode-property-aliases-ecmascript-2.1.0.tgz#43d41e3be698bd493ef911077c9b131f827e8ccd"
   integrity sha512-6t3foTQI9qne+OZoVQB/8x8rk2k1eVy1gRXhV3oFQ5T6R1dqQ1xtin3XqSlx3+ATBkliTaR/hHyJBm+LVPNM8w==
 
-unified@^9.2.0:
+unified@^9.2.2:
   version "9.2.2"
   resolved "https://registry.yarnpkg.com/unified/-/unified-9.2.2.tgz#67649a1abfc3ab85d2969502902775eb03146975"
   integrity sha512-Sg7j110mtefBD+qunSLO1lqOEKdrwBFBrR6Qd8f4uwkhWNlbkaqwHse6e7QvD3AP/MNoJdEDLaf8OxYyoWgorQ==
