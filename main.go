@@ -73,6 +73,7 @@ func getHealth(c echo.Context) error {
 
 // Returns a JSON with information about the auth configuration.
 // The Go backend does not support auth yet. So we always return auth disabled for compatibility with the old Python backend
+// TODO: implement oidc auth
 func getAuth(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]bool{"auth_enabled": false})
 }
@@ -115,8 +116,7 @@ func getContexts(c echo.Context) error {
 // Gatekeeper only supports a single configuration object defined in the cluster but we return a list for future proofing.
 func getConfigs(c echo.Context) error {
 	if c.Param("context") != "" {
-		slog.Debug("switching to custom context", "context", c.Param("context"))
-		err := switchKubernetesContext(c.Echo(), c.Param("context"))
+		err := switchKubernetesContext(c.Param("context"))
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, ErrorAnswer{
 				ErrorMessage: fmt.Sprintf("Got an error while trying to switch to context %s", c.Param("context")),
@@ -140,8 +140,7 @@ func getConfigs(c echo.Context) error {
 // for each Constraint Template.
 func getConstraintTemplates(c echo.Context) error {
 	if c.Param("context") != "" {
-		slog.Debug("switching to custom context", "context", c.Param("context"))
-		err := switchKubernetesContext(c.Echo(), c.Param("context"))
+		err := switchKubernetesContext(c.Param("context"))
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, ErrorAnswer{
 				ErrorMessage: fmt.Sprintf("Got an error while trying to switch to context %s", c.Param("context")),
@@ -186,8 +185,7 @@ func getConstraintTemplates(c echo.Context) error {
 // - when a "report" Query parameter is present in the URL: an HTML report of the violations made from a template.
 func getConstraints(c echo.Context) error {
 	if c.Param("context") != "" {
-		slog.Debug("switching to custom context", "context", c.Param("context"))
-		err := switchKubernetesContext(c.Echo(), c.Param("context"))
+		err := switchKubernetesContext(c.Param("context"))
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, ErrorAnswer{
 				ErrorMessage: fmt.Sprintf("Got an error while trying to switch to context %s", c.Param("context")),
@@ -277,8 +275,7 @@ func getConstraints(c echo.Context) error {
 // for each Constraint Template.
 func getMutations(c echo.Context) error {
 	if c.Param("context") != "" {
-		slog.Debug("switching to custom context", "context", c.Param("context"))
-		err := switchKubernetesContext(c.Echo(), c.Param("context"))
+		err := switchKubernetesContext(c.Param("context"))
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, ErrorAnswer{
 				ErrorMessage: fmt.Sprintf("Got an error while trying to switch to context %s", c.Param("context")),
@@ -350,8 +347,7 @@ func getKubernetesEvents(clientset dynamic.DynamicClient, namespace string, even
 //	See: https://v1-25.docs.kubernetes.io/docs/reference/kubernetes-api/cluster-resources/event-v1/
 func getEvents(c echo.Context) error {
 	if c.Param("context") != "" {
-		slog.Debug("switching to custom context", "context", c.Param("context"))
-		err := switchKubernetesContext(c.Echo(), c.Param("context"))
+		err := switchKubernetesContext(c.Param("context"))
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, ErrorAnswer{
 				ErrorMessage: fmt.Sprintf("Got an error while trying to switch to context %s", c.Param("context")),
@@ -381,7 +377,7 @@ func getEvents(c echo.Context) error {
 
 // Initializes the Kubernetes client from one or more kubeconfigs or an in-cluster client when there's no kubeconfig.
 // The context paramter is optional, if emtpy will use the default context form the loaded kubeconfig.
-func kubeClient(e *echo.Echo, context string) (*dynamic.DynamicClient, *rest.Config, *api.Config, error) {
+func kubeClient(context string) (*dynamic.DynamicClient, *rest.Config, *api.Config, error) {
 
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
 	configOverrides := &clientcmd.ConfigOverrides{CurrentContext: context}
@@ -415,15 +411,17 @@ func kubeClient(e *echo.Echo, context string) (*dynamic.DynamicClient, *rest.Con
 
 // Switches the current context in the kubeconfig and replaces the relevant kuberneetes client objects.
 // If the context name passed is not available in the kubeconfig will return an error and left the kubernetes client objects intact.
-func switchKubernetesContext(e *echo.Echo, c string) error {
+func switchKubernetesContext(c string) error {
 	var err error
-	if c == startingConfig.CurrentContext {
-		return nil
-	}
+	// FIXME: dont' recreate the clients if the context hasn't changed.
+	// notice that startingConfig.currentContext gives the kubeconfig's currentContext and not the chosen one.
+	// I could not find a way to get the context set in the client, it doesn't seem to be accessible.
+	// We should store it ourselves.
+	slog.Debug("switching kubernetes client context", "kubeconfig_context", startingConfig.CurrentContext, "requested_context", c)
 	if _, ok := startingConfig.Contexts[c]; !ok {
 		return fmt.Errorf("context '%s' not found in Kubeconfig file", c)
 	}
-	clientset, config, startingConfig, err = kubeClient(e, c)
+	clientset, config, startingConfig, err = kubeClient(c)
 	if err != nil {
 		slog.Error("initializating the Kubernetes cilent with custom context failed", "context", c, "error", err)
 		return err
@@ -513,7 +511,7 @@ func main() {
 	}
 
 	var err error
-	clientset, config, startingConfig, err = kubeClient(e, "")
+	clientset, config, startingConfig, err = kubeClient("")
 	if err != nil {
 		slog.Error("Kubernetes cilent initialization failed", "error", err)
 		os.Exit(1)

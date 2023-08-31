@@ -25,7 +25,7 @@ import {
 import { useContext, useEffect, useState, ReactNode } from "react";
 import { ApplicationContext } from "../../AppContext";
 import { BackendError } from "../types";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { IEvent } from "./types";
 
 
@@ -35,6 +35,7 @@ function EventsComponent() {
   const [items, setItems] = useState<IEvent[]>([]);
   const appContextData = useContext(ApplicationContext);
   const navigate = useNavigate();
+  const { context } = useParams<"context">();
 
   const columns: Array<EuiBasicTableColumn<IEvent>> = [
     {
@@ -183,8 +184,8 @@ function EventsComponent() {
   useEffect(() => {
     setIsLoading(true);
     fetch(
-      `${appContextData.context.apiUrl}api/v1/events/${appContextData.context.currentK8sContext ?
-        appContextData.context.currentK8sContext + "/" : ""}`
+      `${appContextData.context.apiUrl}api/v1/events/${context ?
+        context + "/" : ""}`
     )
       .then(async (res) => {
         const body: IEvent[] = await res.json();
