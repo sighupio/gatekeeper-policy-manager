@@ -426,8 +426,8 @@ function ConstraintsComponent() {
   useEffect(() => {
     setIsLoading(true);
     fetch(
-      `${appContextData.context.apiUrl}api/v1/constraints/${appContextData.context.currentK8sContext ?
-        appContextData.context.currentK8sContext + "/" : ""}`
+      `${appContextData.context.apiUrl}api/v1/constraints/${context ?
+        context + "/" : ""}`
     )
       .then(async (res) => {
         const body: IConstraint[] = await res.json();
