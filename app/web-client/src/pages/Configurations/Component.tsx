@@ -26,7 +26,7 @@ import {
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { BackendError, ISideNav, ISideNavItem } from "../types";
 import { ApplicationContext } from "../../AppContext";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { JSONTree } from "react-json-tree";
 import theme from "../theme";
 import { scrollToElement } from "../../utils";
@@ -183,6 +183,7 @@ function ConfigurationsComponent() {
   const appContextData = useContext(ApplicationContext);
   const { hash } = useLocation();
   const navigate = useNavigate();
+  const { context } = useParams<"context">();
 
   const onRefChange = useCallback(
     (element: HTMLDivElement | null, index: number) => {
@@ -202,8 +203,8 @@ function ConfigurationsComponent() {
   useEffect(() => {
     setIsLoading(true);
     fetch(
-      `${appContextData.context.apiUrl}api/v1/configs/${appContextData.context.currentK8sContext ?
-        appContextData.context.currentK8sContext + "/" : ""}`
+      `${appContextData.context.apiUrl}api/v1/configs/${context ?
+        context + "/" : ""}`
     )
       .then(async (res) => {
         const body: IConfig[] = await res.json();
