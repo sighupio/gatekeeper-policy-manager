@@ -27,7 +27,7 @@
     "react-router-dom": "^6.16.0",
     "react-scripts": "5.0.1",
     "sass": "^1.66.1",
-    "typescript": "^5.1.6",
+    "typescript": "^5.2.2",
     "web-vitals": "^3.4.0"
   },
   "scripts": {
