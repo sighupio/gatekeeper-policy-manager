@@ -236,7 +236,7 @@ function SingleConstraintTemplate(
         </EuiFlexItem>
         <EuiFlexItem>
           <EuiFlexGroup direction="row" wrap={true} gutterSize="xs">
-            {item.status.byPod.map((pod) => {
+            {item.status.byPod.map((pod: any) => {
               return (
                 <EuiFlexItem
                   grow={false}

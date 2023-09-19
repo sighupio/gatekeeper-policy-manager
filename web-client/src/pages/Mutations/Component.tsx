@@ -173,7 +173,7 @@ function SingleMutation(item: IMutation) {
       <EuiFlexGroup justifyContent="flexEnd" gutterSize="s" className="dynamic">
         <EuiFlexItem>
           <EuiFlexGroup direction="row" wrap={true} gutterSize="xs">
-            {item.status.byPod.map((pod) => {
+            {item.status.byPod.map((pod: any) => {
               return (
                 <EuiFlexItem
                   grow={false}

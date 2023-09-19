@@ -346,7 +346,7 @@ function SingleConstraint(item: IConstraint, context?: string) {
         </EuiFlexItem>
         <EuiFlexItem>
           <EuiFlexGroup direction="row" gutterSize="xs" wrap={true}>
-            {item.status.byPod.map((pod) => {
+            {item.status.byPod.map((pod: any) => {
               return (
                 <EuiFlexItem
                   grow={false}
