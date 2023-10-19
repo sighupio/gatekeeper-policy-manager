@@ -6,7 +6,7 @@
 <!-- markdownlint-enable MD033 -->
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/gatekeeper-policy-manager/status.svg)](https://ci.sighup.io/sighupio/gatekeeper-policy-manager)
-![GPM Release](https://img.shields.io/badge/GPM-v2.0.0-alpha1-blue)
+![GPM Release](https://img.shields.io/badge/GPM-v2.0.0--alpha1-blue)
 ![Helm Chart Release](https://img.shields.io/badge/Helm%20Chart-v0.4.1-blue)
 ![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/gatekeeper-policy-manager)
