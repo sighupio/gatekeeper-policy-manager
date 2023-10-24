@@ -472,7 +472,7 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: programLevel}))
 	slog.SetDefault(logger)
 
-	slog.Info("starting Gatekeeper Policy Manager", "version", "v2.0.0-alpha")
+	slog.Info("starting Gatekeeper Policy Manager", "version", "v2.0.0-alpha1")
 	switch strings.ToLower(os.Getenv("GPM_LOG_LEVEL")) {
 	case "":
 		// if not specified, just use the default
