@@ -1,6 +1,6 @@
 -c constraints.txt
 Flask==3.0.0
-Flask-pyoidc==3.14.2
+Flask-pyoidc==3.14.3
 flask-cors==4.0.0
 gunicorn==21.2.0
 kubernetes==27.2.0
