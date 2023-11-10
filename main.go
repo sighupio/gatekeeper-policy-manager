@@ -30,6 +30,7 @@ import (
 	"github.com/labstack/echo-contrib/prometheus"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/spf13/viper"
 
 	"golang.org/x/exp/slog"
 )
@@ -358,10 +359,7 @@ func getEvents(c echo.Context) error {
 	}
 
 	// TODO: maybe we should Lookup this once at start-time and save it instead of on each call to this func
-	eventsSource, ok := os.LookupEnv("GPM_EVENTS_SOURCE")
-	if !ok {
-		eventsSource = "gatekeeper-webhook"
-	}
+	eventsSource := viper.GetString("events_source")
 	events, err := getKubernetesEvents(*clientset, c.QueryParam("namespace"), eventsSource)
 	if err != nil {
 		slog.Error("got error while getting namespace events", "namespace", c.QueryParam("namespace"), "source", eventsSource, "error", err)
@@ -430,6 +428,15 @@ func switchKubernetesContext(c string) error {
 }
 
 func main() {
+	// Get configuration from env
+	viper.SetEnvPrefix("gpm") // will be uppercased automatically
+	viper.BindEnv("log_level")
+	viper.SetDefault("log_level", "INFO")
+	viper.BindEnv("listen_address")
+	viper.SetDefault("listen_address", ":8080")
+	viper.BindEnv("events_source")
+	viper.SetDefault("events_source", "gatekeeper-webhook")
+
 	// Initilize Echo HTTP server
 	e := echo.New()
 	e.HideBanner = true
@@ -473,9 +480,7 @@ func main() {
 	slog.SetDefault(logger)
 
 	slog.Info("starting Gatekeeper Policy Manager", "version", "v2.0.0-alpha1")
-	switch strings.ToLower(os.Getenv("GPM_LOG_LEVEL")) {
-	case "":
-		// if not specified, just use the default
+	switch strings.ToLower(viper.GetString("log_level")) {
 	case "debug":
 		slog.Info("changed log level", "log_level", "DEBUG")
 		programLevel.Set(slog.LevelDebug)
@@ -489,7 +494,7 @@ func main() {
 		slog.Info("changed log level", "log_level", "ERROR")
 		programLevel.Set(slog.LevelError)
 	default:
-		slog.Warn("the requested log level is not a valid option", "log_level", "INFO", "requested_level", os.Getenv("GPM_LOG_LEVEL"))
+		slog.Warn("the requested log level is not a valid option", "log_level", "INFO", "requested_level", viper.GetString("log_level"))
 		programLevel.Set(slog.LevelInfo)
 	}
 
@@ -585,12 +590,9 @@ func main() {
 		return c.JSON(http.StatusOK, v2Answer{startingConfig.CurrentContext, startingConfig.Contexts})
 	})
 
-	// configure and start the web server
-	address, ok := os.LookupEnv("GPM_LISTEN_ADDRESS")
-	if !ok {
-		address = ":8080"
-	}
+	address := viper.GetString("listen_address")
+
 	slog.Info("starting HTTP server", "address", address)
-	slog.Error("starting HTTP server failed", "error", e.Start(address))
+	slog.Error("starting HTTP server failed", "error", e.Start(address), "address", address)
 	os.Exit(1)
 }
