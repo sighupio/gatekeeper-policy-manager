@@ -27,7 +27,7 @@
     "react-router-dom": "^6.20.1",
     "react-scripts": "5.0.1",
     "sass": "^1.69.5",
-    "typescript": "^5.3.2",
+    "typescript": "^5.3.3",
     "web-vitals": "^3.5.0"
   },
   "resolutions": {
