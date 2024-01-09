@@ -143,7 +143,11 @@ function SingleConstraint(item: IConstraint, context?: string) {
               {getEnforcementActionRenderData(item.spec).badge}
             </EuiFlexItem>
             <EuiFlexItem grow={false} style={{ marginLeft: "auto" }}>
-              <EuiLink href={`/constrainttemplates${context ? "/" + context : ""}#${item.kind}`}>
+              <EuiLink
+                href={`/constrainttemplates${context ? "/" + context : ""}#${
+                  item.kind
+                }`}
+              >
                 <EuiText size="xs">
                   <span>TEMPLATE: {item.kind}</span>
                   <EuiIcon type="link" size="s" style={{ marginLeft: 5 }} />
@@ -246,20 +250,20 @@ function SingleConstraint(item: IConstraint, context?: string) {
                     <EuiFlexItem>
                       {(item.status?.totalViolations ?? 0) >
                         item.status.violations.length && (
-                          <EuiCallOut
-                            title="Not all violations can be shown"
-                            color="warning"
-                            iconType="alert"
-                          >
-                            <p>
-                              Gatekeeper's configuration is limiting the audit
-                              violations per constraint to{" "}
-                              {item.status.violations.length}. See Gatekeeper's
-                              --constraint-violations-limit audit configuration
-                              flag.
-                            </p>
-                          </EuiCallOut>
-                        )}
+                        <EuiCallOut
+                          title="Not all violations can be shown"
+                          color="warning"
+                          iconType="alert"
+                        >
+                          <p>
+                            Gatekeeper's configuration is limiting the audit
+                            violations per constraint to{" "}
+                            {item.status.violations.length}. See Gatekeeper's
+                            --constraint-violations-limit audit configuration
+                            flag.
+                          </p>
+                        </EuiCallOut>
+                      )}
                     </EuiFlexItem>
                   </EuiFlexGroup>
                 </EuiAccordion>
@@ -354,8 +358,9 @@ function SingleConstraint(item: IConstraint, context?: string) {
                 >
                   <EuiBadge
                     iconType={pod.enforced ? shieldActive : shieldInactive}
-                    title={`Constraint is ${!pod.enforced ? "NOT " : ""
-                      }being ENFORCED by this POD`}
+                    title={`Constraint is ${
+                      !pod.enforced ? "NOT " : ""
+                    }being ENFORCED by this POD`}
                     style={{
                       paddingRight: 0,
                       borderRight: 0,
@@ -420,14 +425,15 @@ function ConstraintsComponent() {
         setFullyLoadedRefs(true);
       }
     },
-    [panelsRef, items]
+    [panelsRef, items],
   );
 
   useEffect(() => {
     setIsLoading(true);
     fetch(
-      `${appContextData.context.apiUrl}api/v1/constraints/${context ?
-        context + "/" : ""}`
+      `${appContextData.context.apiUrl}api/v1/constraints/${
+        context ? context + "/" : ""
+      }`,
     )
       .then(async (res) => {
         const body: IConstraint[] = await res.json();
@@ -454,7 +460,7 @@ function ConstraintsComponent() {
       .finally(() => setIsLoading(false));
   }, [appContextData.context.currentK8sContext]);
 
-  useScrollToHash(hash, [fullyLoadedRefs,]);
+  useScrollToHash(hash, [fullyLoadedRefs]);
 
   useCurrentElementInView(panelsRef, setCurrentElementInView);
 
@@ -523,17 +529,18 @@ function ConstraintsComponent() {
                   iconSize="s"
                   iconType="popout"
                   style={{ width: "100%" }}
-                  href={`${appContextData.context.apiUrl}api/v1/constraints/${appContextData.context.currentK8sContext ?? ""}?report=html`}
+                  href={`${appContextData.context.apiUrl}api/v1/constraints/${
+                    appContextData.context.currentK8sContext
+                      ? appContextData.context.currentK8sContext + "/"
+                      : ""
+                  }?report=html`}
                   download
                 >
                   <EuiText size="xs">Download violations report</EuiText>
                 </EuiButton>
               )}
             </EuiPageSidebar>
-            <EuiPageBody
-              paddingSize="m"
-              style={{ marginBottom: 350 }}
-            >
+            <EuiPageBody paddingSize="m" style={{ marginBottom: 350 }}>
               <>
                 {items && items.length > 0 ? (
                   items.map((item, index) => {
@@ -543,7 +550,10 @@ function ConstraintsComponent() {
                         key={item.metadata.name}
                         ref={(node) => onRefChange(node, index)}
                       >
-                        {SingleConstraint(item, context)}
+                        {SingleConstraint(
+                          item,
+                          appContextData.context.currentK8sContext,
+                        )}
                       </div>
                     );
                   })

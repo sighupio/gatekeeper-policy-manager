@@ -14,8 +14,8 @@ import {
   EuiText,
 } from "@elastic/eui";
 import logo from "../../assets/gpm-logo.svg";
-import {useContext} from "react";
-import {ApplicationContext} from "../../AppContext";
+import { useContext } from "react";
+import { ApplicationContext } from "../../AppContext";
 
 function HomeComponent() {
   const appContextData = useContext(ApplicationContext);
@@ -37,7 +37,7 @@ function HomeComponent() {
         direction="column"
       >
         <EuiFlexItem grow={false}>
-          <EuiImage style={{width: 100}} src={logo} alt="gpm"/>
+          <EuiImage style={{ width: 100 }} src={logo} alt="gpm" />
         </EuiFlexItem>
         <EuiFlexItem grow={false}>
           <EuiText textAlign="center">
@@ -46,7 +46,7 @@ function HomeComponent() {
         </EuiFlexItem>
         <EuiFlexItem grow={false}>
           <EuiText textAlign="center">
-            <h2 style={{fontWeight: 300}}>
+            <h2 style={{ fontWeight: 300 }}>
               Gatekeeper Policy Manager is a simple to use web-based tool to see
               the policies deployed in your cluster and their status
             </h2>

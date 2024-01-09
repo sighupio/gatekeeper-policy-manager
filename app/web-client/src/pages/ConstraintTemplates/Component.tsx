@@ -68,7 +68,7 @@ function generateSideNav(list: IConstraintTemplate[]): ISideNav[] {
 function SingleConstraintTemplate(
   item: IConstraintTemplate,
   relatedConstraints: IConstraint[],
-  context?: string
+  context?: string,
 ) {
   return (
     <EuiPanel grow={true} style={{ marginBottom: "24px" }}>
@@ -104,7 +104,7 @@ function SingleConstraintTemplate(
           </EuiFlexGroup>
         </EuiFlexItem>
       </EuiFlexGroup>
-      {item.metadata.annotations?.description &&
+      {item.metadata.annotations?.description && (
         <EuiFlexGroup direction="column" gutterSize="s">
           <EuiFlexItem grow={false}>
             <EuiText size="s">
@@ -112,7 +112,7 @@ function SingleConstraintTemplate(
             </EuiText>
           </EuiFlexItem>
         </EuiFlexGroup>
-      }
+      )}
       <EuiSpacer size="s" />
       <EuiHorizontalRule margin="none" />
       <EuiSpacer size="s" />
@@ -133,24 +133,18 @@ function SingleConstraintTemplate(
                 buttonContent="Libs definition"
                 paddingSize="none"
               >
-                <EuiCodeBlock
-                  lineNumbers
-                  language="rego"
-                >
+                <EuiCodeBlock lineNumbers language="rego">
                   {lib}
                 </EuiCodeBlock>
               </EuiAccordion>
-            )
+            );
           })}
           <EuiAccordion
             id={`${item.spec.crd.spec.names.kind}-rego`}
             buttonContent="Rego definition"
             paddingSize="none"
           >
-            <EuiCodeBlock
-              lineNumbers
-              language="rego"
-            >
+            <EuiCodeBlock lineNumbers language="rego">
               {item.spec.targets[0].rego}
             </EuiCodeBlock>
           </EuiAccordion>
@@ -198,7 +192,11 @@ function SingleConstraintTemplate(
             </EuiFlexItem>
             {relatedConstraints.map((constraint, index) => (
               <EuiFlexItem key={constraint.metadata.name}>
-                <EuiLink href={`/constraints${context ? "/" + context : ""}#${constraint.metadata.name}`}>
+                <EuiLink
+                  href={`/constraints${context ? "/" + context : ""}#${
+                    constraint.metadata.name
+                  }`}
+                >
                   <EuiText size="s">
                     <span>{constraint.metadata.name}</span>
                     <EuiIcon type="link" size="s" style={{ marginLeft: 5 }} />
@@ -300,14 +298,15 @@ function ConstraintTemplatesComponent() {
         setFullyLoadedRefs(true);
       }
     },
-    [panelsRef, items]
+    [panelsRef, items],
   );
 
   useEffect(() => {
     setIsLoading(true);
     fetch(
-      `${appContextData.context.apiUrl}api/v1/constrainttemplates/${context ?
-        context + "/" : ""}`
+      `${appContextData.context.apiUrl}api/v1/constrainttemplates/${
+        context ? context + "/" : ""
+      }`,
     )
       .then(async (res) => {
         const body: IConstraintTemplateResponse = await res.json();
@@ -401,10 +400,7 @@ function ConstraintTemplatesComponent() {
             <EuiPageSidebar paddingSize="m" sticky>
               <EuiSideNav items={sideNav} />
             </EuiPageSidebar>
-            <EuiPageBody
-              paddingSize="m"
-              style={{ marginBottom: 350 }}
-            >
+            <EuiPageBody paddingSize="m" style={{ marginBottom: 350 }}>
               <>
                 {items && items.length > 0 ? (
                   items.map((item, index) => {
@@ -419,7 +415,7 @@ function ConstraintTemplatesComponent() {
                         {SingleConstraintTemplate(
                           item,
                           relatedConstraintsForItem,
-                          context
+                          appContextData.context.currentK8sContext,
                         )}
                       </div>
                     );
