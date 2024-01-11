@@ -1,4 +1,4 @@
-# Gatekeeper Policy Manager Helm Chart - v0.6.0
+# Gatekeeper Policy Manager Helm Chart - v0.9.0
 
 A Helm chart for Gatekeeper Policy Manager, a simple to use, read-only web UI for viewing OPA Gatekeeper policies' status in a Kubernetes Cluster.
 
