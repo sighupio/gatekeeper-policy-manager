@@ -235,7 +235,7 @@ def get_auth():
 
 
 @app.route("/api/v1/constraints/")
-@app.route("/api/v1/constraints/<context>/")
+@app.route("/api/v1/constraints/<path:context>/")
 @login_required_conditional
 def get_constraints(context=None):
     """Constraints view"""
@@ -326,7 +326,7 @@ def get_constraints(context=None):
 
 
 @app.route("/api/v1/constrainttemplates/")
-@app.route("/api/v1/constrainttemplates/<context>/")
+@app.route("/api/v1/constrainttemplates/<path:context>/")
 @login_required_conditional
 def get_constrainttemplates(context=None):
     """Constraint Templates View"""
@@ -397,7 +397,7 @@ def get_constrainttemplates(context=None):
 
 
 @app.route("/api/v1/configs/")
-@app.route("/api/v1/configs/<context>/")
+@app.route("/api/v1/configs/<path:context>/")
 @login_required_conditional
 def get_gatekeeperconfigs(context=None):
     """Gatekeeper Configs View"""
