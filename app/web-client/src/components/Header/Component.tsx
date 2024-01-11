@@ -63,8 +63,8 @@ function HeaderComponent() {
         dropdownDisplay: (
           <EuiText
             size="s"
+            title={k8sContext}
             style={{
-              maxWidth: "200px",
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
@@ -157,12 +157,14 @@ function HeaderComponent() {
                   </p>
                 </EuiText>
                 <EuiSuperSelect
-                  style={{ width: "200px" }}
                   options={optionsFromContexts}
                   valueOfSelected={decodeURIComponent(
                     context.currentK8sContext,
                   )}
                   onChange={(value) => onChangeContext(value)}
+                  hasDividers
+                  placeholder="change current context"
+                  title={decodeURIComponent(context.currentK8sContext)}
                 />
               </EuiHeaderSectionItem>
             )}
