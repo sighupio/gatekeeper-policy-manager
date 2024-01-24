@@ -56,7 +56,7 @@ steps:
       - render
     commands:
       # we use --ignore-deprecations because we don't want the CI to fail when the API has not been removed yet.
-      - /pluto detect gpm.yml --ignore-deprecations --target-versions=k8s=v1.28.0
+      - /pluto detect gpm.yml --ignore-deprecations --target-versions=k8s=v1.29.0
 
 trigger:
   ref:
@@ -132,8 +132,8 @@ steps:
     image: docker:dind
     pull: always
     environment:
-      KIND_VERSION: v0.17.0
-      CLUSTER_VERSION: v1.24.7
+      KIND_VERSION: v0.20.0
+      CLUSTER_VERSION: v1.29.0
       LOAD_IMAGE: gatekeeper-policy-manager:test-${DRONE_BUILD_NUMBER}
       CLUSTER_NAME: ${DRONE_REPO_NAME}-${DRONE_BUILD_NUMBER}
     volumes:
