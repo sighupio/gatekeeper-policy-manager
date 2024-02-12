@@ -1,0 +1,7 @@
+config:
+  secretKey: reguired-value-without-default-value
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 8

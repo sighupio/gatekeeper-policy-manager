@@ -1,0 +1,2 @@
+config:
+  secretKey: reguired-value-without-default-value
