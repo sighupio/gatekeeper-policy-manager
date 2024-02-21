@@ -6,7 +6,7 @@ charset-normalizer==3.3.2
 click==8.1.7
 cryptography==42.0.2
 defusedxml==0.7.1
-future==0.18.3
+future==1.0.0
 google-auth==2.27.0
 idna==3.6
 importlib-resources==6.1.1
