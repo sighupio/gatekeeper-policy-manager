@@ -22,7 +22,7 @@ pycparser==2.21
 pycryptodomex==3.20.0
 pydantic==2.6.2
 pyjwkest==1.4.2
-python-dateutil==2.8.2
+python-dateutil==2.9.0.post0
 PyYAML==6.0.1
 requests==2.31.0
 requests-oauthlib==1.3.1
