@@ -11,7 +11,7 @@
   "dependencies": {
     "@elastic/eui": "^93.0.0",
     "@emotion/css": "^11.11.2",
-    "@emotion/react": "^11.11.3",
+    "@emotion/react": "^11.11.4",
     "@testing-library/jest-dom": "^6.4.2",
     "@testing-library/react": "^12.1.5",
     "@testing-library/user-event": "^14.5.2",
