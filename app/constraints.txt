@@ -25,7 +25,7 @@ pyjwkest==1.4.2
 python-dateutil==2.9.0.post0
 PyYAML==6.0.1
 requests==2.31.0
-requests-oauthlib==1.4.0
+requests-oauthlib==2.0.0
 rsa==4.9
 six==1.16.0
 typing-extensions==4.10.0
