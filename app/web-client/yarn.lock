@@ -1295,10 +1295,10 @@
   dependencies:
     tslib "^1.9.3"
 
-"@elastic/eui@^94.0.0":
-  version "94.0.0"
-  resolved "https://registry.yarnpkg.com/@elastic/eui/-/eui-94.0.0.tgz#dbb48e7734813e549a995da8b7c67813f7490d95"
-  integrity sha512-nyXRE63nB8GWA+HvKKOBAOcADVoYVjmOxA/zXbrXJH7FbMHuQAwd/y0oWhdz2E3QcOhquCuvF22cY71SkOenpQ==
+"@elastic/eui@^94.1.0":
+  version "94.1.0"
+  resolved "https://registry.yarnpkg.com/@elastic/eui/-/eui-94.1.0.tgz#39fea7dc983206ccc9917fc912631b8947ca68ca"
+  integrity sha512-93OujrKqgK5UvzRjy/+7cVx6s4Xq8SjDqCsqZvct4aQAkVLrFZhO8tVoYJrTds5bvz6Pb2LCe2HR90U1LlHHGw==
   dependencies:
     "@hello-pangea/dnd" "^16.3.0"
     "@types/lodash" "^4.14.202"
