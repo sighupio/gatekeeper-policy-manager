@@ -1,4 +1,4 @@
-Beaker==1.12.1
+Beaker==1.13.0
 cachetools==5.3.3
 certifi==2024.2.2
 cffi==1.16.0
