@@ -121,7 +121,11 @@ topologySpreadConstraints: []
 config:
   preferredURLScheme: http
   logLevel: info
-  secretKey:
+  # secret in plain text
+  secretKey: null
+  # name of the secret containing the secret key. if set, config.secretKey should be null!
+  # supported fields: secretKey
+  secretRef: null
   multiCluster:
     enabled: false
     kubeconfig: |
