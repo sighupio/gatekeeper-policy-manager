@@ -9,3 +9,4 @@ tests/e2e/test-results
 build/
 node_modules/
 static-content/
+*.tgz

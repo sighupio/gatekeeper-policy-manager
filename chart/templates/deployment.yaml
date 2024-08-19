@@ -62,10 +62,17 @@ spec:
             - name: GPM_PREFERRED_URL_SCHEME
               value: {{ required "A valid .Values.config.preferredURLScheme entry required! Choose either http or https" .Values.config.preferredURLScheme | quote }}
             - name: GPM_SECRET_KEY
+              {{- if .Values.config.secretKey }}
               valueFrom:
                 secretKeyRef:
                   name: {{ include "gatekeeper-policy-manager.fullname" . }}
                   key: secretKey
+              {{- else }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.secretRef }}
+                  key: secretKey
+              {{- end }}
             {{- if .Values.config.oidc.enabled }}
             - name: GPM_AUTH_ENABLED
               value: "OIDC"
