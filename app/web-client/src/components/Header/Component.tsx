@@ -22,7 +22,7 @@ import {
   useState,
 } from "react";
 import { ApplicationContext } from "../../AppContext";
-import { EuiSuperSelectOption } from "@elastic/eui/src/components/form/super_select/super_select_control";
+import { EuiSuperSelectOption } from "@elastic/eui/src/components/form/super_select/super_select_item";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./Style.scss";
 
@@ -136,11 +136,10 @@ function HeaderComponent() {
                     key={route.path}
                   >
                     <EuiButtonEmpty
-                      href={`${
-                        route.path === "/"
-                          ? route.path
-                          : route.path + "/" + (context.currentK8sContext ?? "")
-                      }`}
+                      href={`${route.path === "/"
+                        ? route.path
+                        : route.path + "/" + (context.currentK8sContext ?? "")
+                        }`}
                     >
                       {route.name}
                     </EuiButtonEmpty>
