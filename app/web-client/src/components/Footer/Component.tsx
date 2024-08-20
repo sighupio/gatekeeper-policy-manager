@@ -22,7 +22,7 @@ function FooterComponent() {
         <EuiFlexItem grow={false}>
           <EuiText size="s" className="dynamic">
             <p>
-              <strong>Gatekeeper Policy Manager v1.0.11</strong>
+              <strong>Gatekeeper Policy Manager v1.0.12</strong>
             </p>
           </EuiText>
           <EuiText size="s">
