@@ -98,7 +98,9 @@ steps:
     commands:
       - "apk add git"
       - "docker buildx create --name sighup-builder --use"
-      - "docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 --pull -f $${DOCKERFILE} -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG} $${BUILD_CONTEXT}"
+      # I have disabled armv7 because the build takess too long and the pipeline goes in timeout.
+      # - "docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 --pull -f $${DOCKERFILE} -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG} $${BUILD_CONTEXT}"
+      - "docker buildx build --platform linux/amd64,linux/arm64 --pull -f $${DOCKERFILE} -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG} $${BUILD_CONTEXT}"
       - "docker buildx build --load --platform linux/amd64 -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG} $${BUILD_CONTEXT}"
 
 volumes:
