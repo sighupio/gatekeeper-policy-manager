@@ -42,12 +42,13 @@ steps:
       - clone
 
   - name: render
-    image: quay.io/sighup/e2e-testing:1.1.0_0.2.2_2.16.1_1.9.4_1.22.0_3.8.7_2.4.1
+    image: quay.io/sighup/e2e-testing:1.1.0_0.11.0_3.12.0_1.9.4_1.29.1_3.5.3_4.33.3
     pull: always
     depends_on:
       - clone
     commands:
-      - kustomize build . > gpm.yml
+      - kustomize build . > gpm.yaml
+      - helm template --set config.secretKey=e2e chart > rendered_chart.yaml
 
   - name: check-deprecated-apis
     image: us-docker.pkg.dev/fairwinds-ops/oss/pluto:v5
@@ -56,7 +57,8 @@ steps:
       - render
     commands:
       # we use --ignore-deprecations because we don't want the CI to fail when the API has not been removed yet.
-      - /pluto detect gpm.yml --ignore-deprecations --target-versions=k8s=v1.29.0
+      - /pluto detect gpm.yaml --ignore-deprecations --target-versions=k8s=v1.29.0
+      - /pluto detect rendered_chart.yaml --ignore-deprecations --target-versions=k8s=v1.29.0
 
 trigger:
   ref:
@@ -94,12 +96,12 @@ steps:
       - name: dockersock
         path: /var/run/docker.sock
     commands:
-      - docker build
-        --pull=true
-        --rm=true
-        -f $${DOCKERFILE}
-        -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG}
-        $${BUILD_CONTEXT}
+      - "apk add git"
+      - "docker buildx create --name sighup-builder --use"
+      # I have disabled armv7 because the build takess too long and the pipeline goes in timeout.
+      # - "docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 --pull -f $${DOCKERFILE} -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG} $${BUILD_CONTEXT}"
+      - "docker buildx build --platform linux/amd64,linux/arm64 --pull -f $${DOCKERFILE} -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG} $${BUILD_CONTEXT}"
+      - "docker buildx build --load -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG} $${BUILD_CONTEXT}"
 
 volumes:
   - name: dockerconfig
@@ -259,7 +261,7 @@ steps:
         include:
           - refs/tags/**
         exclude:
-          - refs/tags/gatekeeper-policy-manager-*  # Exclude helm chart releases
+          - refs/tags/gatekeeper-policy-manager-* # Exclude helm chart releases
 
   - name: registry-sha
     image: docker:dind
@@ -274,16 +276,18 @@ steps:
       repo: quay.io/sighup/gatekeeper-policy-manager
       container_image_name: gatekeeper-policy-manager
       container_image_tag: test-${DRONE_BUILD_NUMBER}
+      DOCKERFILE: Dockerfile
+      BUILD_CONTEXT: "."
     volumes:
       - name: dockersock
         path: /var/run/docker.sock
     commands:
-      - docker login $${registry} -u $${username} -p $${password}
-      - docker tag $${container_image_name}:$${container_image_tag} $${repo}:unstable
-      - "docker tag $${container_image_name}:$${container_image_tag} $${repo}:${DRONE_COMMIT_SHA}"
-      - docker push $${repo}:unstable
-      - "docker push $${repo}:${DRONE_COMMIT_SHA}"
-      - docker rmi $${container_image_name}:$${container_image_tag}
+      - "apk add git"
+      - "docker login $${registry} -u $${username} -p $${password}"
+      - "docker buildx create --name sighup-builder --use"
+      - "docker buildx build --platform linux/amd64,linux/arm64 --pull --push -f $${DOCKERFILE} -t $${repo}:${DRONE_COMMIT_SHA} -t $${repo}:unstable $${BUILD_CONTEXT}"
+      # - "docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 --pull --push -f $${DOCKERFILE} -t $${repo}:unstable -t $${repo}:go -t $${repo}:${DRONE_COMMIT_SHA} $${BUILD_CONTEXT}"
+      # - docker rmi $${container_image_name}:$${container_image_tag}
     when:
       event:
         - push
@@ -301,16 +305,16 @@ steps:
       repo: quay.io/sighup/gatekeeper-policy-manager
       container_image_name: gatekeeper-policy-manager
       container_image_tag: test-${DRONE_BUILD_NUMBER}
+      DOCKERFILE: Dockerfile
+      BUILD_CONTEXT: "."
     volumes:
       - name: dockersock
         path: /var/run/docker.sock
     commands:
-      - docker login $${registry} -u $${username} -p $${password}
-      - docker tag $${container_image_name}:$${container_image_tag} $${repo}:latest
-      - "docker tag $${container_image_name}:$${container_image_tag} $${repo}:${DRONE_TAG}"
-      - docker push $${repo}:latest
-      - "docker push $${repo}:${DRONE_TAG}"
-      - docker rmi $${container_image_name}:$${container_image_tag}
+      - "apk add git"
+      - "docker login $${registry} -u $${username} -p $${password}"
+      - "docker buildx create --name sighup-builder --use"
+      - "docker buildx build --platform linux/amd64,linux/arm64 --pull --push -f $${DOCKERFILE} -t $${repo}:latest -t $${repo}:${DRONE_TAG} $${BUILD_CONTEXT}"
     when:
       event:
         - tag
