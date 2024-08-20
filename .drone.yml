@@ -48,7 +48,7 @@ steps:
       - clone
     commands:
       - kustomize build . > gpm.yaml
-      - helm template --set config.secretKey=e2e char > rendered_chart.yaml
+      - helm template --set config.secretKey=e2e chart > rendered_chart.yaml
 
   - name: check-deprecated-apis
     image: us-docker.pkg.dev/fairwinds-ops/oss/pluto:v5
@@ -100,7 +100,6 @@ steps:
       - "docker buildx create --name sighup-builder --use"
       - "docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 --pull -f $${DOCKERFILE} -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG} $${BUILD_CONTEXT}"
       - "docker buildx build --load --platform linux/amd64 -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG} $${BUILD_CONTEXT}"
-
 
 volumes:
   - name: dockerconfig
