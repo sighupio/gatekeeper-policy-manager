@@ -57,8 +57,8 @@ steps:
       - render
     commands:
       # we use --ignore-deprecations because we don't want the CI to fail when the API has not been removed yet.
-      - /pluto detect gpm.yaml --ignore-deprecations --target-versions=k8s=v1.29.0
-      - /pluto detect rendered_chart.yaml --ignore-deprecations --target-versions=k8s=v1.29.0
+      - /pluto detect gpm.yaml --ignore-deprecations --target-versions=k8s=v1.31.0
+      - /pluto detect rendered_chart.yaml --ignore-deprecations --target-versions=k8s=v1.31.0
 
 trigger:
   ref:
@@ -134,8 +134,8 @@ steps:
     image: docker:dind
     pull: always
     environment:
-      KIND_VERSION: v0.20.0
-      CLUSTER_VERSION: v1.29.0
+      KIND_VERSION: v0.24.0
+      CLUSTER_VERSION: v1.31.0
       LOAD_IMAGE: gatekeeper-policy-manager:test-${DRONE_BUILD_NUMBER}
       CLUSTER_NAME: ${DRONE_REPO_NAME}-${DRONE_BUILD_NUMBER}
     volumes:
@@ -152,7 +152,7 @@ steps:
       - kind get kubeconfig --name $${CLUSTER_NAME} > kubeconfig.yml
 
   - name: tests
-    image: quay.io/sighup/e2e-testing:1.1.0_0.7.0_3.1.1_1.9.4_1.24.1_3.8.7_4.21.1
+    image: quay.io/sighup/e2e-testing:1.1.0_1.31.1_3.10.0_4.33.3
     pull: always
     network_mode: host
     environment:
@@ -165,7 +165,7 @@ steps:
       - bats -t tests/tests.sh
 
   - name: gpm-port-forward
-    image: quay.io/sighup/e2e-testing:1.1.0_0.7.0_3.1.1_1.9.4_1.24.1_3.8.7_4.21.1
+    image: quay.io/sighup/e2e-testing:1.1.0_1.31.1_3.10.0_4.33.3
     pull: always
     network_mode: host
     detach: true
@@ -193,7 +193,7 @@ steps:
     image: docker:dind
     pull: always
     environment:
-      KIND_VERSION: v0.17.0
+      KIND_VERSION: v0.24.0
       CLUSTER_NAME: ${DRONE_REPO_NAME}-${DRONE_BUILD_NUMBER}
     volumes:
       - name: dockerconfig
