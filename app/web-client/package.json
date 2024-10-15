@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@elastic/eui": "^95.8.0",
-    "@emotion/css": "^11.11.2",
+    "@emotion/css": "^11.13.4",
     "@emotion/react": "^11.13.3",
     "@testing-library/jest-dom": "^6.4.2",
     "@testing-library/react": "^12.1.5",
