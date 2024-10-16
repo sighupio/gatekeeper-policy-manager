@@ -2,7 +2,7 @@ Beaker==1.13.0
 cachetools==5.3.3
 certifi==2024.2.2
 cffi==1.17.1
-charset-normalizer==3.3.2
+charset-normalizer==3.4.0
 click==8.1.7
 cryptography==43.0.1
 defusedxml==0.7.1
