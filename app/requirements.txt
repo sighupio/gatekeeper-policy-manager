@@ -3,5 +3,5 @@ Flask==3.0.3
 Flask-pyoidc==3.14.3
 flask-cors==5.0.0
 gunicorn==22.0.0
-kubernetes==29.0.0
+kubernetes==31.0.0
 setuptools>=65.5.1 # not directly required, pinned by Snyk to avoid a vulnerability
