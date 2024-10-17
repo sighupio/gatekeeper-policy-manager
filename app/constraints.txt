@@ -31,5 +31,5 @@ six==1.16.0
 typing-extensions==4.11.0
 urllib3==2.2.3
 websocket-client==1.8.0
-Werkzeug==3.0.2
+Werkzeug==3.0.4
 zipp==3.18.1
