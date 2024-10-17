@@ -2181,10 +2181,10 @@
     lz-string "^1.4.4"
     pretty-format "^27.0.2"
 
-"@testing-library/jest-dom@^6.6.0":
-  version "6.6.0"
-  resolved "https://registry.yarnpkg.com/@testing-library/jest-dom/-/jest-dom-6.6.0.tgz#f27a59e3550f0e29d3d362eefd47036b61a86bc1"
-  integrity sha512-Y76dmd7C85xekWqylJqRmO6lr83cdVprTs0muSvkXr6M73auYK5OvZMc3tKe1F7wMFdzfeBCwVbkoGrRKWb+fg==
+"@testing-library/jest-dom@^6.6.2":
+  version "6.6.2"
+  resolved "https://registry.yarnpkg.com/@testing-library/jest-dom/-/jest-dom-6.6.2.tgz#8186aa9a07263adef9cc5a59a4772db8c31f4a5b"
+  integrity sha512-P6GJD4yqc9jZLbe98j/EkyQDTPgqftohZF5FBkHY5BUERZmcf4HeO2k0XaefEg329ux2p21i1A1DmyQ1kKw2Jw==
   dependencies:
     "@adobe/css-tools" "^4.4.0"
     aria-query "^5.0.0"
