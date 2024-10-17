@@ -1,6 +1,6 @@
 Beaker==1.13.0
 cachetools==5.3.3
-certifi==2024.2.2
+certifi==2024.8.30
 cffi==1.17.1
 charset-normalizer==3.4.0
 click==8.1.7
