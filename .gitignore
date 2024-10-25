@@ -1,4 +1,5 @@
 env
+.venv
 .vscode
 __pycache__
 launch.json
@@ -10,3 +11,5 @@ build/
 node_modules/
 static-content/
 *.tgz
+pyrightconfig.json
+.mise.toml
