@@ -16,7 +16,8 @@ RUN groupadd -r gpm && useradd --no-log-init -r -g gpm gpm
 WORKDIR /app
 COPY --chown=gpm ./app /app
 COPY --from=node --chown=gpm /web-client/build/ /app/static-content/
-RUN pip install --no-cache-dir -r /app/requirements.txt
+RUN pip install uv
+RUN uv pip install --system --no-cache-dir -r /app/requirements.txt
 USER 999
 EXPOSE 8080
 CMD ["gunicorn", "--bind=:8080", "--workers=2", "--threads=4", "--worker-class=gthread", "app:app"]
