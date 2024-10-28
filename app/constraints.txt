@@ -4,7 +4,7 @@ certifi==2024.8.30
 cffi==1.17.1
 charset-normalizer==3.4.0
 click==8.1.7
-cryptography==43.0.1
+cryptography==43.0.3
 defusedxml==0.7.1
 future==1.0.0
 google-auth==2.35.0
