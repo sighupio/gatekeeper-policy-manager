@@ -8,7 +8,7 @@ image:
   repository: quay.io/sighup/gatekeeper-policy-manager
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "v1.0.12"
+  tag: "v1.0.13"
 
 # # Override gatekeeper-policy-manager container entrypoint/args
 # # See https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/

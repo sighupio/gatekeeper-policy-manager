@@ -11,7 +11,7 @@ The following table lists the configurable parameters of the Gatekeeper Policy M
 | `replicaCount` |  | 1 |
 | `image.repository` |  | "quay.io/sighup/gatekeeper-policy-manager" |
 | `image.pullPolicy` |  | "IfNotPresent" |
-| `image.tag` |  | "v1.0.12" |
+| `image.tag` |  | "v1.0.13" |
 | `command` |  | null |
 | `args` |  | null |
 | `imagePullSecrets` |  | [] |
