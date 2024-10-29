@@ -2433,10 +2433,10 @@
   resolved "https://registry.yarnpkg.com/@types/mime/-/mime-3.0.1.tgz#5f8f2bca0a5863cb69bc0b0acd88c96cb1d4ae10"
   integrity sha512-Y4XFY5VJAuw0FgAqPNd6NNoV44jbq9Bz2L7Rh/J6jLTiHBSBJa9fxqQIvkIld4GsoDOcCbvzOUAbLPsSKKg+uA==
 
-"@types/node@*", "@types/node@^22.8.1":
-  version "22.8.1"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-22.8.1.tgz#b39d4b98165e2ae792ce213f610c7c6108ccfa16"
-  integrity sha512-k6Gi8Yyo8EtrNtkHXutUu2corfDf9su95VYVP10aGYMMROM6SAItZi0w1XszA6RtWTHSVp5OeFof37w0IEqCQg==
+"@types/node@*", "@types/node@^22.8.3":
+  version "22.8.3"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-22.8.3.tgz#ebc5dc6fdd37c4a0f992a7b4ca510c733617eaa7"
+  integrity sha512-ZlijaZM38In/raEdZoNKKfIVJEA+4NTsvhGQTgQt4y2/Zgokyz4NUvOch108O3Q1q5lJ170h1hShfPfRPW7BwA==
   dependencies:
     undici-types "~6.19.8"
 
