@@ -5880,10 +5880,10 @@ immer@^9.0.7:
   resolved "https://registry.yarnpkg.com/immer/-/immer-9.0.19.tgz#67fb97310555690b5f9cd8380d38fc0aabb6b38b"
   integrity sha512-eY+Y0qcsB4TZKwgQzLaE/lqYMlKhv5J9dyd2RhhtGhNo2njPXDqU9XPfcNfa3MIDsdtZt5KlkIsirlo4dHsWdQ==
 
-immutable@^4.0.0:
-  version "4.2.2"
-  resolved "https://registry.yarnpkg.com/immutable/-/immutable-4.2.2.tgz#2da9ff4384a4330c36d4d1bc88e90f9e0b0ccd16"
-  integrity sha512-fTMKDwtbvO5tldky9QZ2fMX7slR0mYpY5nbnFWYp0fOzDhHqhgIw9KoYgxLWsoNTS9ZHGauHj18DTyEw6BK3Og==
+immutable@^5.0.2:
+  version "5.0.2"
+  resolved "https://registry.yarnpkg.com/immutable/-/immutable-5.0.2.tgz#bb8a987349a73efbe6b3b292a9cbaf1b530d296b"
+  integrity sha512-1NU7hWZDkV7hJ4PJ9dur9gTNQ4ePNPN4k9/0YhwjzykTi/+3Q5pF93YU5QoVj8BuOnhLgaY8gs0U2pj4kSYVcw==
 
 import-fresh@^3.2.1:
   version "3.3.0"
@@ -9176,15 +9176,16 @@ sass-loader@^12.3.0:
     klona "^2.0.4"
     neo-async "^2.6.2"
 
-sass@^1.80.4:
-  version "1.80.4"
-  resolved "https://registry.yarnpkg.com/sass/-/sass-1.80.4.tgz#bc0418fd796cad2f1a1309d8b4d7fe44b7027de0"
-  integrity sha512-rhMQ2tSF5CsuuspvC94nPM9rToiAFw2h3JTrLlgmNw1MH79v8Cr3DH6KF6o6r+8oofY3iYVPUf66KzC8yuVN1w==
+sass@^1.81.0:
+  version "1.81.0"
+  resolved "https://registry.yarnpkg.com/sass/-/sass-1.81.0.tgz#a9010c0599867909dfdbad057e4a6fbdd5eec941"
+  integrity sha512-Q4fOxRfhmv3sqCLoGfvrC9pRV8btc0UtqL9mN6Yrv6Qi9ScL55CVH1vlPP863ISLEEMNLLuu9P+enCeGHlnzhA==
   dependencies:
-    "@parcel/watcher" "^2.4.1"
     chokidar "^4.0.0"
-    immutable "^4.0.0"
+    immutable "^5.0.2"
     source-map-js ">=0.6.2 <2.0.0"
+  optionalDependencies:
+    "@parcel/watcher" "^2.4.1"
 
 sax@~1.2.4:
   version "1.2.4"
