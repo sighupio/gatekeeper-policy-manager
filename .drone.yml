@@ -1,4 +1,4 @@
-# Copyright (c) 2022 SIGHUP s.r.l All rights reserved.
+# Copyright (c) 2022-2024 SIGHUP s.r.l All rights reserved.
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
@@ -34,7 +34,7 @@ steps:
       FILTER_REGEX_EXCLUDE: (app/static-content/semantic.min.css|chart/|tests/e2e/|\.github)
       # Identifies false positives like missing 'selector'.
       # Doing this is valid for Kustomize patches
-      VALIDATE_KUBERNETES_KUBEVAL: "false"
+      VALIDATE_KUBERNETES_KUBECONFORM: "false"
       # Some duplicated code is intended.
       VALIDATE_JSCPD: "false"
       TYPESCRIPT_DEFAULT_STYLE: "prettier"
