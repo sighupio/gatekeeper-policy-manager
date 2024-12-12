@@ -27,8 +27,9 @@
   padding-right: 16px;
 }
 
+@media screen and (width >=1365px) {
+
   /* stylelint-disable-next-line selector-class-pattern */
-@media screen and (min-width: 1365px) {
   .gpm-header .euiHeader .gpm-header--desktop {
     padding: 0 25%;
   }
