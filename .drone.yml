@@ -19,7 +19,7 @@ trigger:
       - refs/tags/gatekeeper-policy-manager-*
 
 ---
-name: policeman
+name: qa
 kind: pipeline
 type: docker
 
@@ -31,7 +31,7 @@ steps:
     image: quay.io/sighup/policeman
     pull: always
     environment:
-      FILTER_REGEX_EXCLUDE: (app/static-content/semantic.min.css|chart/|tests/e2e/)
+      FILTER_REGEX_EXCLUDE: (app/static-content/semantic.min.css|chart/|tests/e2e/|\.github)
       # Identifies false positives like missing 'selector'.
       # Doing this is valid for Kustomize patches
       VALIDATE_KUBERNETES_KUBEVAL: "false"
@@ -71,7 +71,7 @@ kind: pipeline
 type: docker
 
 depends_on:
-  - policeman
+  - qa
 
 trigger:
   ref:
@@ -225,7 +225,7 @@ type: docker
 
 depends_on:
   - license
-  - policeman
+  - qa
   - e2e
 
 trigger:
