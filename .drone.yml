@@ -39,6 +39,8 @@ steps:
       # Some duplicated code is intended.
       VALIDATE_JSCPD: "false"
       TYPESCRIPT_DEFAULT_STYLE: "prettier"
+      # We ignore the command not found error, because in the linter image we don't have all the binaries being called.
+      SHELLCHECK_OPTS: "-e SC2317"
     depends_on:
       - clone
 
