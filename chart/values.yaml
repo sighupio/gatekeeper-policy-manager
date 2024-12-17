@@ -10,28 +10,6 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: "v1.0.13"
 
-livenessProbe:
-  enabled: true
-  httpGet:
-    path: /health
-    port: 8080
-  initialDelaySeconds: 10
-  periodSeconds: 10
-  timeoutSeconds: 1
-  successThreshold: 1
-  failureThreshold: 3
-
-readinessProbe:
-  enabled: true
-  httpGet:
-    path: /ready
-    port: 8080
-  initialDelaySeconds: 5
-  periodSeconds: 5
-  timeoutSeconds: 1
-  successThreshold: 1
-  failureThreshold: 3
-
 # # Override gatekeeper-policy-manager container entrypoint/args
 # # See https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/
 command:
@@ -89,33 +67,13 @@ ingress:
   # ingressClassName: "nginx"
   annotations:
     {}
-    #kubernetes.io/ingress.class: "nginx"
-    #nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-    #nginx.ingress.kubernetes.io/auth-signin: https://$host/oauth2/start?rd=https://$host$request_uri$is_args$args
-    #nginx.ingress.kubernetes.io/auth-url: https://$host/oauth2/auth
-    #nginx.ingress.kubernetes.io/proxy-buffer-size: "8k"
-    #nginx.ingress.kubernetes.io/secure-backends: "true"
-    #nginx.ingress.kubernetes.io/configuration-snippet: |
-    # auth_request_set $token $upstream_http_authorization;
-    # proxy_set_header Authorization $token;
-    #forecastle.stakater.com/expose: "true"
-    #forecastle.stakater.com/appName: "Gatekeeper Policy Manager"
-    #forecastle.stakater.com/icon: "https://raw.githubusercontent.com/sighupio/gatekeeper-policy-manager/master/app/static-content/logo.svg"
   labels: {}
   hosts:
     - host: gpm.local
       paths: []
-      # pathType: ImplementationSpecific
   tls: []
-  #  - secretName: gpm-tls
-  #    hosts:
-  #      - gpm.local
 
 resources:
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
   requests:
     cpu: 100m
     memory: 128Mi
@@ -184,11 +142,9 @@ config:
     endSessionEndpoint:
 
 # Extra env variables to pass to the gatekeeper-policy-manager container
-# Uncomment and add OIDC variables for enabling OIDC
 extraEnvs: []
 
 rbac:
-  # Specifies whether RBAC resources should be created
   create: true
 
 # If create is `false` the Helm Operator will be restricted to the namespace
@@ -196,6 +152,27 @@ rbac:
 # Additionally, the kubeconfig default context will be set to that namespace.
 clusterRole:
   create: true
-  # The name of a cluster role to bind to; if not set and create is
-  # true, a name based on fullname is generated
   name: "gatekeeper-policy-manager-crd-view"
+
+# Health and liveness probe configurations
+livenessProbe:
+  enabled: true
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 1
+  successThreshold: 1
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: true
+  httpGet:
+    path: /ready
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 1
+  successThreshold: 1
+  failureThreshold: 3
