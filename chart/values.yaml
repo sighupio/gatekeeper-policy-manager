@@ -182,7 +182,7 @@ livenessProbe:
   enabled: true
   httpGet:
     path: /health
-    port: 8080
+    port: http
   initialDelaySeconds: 10
   periodSeconds: 10
   timeoutSeconds: 1
