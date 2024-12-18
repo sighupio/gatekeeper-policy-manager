@@ -193,7 +193,7 @@ readinessProbe:
   enabled: true
   httpGet:
     path: /health
-    port: 8080
+    port: http
   initialDelaySeconds: 5
   periodSeconds: 5
   timeoutSeconds: 1
