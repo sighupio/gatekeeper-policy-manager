@@ -1,4 +1,4 @@
-# Gatekeeper Policy Manager Helm Chart - v0.12.0
+# Gatekeeper Policy Manager Helm Chart - v0.13.0
 
 A Helm chart for Gatekeeper Policy Manager, a simple to use, read-only web UI for viewing OPA Gatekeeper policies' status in a Kubernetes Cluster.
 
@@ -72,4 +72,20 @@ The following table lists the configurable parameters of the Gatekeeper Policy M
 | `rbac.create` |  | true |
 | `clusterRole.create` |  | true |
 | `clusterRole.name` |  | "gatekeeper-policy-manager-crd-view" |
+| `livenessProbe.enabled` |  | true |
+| `livenessProbe.httpGet.path` |  | "/health" |
+| `livenessProbe.httpGet.port` |  | "http" |
+| `livenessProbe.initialDelaySeconds` |  | 10 |
+| `livenessProbe.periodSeconds` |  | 10 |
+| `livenessProbe.timeoutSeconds` |  | 1 |
+| `livenessProbe.successThreshold` |  | 1 |
+| `livenessProbe.failureThreshold` |  | 3 |
+| `readinessProbe.enabled` |  | true |
+| `readinessProbe.httpGet.path` |  | "/health" |
+| `readinessProbe.httpGet.port` |  | "http" |
+| `readinessProbe.initialDelaySeconds` |  | 5 |
+| `readinessProbe.periodSeconds` |  | 5 |
+| `readinessProbe.timeoutSeconds` |  | 1 |
+| `readinessProbe.successThreshold` |  | 1 |
+| `readinessProbe.failureThreshold` |  | 3 |
 
