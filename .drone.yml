@@ -184,7 +184,7 @@ steps:
       password:
         from_secret: quay_password
       REGISTRY: quay.io
-      IMAGE_FULL_NAME: ${REGISTRY}/sighup/gatekeeper-policy-manager
+      IMAGE_NAME: sighup/gatekeeper-policy-manager
       DOCKERFILE: Dockerfile
       BUILD_CONTEXT: "."
     volumes:
@@ -194,7 +194,7 @@ steps:
       - "apk add git"
       - "docker login $${REGISTRY} -u $${username} -p $${password}"
       - "docker buildx create --name sighup-builder --use"
-      - "docker buildx build --platform linux/amd64,linux/arm64 --pull --push -f $${DOCKERFILE} -t $${IMAGE_FULL_NAME}:${DRONE_COMMIT_SHA} -t $${IMAGE_FULL_NAME}:unstable $${BUILD_CONTEXT}"
+      - "docker buildx build --platform linux/amd64,linux/arm64 --pull --push -f $${DOCKERFILE} -t $${REGISTRY}/$${IMAGE_NAME}:${DRONE_COMMIT_SHA} -t $${REGISTRY}/$${IMAGE_NAME}:unstable $${BUILD_CONTEXT}"
     when:
       ref:
         include:
@@ -209,7 +209,7 @@ steps:
       password:
         from_secret: quay_password
       REGISTRY: quay.io
-      IMAGE_FULL_NAME: ${REPO}/sighup/gatekeeper-policy-manager
+      IMAGE_NAME: sighup/gatekeeper-policy-manager
       DOCKERFILE: Dockerfile
       BUILD_CONTEXT: "."
     volumes:
@@ -219,7 +219,7 @@ steps:
       - "apk add git"
       - "docker login $${REGISTRY} -u $${username} -p $${password}"
       - "docker buildx create --name sighup-builder --use"
-      - "docker buildx build --platform linux/amd64,linux/arm64 --pull --push -f $${DOCKERFILE} -t $${IMAGE_FULL_NAME}:latest -t $${IMAGE_FULL_NAME}:${DRONE_TAG} $${BUILD_CONTEXT}"
+      - "docker buildx build --platform linux/amd64,linux/arm64 --pull --push -f $${DOCKERFILE} -t $${REGISTRY}/$${IMAGE_NAME}:latest -t $${REGISTRY}/$${IMAGE_NAME}:${DRONE_TAG} $${BUILD_CONTEXT}"
     when:
       event:
         - tag
