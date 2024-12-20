@@ -2,34 +2,30 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-name: license
+name: QA
 kind: pipeline
 type: docker
 
-steps:
-  - name: check
-    image: docker.io/library/golang:1.17.3
-    pull: always
-    commands:
-      - go get -u github.com/google/addlicense
-      - addlicense -c "SIGHUP s.r.l" -v -l bsd -check -ignore 'chart/**' .
 trigger:
   ref:
     exclude:
-      - refs/tags/gatekeeper-policy-manager-*
-
----
-name: qa
-kind: pipeline
-type: docker
-
-depends_on:
-  - license
+      # this tag is created by Chart Releaser after the release.
+      - refs/tags/gatekeeper-policy-manager-**
 
 steps:
-  - name: lint
+  - name: Check license headers presence
+    image: docker.io/library/golang:1.17.3
+    depends_on:
+      - clone
+    commands:
+      - go get -u github.com/google/addlicense
+      - addlicense -c "SIGHUP s.r.l" -v -l bsd -check -ignore 'chart/**' -ignore 'gpm.yaml' -ignore 'rendered_chart.yaml' .
+
+  - name: Lint
     image: quay.io/sighup/policeman
     pull: always
+    depends_on:
+      - clone
     environment:
       FILTER_REGEX_EXCLUDE: (app/static-content/semantic.min.css|chart/|tests/e2e/|\.github)
       # Identifies false positives like missing 'selector'.
@@ -41,51 +37,47 @@ steps:
       TYPESCRIPT_DEFAULT_STYLE: "prettier"
       # We ignore the command not found error, because in the linter image we don't have all the binaries being called.
       SHELLCHECK_OPTS: "-e SC2317"
-    depends_on:
-      - clone
 
-  - name: render
+  - name: Render manifests
     image: quay.io/sighup/e2e-testing:1.1.0_0.11.0_3.12.0_1.9.4_1.29.1_3.5.3_4.33.3
-    pull: always
     depends_on:
       - clone
     commands:
       - kustomize build . > gpm.yaml
       - helm template --set config.secretKey=e2e chart > rendered_chart.yaml
 
-  - name: check-deprecated-apis
+  - name: Check deprecated APIs
     image: us-docker.pkg.dev/fairwinds-ops/oss/pluto:v5
     pull: always
     depends_on:
-      - render
+      - "Render manifests"
     commands:
       # we use --ignore-deprecations because we don't want the CI to fail when the API has not been removed yet.
       - /pluto detect gpm.yaml --ignore-deprecations --target-versions=k8s=v1.31.0
       - /pluto detect rendered_chart.yaml --ignore-deprecations --target-versions=k8s=v1.31.0
 
-trigger:
-  ref:
-    exclude:
-      - refs/tags/gatekeeper-policy-manager-*
-
 ---
-name: build
+name: Build test and release
 kind: pipeline
 type: docker
 
 depends_on:
-  - qa
+  - QA
 
 trigger:
   ref:
     include:
       - refs/tags/**
-      - refs/heads/**
+      - refs/heads/main
+      - refs/heads/dependabot/**
     exclude:
-      - refs/tags/gatekeeper-policy-manager-*
+      # this tag is created by Chart Releaser after the release.
+      - refs/tags/gatekeeper-policy-manager-**
+      # exclude this expensive pipeline when releasing only a new version of the chart
+      - refs/tags/helm-chart-**
 
 steps:
-  - name: build
+  - name: Build container image
     image: docker:dind
     pull: always
     environment:
@@ -101,39 +93,10 @@ steps:
     commands:
       - "apk add git"
       - "docker buildx create --name sighup-builder --use"
-      # I have disabled armv7 because the build takess too long and the pipeline goes in timeout.
-      # - "docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 --pull -f $${DOCKERFILE} -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG} $${BUILD_CONTEXT}"
       - "docker buildx build --platform linux/amd64,linux/arm64 --pull -f $${DOCKERFILE} -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG} $${BUILD_CONTEXT}"
       - "docker buildx build --load -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG} $${BUILD_CONTEXT}"
 
-volumes:
-  - name: dockerconfig
-    host:
-      path: /root/.docker/config.json
-  - name: dockersock
-    host:
-      path: /var/run/docker.sock
-
----
-name: e2e
-kind: pipeline
-type: docker
-
-depends_on:
-  - build
-
-trigger:
-  ref:
-    include:
-      - refs/tags/**
-      - refs/heads/main
-      - refs/heads/snyk-**
-      - refs/heads/dependabot/**
-    exclude:
-      - refs/tags/gatekeeper-policy-manager-*
-
-steps:
-  - name: kind
+  - name: Create Kind cluster
     image: docker:dind
     pull: always
     environment:
@@ -154,9 +117,8 @@ steps:
       - kind load docker-image $${LOAD_IMAGE} --name $${CLUSTER_NAME}
       - kind get kubeconfig --name $${CLUSTER_NAME} > kubeconfig.yml
 
-  - name: tests
+  - name: E2E tests
     image: quay.io/sighup/e2e-testing:1.1.0_1.31.1_3.10.0_4.33.3
-    pull: always
     network_mode: host
     environment:
       LOAD_IMAGE: gatekeeper-policy-manager:test-${DRONE_BUILD_NUMBER}
@@ -167,23 +129,23 @@ steps:
       - cd -
       - bats -t tests/tests.sh
 
-  - name: gpm-port-forward
+  - name: GPM port-forward
     image: quay.io/sighup/e2e-testing:1.1.0_1.31.1_3.10.0_4.33.3
-    pull: always
     network_mode: host
     detach: true
     commands:
       - export KUBECONFIG=$PWD/kubeconfig.yml
       - kubectl port-forward svc/gatekeeper-policy-manager 8080:80 -n gatekeeper-system
 
-  - name: ui-tests
+  - name: UI tests
+    # This must match the version in the package.json file
     image: mcr.microsoft.com/playwright:v1.30.0-focal
-    pull: always
     network_mode: host
     commands:
       - cd tests/e2e && yarn install && yarn test
 
-  - name: echo-diff-images
+  - name: Print images diff on fail
+    # This must match the version in the package.json file
     image: mcr.microsoft.com/playwright:v1.30.0-focal
     commands:
       - for f in tests/e2e/test-results/*/*diff.png; do echo $f; base64 -w 0 $f; echo; done;
@@ -192,7 +154,7 @@ steps:
       status:
         - failure
 
-  - name: kind-destroy
+  - name: Destroy Kind cluster
     image: docker:dind
     pull: always
     environment:
@@ -213,60 +175,32 @@ steps:
         - success
         - failure
 
-volumes:
-  - name: dockerconfig
-    host:
-      path: /root/.docker/config.json
-  - name: dockersock
-    host:
-      path: /var/run/docker.sock
-
----
-name: release
-kind: pipeline
-type: docker
-
-depends_on:
-  - license
-  - qa
-  - e2e
-
-trigger:
-  ref:
-    include:
-      - refs/tags/**
-      - refs/heads/**
-    exclude:
-      - refs/heads/dependabot/**
-      - refs/heads/snyk-**
-      - refs/tags/gatekeeper-policy-manager-*
-
-steps:
-  - name: prepare-tar-gz
-    image: alpine:latest
+  - name: Push unstable image
+    image: docker:dind
     pull: always
-    depends_on: [clone]
+    environment:
+      username:
+        from_secret: quay_username
+      password:
+        from_secret: quay_password
+      REGISTRY: quay.io
+      IMAGE_FULL_NAME: ${REGISTRY}/sighup/gatekeeper-policy-manager
+      DOCKERFILE: Dockerfile
+      BUILD_CONTEXT: "."
+    volumes:
+      - name: dockersock
+        path: /var/run/docker.sock
     commands:
-      - tar -zcvf gatekeeper-policy-manager-${DRONE_TAG}.tar.gz manifests/ kustomization.yaml LICENSE README.md
+      - "apk add git"
+      - "docker login $${REGISTRY} -u $${username} -p $${password}"
+      - "docker buildx create --name sighup-builder --use"
+      - "docker buildx build --platform linux/amd64,linux/arm64 --pull --push -f $${DOCKERFILE} -t $${IMAGE_FULL_NAME}:${DRONE_COMMIT_SHA} -t $${IMAGE_FULL_NAME}:unstable $${BUILD_CONTEXT}"
     when:
       ref:
         include:
-          - refs/tags/**
+          - refs/heads/main
 
-  - name: prepare-release-notes
-    image: quay.io/sighup/fury-release-notes-plugin:3.7_2.8.4
-    pull: always
-    depends_on: [clone]
-    settings:
-      release_notes_file_path: release-notes.md
-    when:
-      ref:
-        include:
-          - refs/tags/**
-        exclude:
-          - refs/tags/gatekeeper-policy-manager-* # Exclude helm chart releases
-
-  - name: registry-sha
+  - name: Push stable image
     image: docker:dind
     pull: always
     depends_on: [clone]
@@ -275,10 +209,8 @@ steps:
         from_secret: quay_username
       password:
         from_secret: quay_password
-      registry: quay.io
-      repo: quay.io/sighup/gatekeeper-policy-manager
-      container_image_name: gatekeeper-policy-manager
-      container_image_tag: test-${DRONE_BUILD_NUMBER}
+      REGISTRY: quay.io
+      IMAGE_FULL_NAME: ${REPO}/sighup/gatekeeper-policy-manager
       DOCKERFILE: Dockerfile
       BUILD_CONTEXT: "."
     volumes:
@@ -286,49 +218,33 @@ steps:
         path: /var/run/docker.sock
     commands:
       - "apk add git"
-      - "docker login $${registry} -u $${username} -p $${password}"
+      - "docker login $${REGISTRY} -u $${username} -p $${password}"
       - "docker buildx create --name sighup-builder --use"
-      - "docker buildx build --platform linux/amd64,linux/arm64 --pull --push -f $${DOCKERFILE} -t $${repo}:${DRONE_COMMIT_SHA} -t $${repo}:unstable $${BUILD_CONTEXT}"
-      # - "docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 --pull --push -f $${DOCKERFILE} -t $${repo}:unstable -t $${repo}:go -t $${repo}:${DRONE_COMMIT_SHA} $${BUILD_CONTEXT}"
-      # - docker rmi $${container_image_name}:$${container_image_tag}
-    when:
-      event:
-        - push
-
-  - name: registry-tag
-    image: docker:dind
-    pull: always
-    depends_on: [clone]
-    environment:
-      username:
-        from_secret: quay_username
-      password:
-        from_secret: quay_password
-      registry: quay.io
-      repo: quay.io/sighup/gatekeeper-policy-manager
-      container_image_name: gatekeeper-policy-manager
-      container_image_tag: test-${DRONE_BUILD_NUMBER}
-      DOCKERFILE: Dockerfile
-      BUILD_CONTEXT: "."
-    volumes:
-      - name: dockersock
-        path: /var/run/docker.sock
-    commands:
-      - "apk add git"
-      - "docker login $${registry} -u $${username} -p $${password}"
-      - "docker buildx create --name sighup-builder --use"
-      - "docker buildx build --platform linux/amd64,linux/arm64 --pull --push -f $${DOCKERFILE} -t $${repo}:latest -t $${repo}:${DRONE_TAG} $${BUILD_CONTEXT}"
+      - "docker buildx build --platform linux/amd64,linux/arm64 --pull --push -f $${DOCKERFILE} -t $${IMAGE_FULL_NAME}:latest -t $${IMAGE_FULL_NAME}:${DRONE_TAG} $${BUILD_CONTEXT}"
     when:
       event:
         - tag
 
-  - name: publish-prerelease
+  - name: Package tar.gz
+    image: alpine:latest
+    pull: always
+    commands:
+      - tar -zcvf gatekeeper-policy-manager-${DRONE_TAG}.tar.gz manifests/ kustomization.yaml docs/releases/${DRONE_TAG}.md LICENSE README.md
+    when:
+      event:
+        - tag
+
+  - name: Prepare release notes
+    image: quay.io/sighup/fury-release-notes-plugin:3.7_2.8.4
+    settings:
+      release_notes_file_path: release-notes.md
+    when:
+      event:
+        - tag
+
+  - name: Publish Preview Release
     image: plugins/github-release
     pull: always
-    depends_on:
-      - prepare-tar-gz
-      - prepare-release-notes
-      - registry-tag
     settings:
       api_key:
         from_secret: c3p0
@@ -347,13 +263,9 @@ steps:
         include:
           - refs/tags/v**-rc**
 
-  - name: publish-stable
+  - name: Publish Final Release
     image: plugins/github-release
     pull: always
-    depends_on:
-      - prepare-tar-gz
-      - prepare-release-notes
-      - registry-tag
     settings:
       api_key:
         from_secret: c3p0
@@ -375,17 +287,20 @@ steps:
           - refs/tags/v**
 
 volumes:
+  - name: dockerconfig
+    host:
+      path: /root/.docker/config.json
   - name: dockersock
     host:
       path: /var/run/docker.sock
 
 ---
-name: release-helm-chart
+name: Release Helm Chart
 kind: pipeline
 type: docker
 
 depends_on:
-  - "release"
+  - "Build test and release"
 
 trigger:
   ref:
@@ -393,9 +308,11 @@ trigger:
       # Trigger the Helm Chart Releaser only when tagging
       - refs/tags/**
     exclude:
+      # Don't release the chart when tagging Release Candidates
+      - refs/tags/v**-rc.**
       # These kind of tags are generated by `cr` in this pipeline
       # we exclude them to avoid a loop.
-      - refs/tags/gatekeeper-policy-manager-*
+      - refs/tags/gatekeeper-policy-manager-**
 
 steps:
   # We need to manually fetch the gh-pages branch because Drone by default
