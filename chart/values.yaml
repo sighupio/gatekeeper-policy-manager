@@ -177,3 +177,25 @@ clusterRole:
   # The name of a cluster role to bind to; if not set and create is
   # true, a name based on fullname is generated
   name: "gatekeeper-policy-manager-crd-view"
+# Health and liveness probe configurations
+livenessProbe:
+  enabled: true
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 1
+  successThreshold: 1
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: true
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 1
+  successThreshold: 1
+  failureThreshold: 3
