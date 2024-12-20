@@ -93,8 +93,7 @@ steps:
     commands:
       - "apk add git"
       - "docker buildx create --name sighup-builder --use"
-      - "docker buildx build --platform linux/amd64,linux/arm64 --pull -f $${DOCKERFILE} -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG} $${BUILD_CONTEXT}"
-      - "docker buildx build --load -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG} $${BUILD_CONTEXT}"
+      - "docker buildx build --platform linux/amd64,linux/arm64 --pull --load -f $${DOCKERFILE} -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG} $${BUILD_CONTEXT}"
 
   - name: Create Kind cluster
     image: docker:dind
@@ -203,7 +202,6 @@ steps:
   - name: Push stable image
     image: docker:dind
     pull: always
-    depends_on: [clone]
     environment:
       username:
         from_secret: quay_username
