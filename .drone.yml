@@ -300,6 +300,7 @@ type: docker
 
 depends_on:
   - QA
+  - "Build test and release"
 
 trigger:
   ref:
