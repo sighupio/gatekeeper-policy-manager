@@ -299,7 +299,7 @@ kind: pipeline
 type: docker
 
 depends_on:
-  - "Build test and release"
+  - QA
 
 trigger:
   ref:
