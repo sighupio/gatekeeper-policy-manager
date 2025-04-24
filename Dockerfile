@@ -4,7 +4,7 @@
 FROM --platform=$BUILDPLATFORM node:lts-alpine AS node
 WORKDIR /web-client
 COPY app/web-client/package.json app/web-client/yarn.lock ./
-RUN yarn install
+RUN yarn install && yarn cache clean
 COPY app/web-client /web-client
 RUN yarn build
 
