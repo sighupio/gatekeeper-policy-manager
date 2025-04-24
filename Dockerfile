@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 FROM --platform=$BUILDPLATFORM node:lts-alpine AS node
 WORKDIR /web-client
-COPY app/web-client/package.json app/web-client/yarn.lock .
+COPY app/web-client/package.json app/web-client/yarn.lock ./
 RUN yarn install
 COPY app/web-client /web-client
 RUN yarn build
