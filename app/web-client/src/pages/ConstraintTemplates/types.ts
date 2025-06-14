@@ -7,9 +7,18 @@ import { IConstraint } from "../Constraints/types";
  */
 
 export interface IConstraintTemplateSpecTarget {
-  rego: string;
+  rego?: string;
   libs?: string[];
   target: string;
+  code?: IConstraintTemplateSpecTargetCode[];
+}
+
+export interface IConstraintTemplateSpecTargetCode {
+  engine: string;
+  source: {
+    rego: string;
+    version: string;
+  };
 }
 
 export interface IConstraintTemplateSpecStatusPod {

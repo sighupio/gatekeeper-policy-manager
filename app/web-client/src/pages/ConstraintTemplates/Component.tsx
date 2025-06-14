@@ -145,7 +145,7 @@ function SingleConstraintTemplate(
             paddingSize="none"
           >
             <EuiCodeBlock lineNumbers language="rego">
-              {item.spec.targets[0].rego}
+              {item.spec.targets[0].rego ?? item.spec.targets[0].code?.filter(code => code.engine == "Rego")[0]?.source.rego}
             </EuiCodeBlock>
           </EuiAccordion>
         </EuiFlexItem>
