@@ -8,7 +8,6 @@
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/gatekeeper-policy-manager/status.svg)](https://ci.sighup.io/sighupio/gatekeeper-policy-manager)
 ![GPM Release](https://img.shields.io/badge/GPM-v2.0.0--alpha1-blue)
 ![Helm Chart Release](https://img.shields.io/badge/Helm%20Chart-v0.4.1-blue)
-![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/gatekeeper-policy-manager)
 
 **Gatekeeper Policy Manager** is a simple *read-only* web UI for viewing OPA Gatekeeper policies' status in a Kubernetes Cluster.
@@ -29,7 +28,8 @@ GPM lets you see in detail:
 
 You'll need OPA Gatekeeper running in your cluster and at least some constraint templates and constraints defined to take advantage of this tool.
 
-ℹ You can easily deploy Gatekeeper to your cluster using the (also open source) [Kubernetes Fury OPA](https://github.com/sighupio/fury-kubernetes-opa) module.
+> [!TIP]
+> You can easily deploy Gatekeeper to your cluster using the (also open source) [SIGHUP Distribution Policy Module](https://github.com/sighupio/module-policy).
 
 ## Deploying GPM
 
@@ -43,7 +43,8 @@ kubectl apply -k .
 
 By default, this will create a deployment and a service both with the name `gatekeper-policy-manager` in the `gatekeeper-system` namespace. We invite you to take a look into the `kustomization.yaml` file to do further configuration.
 
-> 💡 GPM can run as a POD in a Kubernetes cluster or locally with a `kubeconfig` file. It will try its best to autodetect the correct configuration.
+> [!NOTE]
+> GPM can run as a POD in a Kubernetes cluster or locally with a `kubeconfig` file. It will try its best to autodetect the correct configuration.
 
 Once you've deployed the application, if you haven't set up an ingress, you can access the web UI using port-forward:
 
@@ -66,7 +67,8 @@ helm repo add gpm https://sighupio.github.io/gatekeeper-policy-manager
 helm upgrade --install --namespace gatekeeper-system --set image.tag=v2.0.0-alpha1 --values my-values.yaml gatekeeper-policy-manager gpm/gatekeeper-policy-manager
 ```
 
-> don't forget to replace `my-values.yaml` with the path to your values file.
+> [!IMPORTANT]
+> Don't forget to replace `my-values.yaml` with the path to your values file.
 
 ## Running locally
 
@@ -78,7 +80,7 @@ docker run -v ~/.kube/config:/home/nonroot/.kube/config -p 8080:8080 quay.io/sig
 
 Then access it with your browser by visiting [http://127.0.0.1:8080](http://127.0.0.1:8080).
 
-> You can also run the app binary directly, see the [development section](#development) for further information.
+You can also run the app binary directly, see the [development section](#development) for further information.
 
 ## Configuration
 
@@ -108,7 +110,7 @@ When you run GPM locally, you are already using a `kubeconfig` file to connect t
 
 #### AWS IAM Authentication
 
-If you want to use a Kubeconfig with IAM Authentication, you'll need to customize GPM's container image because the IAM authentication uses external AWS binaries that are not included by default in the image.
+If you want to use a kubeconfig with IAM Authentication, you'll need to customize GPM's container image because the IAM authentication uses external AWS binaries that are not included by default in the image.
 
 You can customize the container image with a `Dockerfile` like the following:
 
@@ -123,7 +125,8 @@ COPY --from=downloader --chown=root:root /tmp/aws-iam-authenticator /usr/local/b
 
 You may need to add also the `aws` CLI for debugging purposes, you can use the same approach as before.
 
-> ℹ️ Make sure that your `kubeconfig` has the `apiVersion` set as `client.authentication.k8s.io/v1beta1`
+> [!NOTE]
+> Make sure that your `kubeconfig` has the `apiVersion` set as `client.authentication.k8s.io/v1beta1`
 >
 > You can read more [in this issue](https://github.com/sighupio/gatekeeper-policy-manager/issues/330).
 
@@ -160,7 +163,8 @@ $ go mod download
 $ APP_ENV=development GPM_LOG_LEVEL=DEBUG go run main.go
 ```
 
-> 💡 Access to a Kubernetes cluster with OPA Gatekeeper deployed is recommended to debug the application.
+> [!TIP]
+> Access to a Kubernetes cluster with OPA Gatekeeper deployed is recommended to debug the application.
 
 ## Contributing
 

@@ -12,8 +12,8 @@ load ./helper
     ns(){
         kubectl create ns gatekeeper-system
 	# We create the CRD so the apply doesn't fail. We don't care about the servicemonitor and the rule actually
-        kubectl apply -f https://raw.githubusercontent.com/sighupio/fury-kubernetes-monitoring/v2.0.0/katalog/prometheus-operator/crds/0servicemonitorCustomResourceDefinition.yaml
-        kubectl apply -f https://raw.githubusercontent.com/sighupio/fury-kubernetes-monitoring/v2.0.0/katalog/prometheus-operator/crds/0prometheusruleCustomResourceDefinition.yaml
+        kubectl apply -f https://raw.githubusercontent.com/sighupio/module-monitoring/v3.5.0/katalog/prometheus-operator/crds/0servicemonitorCustomResourceDefinition.yaml
+        kubectl apply -f https://raw.githubusercontent.com/sighupio/module-monitoring/v3.5.0/katalog/prometheus-operator/crds/0prometheusruleCustomResourceDefinition.yaml
     }
     run ns
     [ "$status" -eq 0 ]

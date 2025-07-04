@@ -51,6 +51,7 @@ steps:
       - clone
     commands:
       - kustomize build . > gpm.yml
+      - helm template --set config.secretKey=e2e chart > rendered_chart.yaml
 
   - name: check-deprecated-apis
     image: us-docker.pkg.dev/fairwinds-ops/oss/pluto:v5
@@ -59,7 +60,8 @@ steps:
       - render
     commands:
       # we use --ignore-deprecations because we don't want the CI to fail when the API has not been removed yet.
-      - /pluto detect gpm.yml --ignore-deprecations --target-versions=k8s=v1.25.0
+      - /pluto detect gpm.yaml --ignore-deprecations --target-versions=k8s=v1.33.0
+      - /pluto detect rendered_chart.yaml --ignore-deprecations --target-versions=k8s=v1.33.0
 
 trigger:
   ref:
