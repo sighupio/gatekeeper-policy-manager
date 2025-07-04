@@ -12,7 +12,7 @@ ENV npm_config_target_arch=${TARGETARCH} npm_config_target_platform=${TARGETOS}
 RUN yarn install && yarn cache clean && yarn build
 
 
-FROM --platform=$BUILDPLATFORM golang:1.21 AS backend
+FROM --platform=$BUILDPLATFORM golang:1.24 AS backend
 ARG TARGETOS
 ARG TARGETARCH
 WORKDIR /app

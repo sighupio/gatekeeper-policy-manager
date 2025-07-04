@@ -79,7 +79,7 @@ $euiTitle: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, 
   border-radius: 8px !important;
 }
 
-.euiPagination__compressedText > span:first-of-type {
+.euiPagination__compressedText>span:first-of-type {
   color: $euiColorPrimary;
 }
 
@@ -107,7 +107,7 @@ $euiTitle: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, 
 .euiSelect:focus,
 .euiFieldText:focus,
 .euiSuperSelectControl.euiSuperSelect--isOpen__button,
-.euiFilePicker__input:focus + .euiFilePicker__prompt,
+.euiFilePicker__input:focus+.euiFilePicker__prompt,
 .euiComboBox.euiComboBox-isOpen .euiComboBox__inputWrap,
 .euiComboBox.euiComboBox-isOpen .euiComboBox__inputWrap--compressed {
   background-image: linear-gradient(to top, $euiColorPrimary, $euiColorPrimary 2px, transparent 2px, transparent 100%);
@@ -132,5 +132,3 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-
-@import "@elastic/eui/dist/eui_theme_light.css";

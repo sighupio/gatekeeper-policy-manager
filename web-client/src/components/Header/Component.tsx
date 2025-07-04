@@ -22,7 +22,7 @@ import {
   useState,
 } from "react";
 import { ApplicationContext } from "../../AppContext";
-import { EuiSuperSelectOption } from "@elastic/eui/src/components/form/super_select/super_select_control";
+import { EuiSuperSelectOption } from "@elastic/eui/src/components/form/super_select/super_select_item";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./Style.scss";
 
@@ -86,7 +86,13 @@ function HeaderComponent() {
     });
     setOptionsFromContexts(optionsFromContexts);
 
-    if (pathSplit && pathSplit.length > 1 && pathname !== "/" && pathname !== "/error" && context.k8sContexts.length > 0) {
+    if (
+      pathSplit &&
+      pathSplit.length > 1 &&
+      pathname !== "/" &&
+      pathname !== "/error" &&
+      context.k8sContexts.length > 0
+    ) {
       if (setContext) {
         setContext({
           currentK8sContext: pathSplit[1].slice(1),
@@ -96,7 +102,7 @@ function HeaderComponent() {
   }, [context.k8sContexts]);
 
   const doLogout: MouseEventHandler<HTMLButtonElement> = (
-    event: MouseEvent<HTMLButtonElement>
+    event: MouseEvent<HTMLButtonElement>,
   ): void => {
     event.preventDefault();
     window.location.replace("/logout");
@@ -108,9 +114,16 @@ function HeaderComponent() {
         currentK8sContext: value,
       });
 
-      if (pathSplit && pathSplit.length > 0 && pathname !== "/" && pathname !== "/error") {
-        navigate(pathSplit[0] + "/" + value + hash, { replace: true })
-        navigate(0)
+      if (
+        pathSplit &&
+        pathSplit.length > 0 &&
+        pathname !== "/" &&
+        pathname !== "/error"
+      ) {
+        navigate(pathSplit[0] + "/" + encodeURIComponent(value) + hash, {
+          replace: true,
+        });
+        navigate(0);
       }
     }
   };
@@ -124,10 +137,19 @@ function HeaderComponent() {
               routes.map((route) => {
                 return (
                   <EuiHeaderSectionItem
-                    className={(pathSplit ? pathSplit[0] : pathname) === route.path ? "header-active" : ""}
+                    className={
+                      (pathSplit ? pathSplit[0] : pathname) === route.path
+                        ? "header-active"
+                        : ""
+                    }
                     key={route.path}
                   >
-                    <EuiButtonEmpty href={`${route.path === "/" ? route.path : route.path + "/" + (context.currentK8sContext ?? "")}`}>
+                    <EuiButtonEmpty
+                      href={`${route.path === "/"
+                        ? route.path
+                        : route.path + "/" + (context.currentK8sContext ?? "")
+                        }`}
+                    >
                       {route.name}
                     </EuiButtonEmpty>
                   </EuiHeaderSectionItem>
@@ -143,10 +165,14 @@ function HeaderComponent() {
                   </p>
                 </EuiText>
                 <EuiSuperSelect
-                  style={{ width: "200px" }}
                   options={optionsFromContexts}
-                  valueOfSelected={context.currentK8sContext}
+                  valueOfSelected={decodeURIComponent(
+                    context.currentK8sContext,
+                  )}
                   onChange={(value) => onChangeContext(value)}
+                  hasDividers
+                  placeholder="change current context"
+                  title={decodeURIComponent(context.currentK8sContext)}
                 />
               </EuiHeaderSectionItem>
             )}
