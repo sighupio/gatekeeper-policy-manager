@@ -9,26 +9,26 @@
     "url": "https://github.com/sighupio/gatekeeper-policy-manager"
   },
   "dependencies": {
-    "@elastic/eui": "^89.1.0",
-    "@emotion/css": "^11.11.2",
-    "@emotion/react": "^11.11.1",
-    "@testing-library/jest-dom": "^6.1.4",
+    "@elastic/eui": "^99.1.0",
+    "@emotion/css": "^11.13.5",
+    "@emotion/react": "^11.14.0",
+    "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^12.1.5",
-    "@testing-library/user-event": "^14.5.1",
-    "@types/jest": "^29.5.6",
-    "@types/node": "^20.8.8",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.3",
     "@types/react": "^17.0.20",
-    "@types/react-dom": "^17.0.9",
+    "@types/react-dom": "^18.3.1",
     "lodash.clonedeep": "^4.5.0",
     "prop-types": "^15.8.1",
     "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "react-json-tree": "^0.18.0",
-    "react-router-dom": "^6.17.0",
+    "react-dom": "^18.3.1",
+    "react-json-tree": "^0.19.0",
+    "react-router-dom": "^6.28.2",
     "react-scripts": "5.0.1",
-    "sass": "^1.69.4",
-    "typescript": "^5.2.2",
-    "web-vitals": "^3.5.0"
+    "sass": "^1.83.4",
+    "typescript": "^5.6.3",
+    "web-vitals": "^4.2.4"
   },
   "resolutions": {
     "fork-ts-checker-webpack-plugin": "^8.0.0",
@@ -62,8 +62,8 @@
   },
   "devDependencies": {
     "@elastic/datemath": "^5.0.3",
-    "@types/lodash.clonedeep": "^4.5.7",
+    "@types/lodash.clonedeep": "^4.5.9",
     "@types/react-router-dom": "^5.3.3",
-    "moment": "^2.29.4"
+    "moment": "^2.30.1"
   }
 }
