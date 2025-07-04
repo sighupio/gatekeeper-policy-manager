@@ -257,7 +257,8 @@ function EventsComponent() {
                       // compressed={true}
                       itemId={item => item.metadata.name}
                       itemIdToExpandedRowMap={itemIdToExpandedRowMap}
-                      isExpandable={true}
+                      // FIXME: con el ultimo alineamento con `main` (update de las dependencias) dejo de funcionar el isExpandable
+                      // isExpandable={true}
                       items={items}
                       columns={columnsWithExpandingRowToggle}
                     // sorting={}
