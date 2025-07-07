@@ -193,9 +193,8 @@ function SingleConstraintTemplate(
             {relatedConstraints.map((constraint, index) => (
               <EuiFlexItem key={constraint.metadata.name}>
                 <EuiLink
-                  href={`/constraints${context ? "/" + context : ""}#${
-                    constraint.metadata.name
-                  }`}
+                  href={`/constraints${context ? "/" + context : ""}#${constraint.metadata.name
+                    }`}
                 >
                   <EuiText size="s">
                     <span>{constraint.metadata.name}</span>
@@ -304,8 +303,7 @@ function ConstraintTemplatesComponent() {
   useEffect(() => {
     setIsLoading(true);
     fetch(
-      `${appContextData.context.apiUrl}api/v1/constrainttemplates/${
-        context ? context + "/" : ""
+      `${appContextData.context.apiUrl}api/v1/constrainttemplates/${context ? context + "/" : ""
       }`,
     )
       .then(async (res) => {
@@ -397,7 +395,7 @@ function ConstraintTemplatesComponent() {
             style={{ position: "relative" }}
             className="gpm-page gpm-page-constraint-templates"
           >
-            <EuiPageSidebar paddingSize="m" sticky>
+            <EuiPageSidebar paddingSize="m" style={{ height: "100vh" }} sticky>
               <EuiSideNav items={sideNav} />
             </EuiPageSidebar>
             <EuiPageBody paddingSize="m" style={{ marginBottom: 350 }}>
@@ -429,8 +427,9 @@ function ConstraintTemplatesComponent() {
               </>
             </EuiPageBody>
           </EuiPage>
-        </EuiFlexGroup>
-      )}
+        </EuiFlexGroup >
+      )
+      }
     </>
   );
 }

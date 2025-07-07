@@ -6,17 +6,17 @@ namespace: gatekeeper-system
 
 resources:
   # Deploy Gatekeeper from KFD OPA Module
-  - github.com/sighupio/fury-kubernetes-opa/katalog/gatekeeper/core?ref=v1.12.0
-  - github.com/sighupio/fury-kubernetes-opa/katalog/gatekeeper/rules?ref=v1.12.0
-  - github.com/sighupio/fury-kubernetes-opa/katalog/gatekeeper/monitoring?ref=v1.12.0
+  - github.com/sighupio/module-policy/katalog/gatekeeper/core?ref=v1.14.0
+  - github.com/sighupio/module-policy/katalog/gatekeeper/rules?ref=v1.14.0
+  - github.com/sighupio/module-policy/katalog/gatekeeper/monitoring?ref=v1.14.0
 
   # Deploy GPM itself
   - ../manifests/rbac.yaml
   - ../manifests/deployment.yaml
   - ../manifests/service.yaml
 
-patchesStrategicMerge:
-  - deploy-patch.yaml
+patches:
+  - path: deploy-patch.yaml
 
 images:
   - name: quay.io/sighup/gatekeeper-policy-manager

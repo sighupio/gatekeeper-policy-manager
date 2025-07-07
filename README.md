@@ -8,7 +8,6 @@
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/gatekeeper-policy-manager/status.svg)](https://ci.sighup.io/sighupio/gatekeeper-policy-manager)
 ![GPM Release](https://img.shields.io/badge/GPM-v1.0.14-blue)
 ![Helm Chart Release](https://img.shields.io/badge/Helm%20Chart-v0.4.1-blue)
-![Slack](https://img.shields.io/badge/slack-@kubernetes/fury-yellow.svg?logo=slack)
 ![License](https://img.shields.io/github/license/sighupio/gatekeeper-policy-manager)
 
 **Gatekeeper Policy Manager** is a simple *read-only* web UI for viewing OPA Gatekeeper policies' status in a Kubernetes Cluster.
@@ -23,7 +22,8 @@ GPM can display all the defined **Constraint Templates** with their rego code, a
 
 You'll need OPA Gatekeeper running in your cluster and at least some constraint templates and constraints defined to take advantage of this tool.
 
-ℹ You can easily deploy Gatekeeper to your cluster using the (also open source) [Kubernetes Fury OPA](https://github.com/sighupio/fury-kubernetes-opa) module.
+> [!NOTE]
+> You can easily deploy Gatekeeper to your cluster using the (also open source) [SIGHUP Distribution Policy Module](https://github.com/sighupio/module-policy).
 
 ## Deploying GPM
 
@@ -60,6 +60,7 @@ helm repo add gpm https://sighupio.github.io/gatekeeper-policy-manager
 helm upgrade --install --namespace gatekeeper-system --set image.tag=v1.0.14 --values my-values.yaml gatekeeper-policy-manager gpm/gatekeeper-policy-manager
 ```
 
+> [!IMPORTANT]
 > don't forget to replace `my-values.yaml` with the path to your values file.
 
 ## Running locally
@@ -96,7 +97,8 @@ GPM is a stateless application, but it can be configured using environment varia
 | `GPM_OIDC_USERINFO_ENDPOINT`      | OIDC Userinfo Endpoint (optional, setting this parameter disables the discovery of the rest of the provider configuration, set all the other values also if setting this one)                                                     |                        |
 | `GPM_OIDC_END_SESSION_ENDPOINT`   | OIDC End Session Endpoint (optional, setting this parameter disables the discovery of the rest of the provider configuration, set all the other values also if setting this one)                                                  |                        |
 
-> ⚠️ Please notice that OIDC Authentication is in beta state. It has been tested to work with Keycloak as a provider.
+>[!WARNING]
+> Please notice that OIDC Authentication is in beta state. It has been tested to work with Keycloak as a provider.
 >
 > These environment variables are already provided and ready to be set in the [`manifests/enable-oidc.yaml`](manifests/enable-oidc.yaml) file.
 
@@ -176,7 +178,7 @@ $ FLASK_APP=app/app.py flask run
 
 > Access to a Kubernetes cluster with OPA Gatekeeper deployed is recommended to debug the application.
 >
-> You'll need an OIDC provider to test the OIDC authentication. You can use our [fury-kubernetes-keycloak](https://github.com/sighupio/fury-kubernetes-keycloak) module.
+> You'll need an OIDC provider to test the OIDC authentication. You can use the SIGHUP Distribution [Keycloak add-on module](https://github.com/sighupio/add-on-keycloak).
 
 ## Roadmap
 

@@ -1,6 +1,6 @@
 
-Thank you for installing SIGHUP Gatekeeper Policy Manager, part of the Kubernetes Fury Distribution
-https://kubernetesfury.com | https://sighup.io
+Thank you for installing SIGHUP Gatekeeper Policy Manager, part of the SIGHUP Distribution
+https://docs.sighup.com | https://sighup.io
 
 This is open source software <3 check out the source code at:
 https://github.com/sighupio/gatekeeper-policy-manager
