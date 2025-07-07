@@ -476,19 +476,16 @@ function ConstraintsComponent() {
 
   useEffect(() => {
     if (currentElementInView) {
-      const newSideBar: ISideNav[] = clonedeep(sideNav);
+      setSideNav((prevSideNav) => {
+        const newSideBar: ISideNav[] = clonedeep(prevSideNav);
 
-      newSideBar[0].items = newSideBar[0].items.map((item) => {
-        if (item.name === currentElementInView) {
-          item.isSelected = true;
-        } else {
-          item.isSelected = false;
-        }
+        newSideBar[0].items = newSideBar[0].items.map((item) => ({
+          ...item,
+          isSelected: item.name === currentElementInView,
+        }));
 
-        return item;
+        return newSideBar;
       });
-
-      setSideNav(newSideBar);
     }
   }, [currentElementInView]);
 
@@ -529,21 +526,21 @@ function ConstraintsComponent() {
               paddingSize="m"
               style={{
                 minWidth: "300px",
+                height: "100vh",
               }}
               sticky
             >
-              <EuiSideNav items={sideNav} />
+              <EuiSideNav items={sideNav} truncate={false} />
               {items.length > 0 && (
                 <EuiButton
                   iconSide="right"
                   iconSize="s"
                   iconType="popout"
                   style={{ width: "100%" }}
-                  href={`${appContextData.context.apiUrl}api/v1/constraints/${
-                    appContextData.context.currentK8sContext
-                      ? appContextData.context.currentK8sContext + "/"
-                      : ""
-                  }?report=html`}
+                  href={`${appContextData.context.apiUrl}api/v1/constraints/${appContextData.context.currentK8sContext
+                    ? appContextData.context.currentK8sContext + "/"
+                    : ""
+                    }?report=html`}
                   download
                 >
                   <EuiText size="xs">Download violations report</EuiText>

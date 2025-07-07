@@ -14,9 +14,9 @@ export function scrollToElement(hash: string, smooth: boolean = false) {
   element?.firstElementChild?.classList.toggle("highlighted");
 
   if (smooth) {
-    element.scrollIntoView({ behavior: "smooth", block: "center" });
+    element.scrollIntoView({ behavior: "smooth", block: "start" });
   } else {
-    element.scrollIntoView({ block: "center" });
+    element.scrollIntoView({ block: "start" });
   }
 
   setTimeout(() => {
