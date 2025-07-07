@@ -7,7 +7,7 @@
 import {
   EuiAccordion,
   EuiBadge,
-  EuiBasicTable,
+  EuiInMemoryTable,
   EuiButton,
   EuiCallOut,
   EuiEmptyPrompt,
@@ -58,7 +58,7 @@ function generateSideNav(list: IConstraint[]): ISideNav[] {
       icon: (
         <>
           <EuiBadge
-            color={item.status?.totalViolations ?? 0 > 0 ? "danger" : "success"}
+            color={(item.status?.totalViolations ?? 0) > 0 ? "danger" : "success"}
           >
             {item.status.totalViolations}
           </EuiBadge>
@@ -144,9 +144,8 @@ function SingleConstraint(item: IConstraint, context?: string) {
             </EuiFlexItem>
             <EuiFlexItem grow={false} style={{ marginLeft: "auto" }}>
               <EuiLink
-                href={`/constrainttemplates${context ? "/" + context : ""}#${
-                  item.kind
-                }`}
+                href={`/constrainttemplates${context ? "/" + context : ""}#${item.kind
+                  }`}
               >
                 <EuiText size="xs">
                   <span>TEMPLATE: {item.kind}</span>
@@ -220,29 +219,42 @@ function SingleConstraint(item: IConstraint, context?: string) {
                 >
                   <EuiFlexGroup direction="column" gutterSize="s">
                     <EuiFlexItem>
-                      <EuiBasicTable
+                      <EuiInMemoryTable
+                        search={{
+                          box: {
+                            incremental: true,
+                            schema: true,
+                            placeholder: "Filter violations...",
+                          },
+                        }}
+                        sorting={true}
                         tableLayout="auto"
                         items={item.status.violations}
                         columns={[
                           {
                             field: "enforcementAction",
                             name: "Action",
+                            sortable: true,
                           },
                           {
                             field: "kind",
                             name: "Kind",
+                            sortable: true,
                           },
                           {
                             field: "namespace",
                             name: "Namespace",
+                            sortable: true,
                           },
                           {
                             field: "name",
                             name: "Name",
+                            sortable: true,
                           },
                           {
                             field: "message",
                             name: "Message",
+                            sortable: true,
                           },
                         ]}
                       />
@@ -250,20 +262,20 @@ function SingleConstraint(item: IConstraint, context?: string) {
                     <EuiFlexItem>
                       {(item.status?.totalViolations ?? 0) >
                         item.status.violations.length && (
-                        <EuiCallOut
-                          title="Not all violations can be shown"
-                          color="warning"
-                          iconType="alert"
-                        >
-                          <p>
-                            Gatekeeper's configuration is limiting the audit
-                            violations per constraint to{" "}
-                            {item.status.violations.length}. See Gatekeeper's
-                            --constraint-violations-limit audit configuration
-                            flag.
-                          </p>
-                        </EuiCallOut>
-                      )}
+                          <EuiCallOut
+                            title="Not all violations can be shown"
+                            color="warning"
+                            iconType="alert"
+                          >
+                            <p>
+                              Gatekeeper's configuration is limiting the audit
+                              violations per constraint to{" "}
+                              {item.status.violations.length}. See Gatekeeper's
+                              --constraint-violations-limit audit configuration
+                              flag.
+                            </p>
+                          </EuiCallOut>
+                        )}
                     </EuiFlexItem>
                   </EuiFlexGroup>
                 </EuiAccordion>
@@ -358,9 +370,8 @@ function SingleConstraint(item: IConstraint, context?: string) {
                 >
                   <EuiBadge
                     iconType={pod.enforced ? shieldActive : shieldInactive}
-                    title={`Constraint is ${
-                      !pod.enforced ? "NOT " : ""
-                    }being ENFORCED by this POD`}
+                    title={`Constraint is ${!pod.enforced ? "NOT " : ""
+                      }being ENFORCED by this POD`}
                     style={{
                       paddingRight: 0,
                       borderRight: 0,
@@ -431,8 +442,7 @@ function ConstraintsComponent() {
   useEffect(() => {
     setIsLoading(true);
     fetch(
-      `${appContextData.context.apiUrl}api/v1/constraints/${
-        context ? context + "/" : ""
+      `${appContextData.context.apiUrl}api/v1/constraints/${context ? context + "/" : ""
       }`,
     )
       .then(async (res) => {
