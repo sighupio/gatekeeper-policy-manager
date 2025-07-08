@@ -346,13 +346,13 @@ function MutationsComponent() {
             restrictWidth={1200}
             grow={true}
             style={{ position: "relative" }}
-            className="gpm-page gpm-page-config"
+            className="gpm-page gpm-page-mutations"
           >
-            <EuiPageSidebar paddingSize="m"
-              style={{
-                height: "100vh", // needed for sticky behavior
-              }}
-              sticky>
+            <EuiPageSidebar
+              paddingSize="m"
+              style={{ height: "100vh" }}
+              sticky
+            >
               <EuiSideNav items={sideNav} />
             </EuiPageSidebar>
             <EuiPageBody

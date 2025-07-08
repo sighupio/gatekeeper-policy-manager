@@ -424,7 +424,7 @@ function ConstraintTemplatesComponent() {
               </>
             </EuiPageBody>
           </EuiPage>
-        </EuiFlexGroup >
+        </EuiFlexGroup>
       )
       }
     </>
