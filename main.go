@@ -160,7 +160,7 @@ func getConstraintTemplates(c echo.Context) error {
 	response.Constraints_by_constrainttemplates = make(map[string][]unstructured.Unstructured)
 
 	// get all constraint templates
-	constrainttemplates, err := getCustomResources(*clientset, "templates.gatekeeper.sh", "v1beta1", "constrainttemplates")
+	constrainttemplates, err := getCustomResources(*clientset, "templates.gatekeeper.sh", "v1", "constrainttemplates")
 	if err != nil {
 		slog.Error("getting Constraint Templates resources failed", "error", err)
 		return c.JSON(http.StatusInternalServerError, ErrorAnswer{
@@ -507,7 +507,7 @@ func main() {
 
 	// CORS configuration for frontend development purposes
 	if os.Getenv("APP_ENV") == "development" {
-		origins := []string{"http://localhost:3000"}
+		origins := []string{"http://localhost:3000", "http://localhost:3001"}
 		headers := []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept}
 		slog.Warn("running in development mode, allowing CORS from other origins", "origins", origins, "headers", headers)
 		e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
