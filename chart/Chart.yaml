@@ -7,7 +7,7 @@ description:
 home: https://sighup.io
 sources:
   - https://github.com/sighupio/gatekeeper-policy-manager/
-icon: https://raw.githubusercontent.com/sighupio/gatekeeper-policy-manager/main/app/static-content/logo.svg
+icon: https://raw.githubusercontent.com/sighupio/gatekeeper-policy-manager/main/docs/assets/logo.svg
 maintainers:
   - name: Ramiro Algozino
     email: ramiro@sighup.io
