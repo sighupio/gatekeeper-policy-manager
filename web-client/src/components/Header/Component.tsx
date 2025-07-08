@@ -71,13 +71,12 @@ function HeaderComponent() {
         dropdownDisplay: (
           <EuiText
             size="s"
+            title={k8sContext}
             style={{
-              maxWidth: "200px",
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
             }}
-            title={k8sContext}
           >
             {k8sContext}
           </EuiText>
