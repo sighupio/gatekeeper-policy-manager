@@ -229,6 +229,7 @@ function SingleConstraint(item: IConstraint, context?: string) {
                         }}
                         sorting={true}
                         tableLayout="auto"
+                        pagination={true}
                         items={item.status.violations}
                         columns={[
                           {
@@ -468,7 +469,7 @@ function ConstraintsComponent() {
         navigate(`/error`, { state: { error: error } });
       })
       .finally(() => setIsLoading(false));
-  }, [appContextData.context.currentK8sContext]);
+  }, [appContextData.context.apiUrl, appContextData.context.currentK8sContext, context, navigate]);
 
   useScrollToHash(hash, [fullyLoadedRefs]);
 
