@@ -145,7 +145,7 @@ function SingleConstraintTemplate(
             paddingSize="none"
           >
             <EuiCodeBlock lineNumbers language="rego">
-              {item.spec.targets[0].rego ?? item.spec.targets[0].code?.filter(code => code.engine == "Rego")[0]?.source.rego}
+              {item.spec.targets[0].rego ?? item.spec.targets[0].code?.filter(code => code.engine === "Rego")[0]?.source.rego}
             </EuiCodeBlock>
           </EuiAccordion>
         </EuiFlexItem>
@@ -346,19 +346,16 @@ function ConstraintTemplatesComponent() {
 
   useEffect(() => {
     if (currentElementInView) {
-      const newSideBar: ISideNav[] = clonedeep(sideNav);
+      setSideNav((prevSideNav) => {
+        const newSideBar: ISideNav[] = clonedeep(prevSideNav);
 
-      newSideBar[0].items = newSideBar[0].items.map((item) => {
-        if (item.name === currentElementInView) {
-          item.isSelected = true;
-        } else {
-          item.isSelected = false;
-        }
+        newSideBar[0].items = newSideBar[0].items.map((item) => ({
+          ...item,
+          isSelected: item.name === currentElementInView,
+        }));
 
-        return item;
+        return newSideBar;
       });
-
-      setSideNav(newSideBar);
     }
   }, [currentElementInView]);
 

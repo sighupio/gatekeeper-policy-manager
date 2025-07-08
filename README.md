@@ -61,7 +61,7 @@ helm upgrade --install --namespace gatekeeper-system --set image.tag=v1.0.14 --v
 ```
 
 > [!IMPORTANT]
-> don't forget to replace `my-values.yaml` with the path to your values file.
+> Don't forget to replace `my-values.yaml` with the path to your values file.
 
 ## Running locally
 
