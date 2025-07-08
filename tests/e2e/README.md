@@ -6,12 +6,16 @@ The best way to use locally these tests is to run them in a docker container, ot
 
 > Notice that you'll need to have a working instance of GPM accessible at `http://localhost:8080`
 >
-> For example with: kubectl port-forward -n gatekeeper-system svc/gatekeeper-policy-manager 8080:80
+> For example with:
+>
+> ```bash
+> kubectl port-forward -n gatekeeper-system svc/gatekeeper-policy-manager 8080:80
+> ```
 
 1. Get the container running:
 
 ```console
-docker run --rm -it -v --network=host $PWD:/app mcr.microsoft.com/playwright:v1.30.0-focal
+docker run --rm -it --network=host -v $PWD:/app mcr.microsoft.com/playwright:v1.30.0-focal
 ```
 
 2. Install all the dependencies:
