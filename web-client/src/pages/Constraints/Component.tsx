@@ -7,7 +7,7 @@
 import {
   EuiAccordion,
   EuiBadge,
-  EuiBasicTable,
+  EuiInMemoryTable,
   EuiButton,
   EuiCallOut,
   EuiEmptyPrompt,
@@ -58,7 +58,7 @@ function generateSideNav(list: IConstraint[]): ISideNav[] {
       icon: (
         <>
           <EuiBadge
-            color={item.status?.totalViolations ?? 0 > 0 ? "danger" : "success"}
+            color={(item.status?.totalViolations ?? 0) > 0 ? "danger" : "success"}
           >
             {item.status.totalViolations}
           </EuiBadge>
@@ -143,7 +143,10 @@ function SingleConstraint(item: IConstraint, context?: string) {
               {getEnforcementActionRenderData(item.spec).badge}
             </EuiFlexItem>
             <EuiFlexItem grow={false} style={{ marginLeft: "auto" }}>
-              <EuiLink href={`/constrainttemplates${context ? "/" + context : ""}#${item.kind}`}>
+              <EuiLink
+                href={`/constrainttemplates${context ? "/" + context : ""}#${item.kind
+                  }`}
+              >
                 <EuiText size="xs">
                   <span>TEMPLATE: {item.kind}</span>
                   <EuiIcon type="link" size="s" style={{ marginLeft: 5 }} />
@@ -216,29 +219,43 @@ function SingleConstraint(item: IConstraint, context?: string) {
                 >
                   <EuiFlexGroup direction="column" gutterSize="s">
                     <EuiFlexItem>
-                      <EuiBasicTable
+                      <EuiInMemoryTable
+                        search={{
+                          box: {
+                            incremental: true,
+                            schema: true,
+                            placeholder: "Filter violations...",
+                          },
+                        }}
+                        sorting={true}
                         tableLayout="auto"
+                        pagination={true}
                         items={item.status.violations}
                         columns={[
                           {
                             field: "enforcementAction",
                             name: "Action",
+                            sortable: true,
                           },
                           {
                             field: "kind",
                             name: "Kind",
+                            sortable: true,
                           },
                           {
                             field: "namespace",
                             name: "Namespace",
+                            sortable: true,
                           },
                           {
                             field: "name",
                             name: "Name",
+                            sortable: true,
                           },
                           {
                             field: "message",
                             name: "Message",
+                            sortable: true,
                           },
                         ]}
                       />
@@ -346,7 +363,7 @@ function SingleConstraint(item: IConstraint, context?: string) {
         </EuiFlexItem>
         <EuiFlexItem>
           <EuiFlexGroup direction="row" gutterSize="xs" wrap={true}>
-            {item.status.byPod.map((pod: any) => {
+            {item.status.byPod.map((pod) => {
               return (
                 <EuiFlexItem
                   grow={false}
@@ -365,33 +382,9 @@ function SingleConstraint(item: IConstraint, context?: string) {
                   >
                     {pod.id}
                     <EuiBadge
-                      style={{
-                        fontSize: 10,
-                        margin: "0px",
-                        borderRadius: 0,
-                        padding: 0,
-                        verticalAlign: "baseline",
-                      }}>&nbsp;</EuiBadge>
-                    {pod.operations.map((operation: string) => {
-                      return (
-                        <EuiBadge
-                          color="#ccc"
-                          key={`${item.metadata.name}-${pod.id}-${operation}`}
-                          style={{
-                            fontSize: 10,
-                            margin: "0px",
-                            borderRadius: 0,
-                            verticalAlign: "baseline",
-                          }}> {operation}
-                        </EuiBadge>
-                      );
-                    })}
-                    <EuiBadge
                       color="#666"
                       style={{
-                        fontSize: 10,
-                        margin: "0px",
-                        marginRight: "1px",
+                        marginLeft: "8px",
                         borderBottomLeftRadius: 0,
                         borderTopLeftRadius: 0,
                         verticalAlign: "baseline",
@@ -444,14 +437,14 @@ function ConstraintsComponent() {
         setFullyLoadedRefs(true);
       }
     },
-    [panelsRef, items]
+    [panelsRef, items],
   );
 
   useEffect(() => {
     setIsLoading(true);
     fetch(
-      `${appContextData.context.apiUrl}api/v1/constraints/${context ?
-        context + "/" : ""}`
+      `${appContextData.context.apiUrl}api/v1/constraints/${context ? context + "/" : ""
+      }`,
     )
       .then(async (res) => {
         const body: IConstraint[] = await res.json();
@@ -476,27 +469,24 @@ function ConstraintsComponent() {
         navigate(`/error`, { state: { error: error } });
       })
       .finally(() => setIsLoading(false));
-  }, [appContextData.context.currentK8sContext]);
+  }, [appContextData.context.apiUrl, appContextData.context.currentK8sContext, context, navigate]);
 
-  useScrollToHash(hash, [fullyLoadedRefs,]);
+  useScrollToHash(hash, [fullyLoadedRefs]);
 
   useCurrentElementInView(panelsRef, setCurrentElementInView);
 
   useEffect(() => {
     if (currentElementInView) {
-      const newSideBar: ISideNav[] = clonedeep(sideNav);
+      setSideNav((prevSideNav) => {
+        const newSideBar: ISideNav[] = clonedeep(prevSideNav);
 
-      newSideBar[0].items = newSideBar[0].items.map((item) => {
-        if (item.name === currentElementInView) {
-          item.isSelected = true;
-        } else {
-          item.isSelected = false;
-        }
+        newSideBar[0].items = newSideBar[0].items.map((item) => ({
+          ...item,
+          isSelected: item.name === currentElementInView,
+        }));
 
-        return item;
+        return newSideBar;
       });
-
-      setSideNav(newSideBar);
     }
   }, [currentElementInView]);
 
@@ -537,27 +527,28 @@ function ConstraintsComponent() {
               paddingSize="m"
               style={{
                 minWidth: "300px",
+                height: "100vh",
               }}
               sticky
             >
-              <EuiSideNav items={sideNav} />
+              <EuiSideNav items={sideNav} truncate={false} />
               {items.length > 0 && (
                 <EuiButton
                   iconSide="right"
                   iconSize="s"
                   iconType="popout"
                   style={{ width: "100%" }}
-                  href={`${appContextData.context.apiUrl}api/v1/constraints/${appContextData.context.currentK8sContext ?? ""}?report=html`}
+                  href={`${appContextData.context.apiUrl}api/v1/constraints/${appContextData.context.currentK8sContext
+                    ? appContextData.context.currentK8sContext + "/"
+                    : ""
+                    }?report=html`}
                   download
                 >
                   <EuiText size="xs">Download violations report</EuiText>
                 </EuiButton>
               )}
             </EuiPageSidebar>
-            <EuiPageBody
-              paddingSize="m"
-              style={{ marginBottom: 350 }}
-            >
+            <EuiPageBody paddingSize="m" style={{ marginBottom: 350 }}>
               <>
                 {items && items.length > 0 ? (
                   items.map((item, index) => {
@@ -567,7 +558,10 @@ function ConstraintsComponent() {
                         key={item.metadata.name}
                         ref={(node) => onRefChange(node, index)}
                       >
-                        {SingleConstraint(item, context)}
+                        {SingleConstraint(
+                          item,
+                          appContextData.context.currentK8sContext,
+                        )}
                       </div>
                     );
                   })

@@ -302,19 +302,16 @@ function MutationsComponent() {
 
   useEffect(() => {
     if (currentElementInView) {
-      const newSideBar: ISideNav[] = clonedeep(sideNav);
+      setSideNav((prevSideNav) => {
+        const newSideBar: ISideNav[] = clonedeep(prevSideNav);
 
-      newSideBar[0].items = newSideBar[0].items.map((item) => {
-        if (item.name === currentElementInView) {
-          item.isSelected = true;
-        } else {
-          item.isSelected = false;
-        }
+        newSideBar[0].items = newSideBar[0].items.map((item) => ({
+          ...item,
+          isSelected: item.name === currentElementInView,
+        }));
 
-        return item;
+        return newSideBar;
       });
-
-      setSideNav(newSideBar);
     }
   }, [currentElementInView]);
 
@@ -351,7 +348,11 @@ function MutationsComponent() {
             style={{ position: "relative" }}
             className="gpm-page gpm-page-config"
           >
-            <EuiPageSidebar paddingSize="m" sticky>
+            <EuiPageSidebar paddingSize="m"
+              style={{
+                height: "100vh", // needed for sticky behavior
+              }}
+              sticky>
               <EuiSideNav items={sideNav} />
             </EuiPageSidebar>
             <EuiPageBody

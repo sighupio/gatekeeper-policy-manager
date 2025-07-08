@@ -145,10 +145,7 @@ function SingleConstraintTemplate(
             paddingSize="none"
           >
             <EuiCodeBlock lineNumbers language="rego">
-              {item.spec.targets[0].rego ??
-                item.spec.targets[0].code?.filter(
-                  (code) => code.engine === "Rego",
-                )[0]?.source.rego}
+              {item.spec.targets[0].rego ?? item.spec.targets[0].code?.filter(code => code.engine === "Rego")[0]?.source.rego}
             </EuiCodeBlock>
           </EuiAccordion>
         </EuiFlexItem>
@@ -196,7 +193,8 @@ function SingleConstraintTemplate(
             {relatedConstraints.map((constraint, index) => (
               <EuiFlexItem key={constraint.metadata.name}>
                 <EuiLink
-                  href={`/constraints${context ? "/" + context : ""}#${constraint.metadata.name}`}
+                  href={`/constraints${context ? "/" + context : ""}#${constraint.metadata.name
+                    }`}
                 >
                   <EuiText size="s">
                     <span>{constraint.metadata.name}</span>
@@ -235,7 +233,7 @@ function SingleConstraintTemplate(
         </EuiFlexItem>
         <EuiFlexItem>
           <EuiFlexGroup direction="row" wrap={true} gutterSize="xs">
-            {item.status.byPod.map((pod: any) => {
+            {item.status.byPod.map((pod) => {
               return (
                 <EuiFlexItem
                   grow={false}
@@ -252,39 +250,9 @@ function SingleConstraintTemplate(
                   >
                     {pod.id}
                     <EuiBadge
-                      style={{
-                        fontSize: 10,
-                        margin: "0px",
-                        borderRadius: 0,
-                        padding: 0,
-                        verticalAlign: "baseline",
-                      }}
-                    >
-                      &nbsp;
-                    </EuiBadge>
-                    {pod.operations.map((operation: string) => {
-                      return (
-                        <EuiBadge
-                          color="#ccc"
-                          key={`${item.metadata.name}-${pod.id}-${operation}`}
-                          style={{
-                            fontSize: 10,
-                            margin: "0px",
-                            borderRadius: 0,
-                            verticalAlign: "baseline",
-                          }}
-                        >
-                          {" "}
-                          {operation}
-                        </EuiBadge>
-                      );
-                    })}
-                    <EuiBadge
                       color="#666"
                       style={{
-                        fontSize: 10,
-                        margin: "0px",
-                        marginRight: "1px",
+                        marginLeft: "8px",
                         borderBottomLeftRadius: 0,
                         borderTopLeftRadius: 0,
                         verticalAlign: "baseline",
@@ -378,19 +346,16 @@ function ConstraintTemplatesComponent() {
 
   useEffect(() => {
     if (currentElementInView) {
-      const newSideBar: ISideNav[] = clonedeep(sideNav);
+      setSideNav((prevSideNav) => {
+        const newSideBar: ISideNav[] = clonedeep(prevSideNav);
 
-      newSideBar[0].items = newSideBar[0].items.map((item) => {
-        if (item.name === currentElementInView) {
-          item.isSelected = true;
-        } else {
-          item.isSelected = false;
-        }
+        newSideBar[0].items = newSideBar[0].items.map((item) => ({
+          ...item,
+          isSelected: item.name === currentElementInView,
+        }));
 
-        return item;
+        return newSideBar;
       });
-
-      setSideNav(newSideBar);
     }
   }, [currentElementInView]);
 
@@ -427,7 +392,7 @@ function ConstraintTemplatesComponent() {
             style={{ position: "relative" }}
             className="gpm-page gpm-page-constraint-templates"
           >
-            <EuiPageSidebar paddingSize="m" sticky>
+            <EuiPageSidebar paddingSize="m" style={{ height: "100vh" }} sticky>
               <EuiSideNav items={sideNav} />
             </EuiPageSidebar>
             <EuiPageBody paddingSize="m" style={{ marginBottom: 350 }}>
@@ -445,7 +410,7 @@ function ConstraintTemplatesComponent() {
                         {SingleConstraintTemplate(
                           item,
                           relatedConstraintsForItem,
-                          context,
+                          appContextData.context.currentK8sContext,
                         )}
                       </div>
                     );
@@ -459,8 +424,9 @@ function ConstraintTemplatesComponent() {
               </>
             </EuiPageBody>
           </EuiPage>
-        </EuiFlexGroup>
-      )}
+        </EuiFlexGroup >
+      )
+      }
     </>
   );
 }
