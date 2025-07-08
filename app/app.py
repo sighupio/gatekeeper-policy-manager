@@ -332,7 +332,13 @@ def get_constrainttemplates(context=None):
     """Constraint Templates View"""
     try:
         api = get_api(context)
-        currentversion = "v1beta1"
+        if not api:
+            return {
+                "error": "Could not connect to Kubernetes Cluster",
+                "action": "Failed to create API client",
+                "description": api,
+            }, 500
+        currentversion = "v1"
         for a in api["apis"].get_api_versions().groups:
             if a.name == "templates.gatekeeper.sh":
                 currentversion = a.preferred_version.version
@@ -350,15 +356,22 @@ def get_constrainttemplates(context=None):
         )
         constraints_by_constrainttemplates = {}
         for ct in constrainttemplates:
-            constraints_by_constrainttemplates[ct["metadata"]["name"]] = (
-                api["cm"]
-                .list_cluster_custom_object(
-                    group="constraints.gatekeeper.sh",
-                    version="v1beta1",
-                    plural=ct["metadata"]["name"],
+            try:
+                constraints_by_constrainttemplates[ct["metadata"]["name"]] = (
+                    api["cm"]
+                    .list_cluster_custom_object(
+                        group="constraints.gatekeeper.sh",
+                        version="v1beta1",
+                        plural=ct["metadata"]["name"],
+                    )
+                    .get("items")
                 )
-                .get("items")
-            )
+            except ApiException as e:
+                if e.status == 404:
+                    app.logger.debug(
+                        f"No constraints found for Constraint Template {ct['metadata']['name']}"
+                    )
+
     except NewConnectionError as e:
         return {
             "error": "Could not connect to Kubernetes Cluster",
