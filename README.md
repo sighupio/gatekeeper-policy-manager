@@ -104,15 +104,16 @@ GPM is a stateless application, but it can be configured using environment varia
 
 ### Multi-cluster support
 
-Since `v1.0.14` GPM has basic multi-cluster support when using a `kubeconfig` with more than one context. GPM will let you chose the context right from the UI.
+GPM has multi-cluster support when using a `kubeconfig` with more than one context. GPM will let you chose the context right from the UI.
 
-If you want to run GPM in a cluster but with multi-cluster support, it's as easy as mounting a `kubeconfig` file in GPM's pod(s) with the cluster access configuration and set the environment variable `KUBECONFIG` with the path to the mounted `kubeconfig` file. Or you can simply mount it in `/home/gpm/.kube/config` and GPM will detect it automatically.
+If you want to run GPM in-cluster but with multi-cluster support, it's as easy as mounting a `kubeconfig` file in GPM's pod(s) with the cluster access configuration and set the environment variable `KUBECONFIG` with the path to the mounted `kubeconfig` file. Or you can simply mount it in `/home/gpm/.kube/config` and GPM will detect it automatically.
 
+> [!NOTE]
 > Please remember that the user for the clusters should have the right permissions. You can use the [`manifests/rabc.yaml`](manifests/rbac.yaml) file as reference.
 >
 > Also note that the cluster where GPM is running should be able to reach the other clusters.
 
-When you run GPM locally, you are already using a `kubeconfig` file  to connect to the clusters, now you should see all your defined contexts and you can switch between them easily from the UI.
+When you run GPM locally, you are already using a `kubeconfig` file to connect to the clusters, now you should see all your defined contexts. You can switch between them easily from the UI.
 
 #### AWS IAM Authentication
 
@@ -173,9 +174,19 @@ $ source ./env/bin/activate
 # Install all the dependencies
 $ pip install -r app/requirements.txt
 # Run the development server
-$ FLASK_APP=app/app.py flask run
+$ FLASK_APP=app/app.py FLASK_ENV=development flask run
 ```
 
+If you want to test changes to the frontend live, make sure the backend is running (see above) and then run the frontend using `yarn`:
+
+```bash
+cd app/web-client
+yarn start
+```
+
+A browser window should open, if the React application can't reach the backend, check that the `.env` file points to the right backend endpoint (`REACT_APP_LOCAL_GPM_SERVER_URL`).
+
+> [!TIP]
 > Access to a Kubernetes cluster with OPA Gatekeeper deployed is recommended to debug the application.
 >
 > You'll need an OIDC provider to test the OIDC authentication. You can use the SIGHUP Distribution [Keycloak add-on module](https://github.com/sighupio/add-on-keycloak).
@@ -191,6 +202,6 @@ The following is a wishlist of features that we would like to add to GPM (in no 
 - [x] Root-less docker image
 - [x] Multi-cluster view
 - [ ] Minimal write capabilities?
-- [ ] Rewrite app in Golang?
+- [ ] Rewrite app in Golang? (WIP in the `feature/go-backend` branch)
 
 Please, let us know if you are using GPM and what features would you like to have by creating an issue here on GitHub 💪🏻
