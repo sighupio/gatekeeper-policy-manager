@@ -78,7 +78,7 @@ ingress:
     # proxy_set_header Authorization $token;
     #forecastle.stakater.com/expose: "true"
     #forecastle.stakater.com/appName: "Gatekeeper Policy Manager"
-    #forecastle.stakater.com/icon: "https://raw.githubusercontent.com/sighupio/gatekeeper-policy-manager/master/app/static-content/logo.svg"
+    #forecastle.stakater.com/icon: "https://raw.githubusercontent.com/sighupio/gatekeeper-policy-manager/main/docs/assets/logo.svg"
   labels: {}
   hosts:
     - host: gpm.local
