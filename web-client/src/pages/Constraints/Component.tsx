@@ -34,7 +34,7 @@ import { BackendError, ISideNav, ISideNavItem } from "../types";
 import { JSONTree } from "react-json-tree";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import theme from "../theme";
-import { scrollToElement } from "../../utils";
+import { scrollToElement, autoLink } from "../../utils";
 import { IConstraint, IConstraintSpec } from "./types";
 import useScrollToHash from "../../hooks/useScrollToHash";
 import useCurrentElementInView from "../../hooks/useCurrentElementInView";
@@ -256,6 +256,11 @@ function SingleConstraint(item: IConstraint, context?: string) {
                             field: "message",
                             name: "Message",
                             sortable: true,
+                            render: (message: string) => {
+                              return (
+                                <EuiText size="s">{autoLink(message)}</EuiText>
+                              );
+                            }
                           },
                         ]}
                       />
