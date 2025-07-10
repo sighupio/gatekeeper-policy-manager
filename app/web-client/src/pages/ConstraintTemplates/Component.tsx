@@ -33,7 +33,7 @@ import { IConstraint } from "../Constraints/types";
 import { JSONTree } from "react-json-tree";
 import theme from "../theme";
 import clonedeep from "lodash.clonedeep";
-import { scrollToElement } from "../../utils";
+import { scrollToElement, autoLink } from "../../utils";
 import {
   IConstraintTemplate,
   IConstraintTemplateResponse,
@@ -108,7 +108,7 @@ function SingleConstraintTemplate(
         <EuiFlexGroup direction="column" gutterSize="s">
           <EuiFlexItem grow={false}>
             <EuiText size="s">
-              <p>{item.metadata.annotations.description}</p>
+              <p>{autoLink(item.metadata.annotations.description)}</p>
             </EuiText>
           </EuiFlexItem>
         </EuiFlexGroup>
