@@ -1,16 +1,18 @@
 # Copyright (c) 2022 SIGHUP s.r.l All rights reserved.
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
 
 namespace: gatekeeper-system
 
 resources:
-  - manifests/rbac.yaml
-  - manifests/deployment.yaml
-  - manifests/service.yaml
-  # Uncomment the following line to create an ingress if you want to expose the
-  # the app to the outside. Remember to edit the file and set the host accordingly.
-  # - manifests/ingress.yaml
+- manifests/rbac.yaml
+- manifests/deployment.yaml
+- manifests/service.yaml
+    # Uncomment the following line to create an ingress if you want to expose the
+    # the app to the outside. Remember to edit the file and set the host accordingly.
+    # - manifests/ingress.yaml
 
 # Uncomment the following line if you are using some of the patches below.
 #patchesStrategicMerge:
@@ -28,5 +30,5 @@ resources:
 #       - kubeconfig # or the path to your file.
 
 images:
-  - name: quay.io/sighup/gatekeeper-policy-manager
-    newTag: "v1.0.14"
+- name: quay.io/sighup/gatekeeper-policy-manager
+  newTag: v1.0.14

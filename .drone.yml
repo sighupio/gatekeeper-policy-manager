@@ -118,7 +118,7 @@ steps:
       - kind get kubeconfig --name $${CLUSTER_NAME} > kubeconfig.yml
 
   - name: E2E tests
-    image: quay.io/sighup/e2e-testing:1.1.0_1.31.1_3.10.0_4.33.3
+    image: quay.io/sighup/e2e-testing:2.24.17_1.1.0_3.12.0_1.32.2_5.6.0_1.9.0_4.33.3
     network_mode: host
     environment:
       LOAD_IMAGE: gatekeeper-policy-manager:test-${DRONE_BUILD_NUMBER}

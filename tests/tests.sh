@@ -22,7 +22,7 @@ load ./helper
 @test "Deploy" {
     info
     deploy(){
-        kustomize build --load_restrictor none tests/ | kubectl apply -f -
+        kustomize build --load-restrictor LoadRestrictionsNone tests/ | kubectl apply -f -
     }
     loop_it deploy 10 5
     status=${loop_it_result}
