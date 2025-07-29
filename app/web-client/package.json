@@ -12,7 +12,7 @@
     "@elastic/eui": "^99.1.0",
     "@emotion/css": "^11.13.5",
     "@emotion/react": "^11.14.0",
-    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/jest-dom": "^6.6.4",
     "@testing-library/react": "^12.1.5",
     "@testing-library/user-event": "^14.6.1",
     "@types/jest": "^30.0.0",
