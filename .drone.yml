@@ -111,7 +111,6 @@ steps:
         path: /var/run/docker.sock
     commands:
       - wget -qO /usr/local/bin/kind "https://kind.sigs.k8s.io/dl/$${KIND_VERSION}/kind-$(uname)-amd64"
-      - wget -qO /usr/local/bin/kubectl "https://storage.googleapis.com/kubernetes-release/release/$${CLUSTER_VERSION}/bin/linux/amd64/kubectl"
       - wget -qO /usr/local/bin/kubectl "https://dl.k8s.io/$${CLUSTER_VERSION}/bin/linux/arm/kubectl"
       - chmod +x /usr/local/bin/kind /usr/local/bin/kubectl
       - kind create cluster --name $${CLUSTER_NAME} --image registry.sighup.io/fury/kindest/node:$${CLUSTER_VERSION}
