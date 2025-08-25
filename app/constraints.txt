@@ -1,10 +1,10 @@
 Beaker==1.13.0
 cachetools==5.5.0
-certifi==2025.7.14
+certifi==2025.8.3
 cffi==1.17.1
-charset-normalizer==3.4.2
+charset-normalizer==3.4.3
 click==8.1.8
-cryptography==45.0.5
+cryptography==45.0.6
 defusedxml==0.7.1
 future==1.0.0
 google-auth==2.40.3
