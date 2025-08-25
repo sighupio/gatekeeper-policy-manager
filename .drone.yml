@@ -100,8 +100,8 @@ steps:
     image: docker:dind
     pull: always
     environment:
-      KIND_VERSION: v0.24.0
-      CLUSTER_VERSION: v1.31.0
+      KIND_VERSION: v0.29.0
+      CLUSTER_VERSION: v1.33.0
       LOAD_IMAGE: gatekeeper-policy-manager:test-${DRONE_BUILD_NUMBER}
       CLUSTER_NAME: ${DRONE_REPO_NAME}-${DRONE_BUILD_NUMBER}
     volumes:
