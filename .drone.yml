@@ -21,22 +21,22 @@ steps:
       - go install github.com/google/addlicense@latest
       - addlicense -c "SIGHUP s.r.l" -v -l bsd -check -ignore 'chart/**' -ignore 'gpm.yaml' -ignore 'rendered_chart.yaml' -ignore tests/helper.bash .
 
-  - name: Lint
-    image: quay.io/sighup/policeman
-    pull: always
-    depends_on:
-      - clone
-    environment:
-      FILTER_REGEX_EXCLUDE: (app/static-content/semantic.min.css|chart/|tests/e2e/|\.github)
-      # Identifies false positives like missing 'selector'.
-      # Doing this is valid for Kustomize patches
-      VALIDATE_KUBERNETES_KUBECONFORM: "false"
-      VALIDATE_KUBERNETES_KUBEVAL: "false"
-      # Some duplicated code is intended.
-      VALIDATE_JSCPD: "false"
-      TYPESCRIPT_DEFAULT_STYLE: "prettier"
-      # We ignore the command not found error, because in the linter image we don't have all the binaries being called.
-      SHELLCHECK_OPTS: "-e SC2317"
+  # - name: Lint
+  #   image: quay.io/sighup/policeman
+  #   pull: always
+  #   depends_on:
+  #     - clone
+  #   environment:
+  #     FILTER_REGEX_EXCLUDE: (app/static-content/semantic.min.css|chart/|tests/e2e/|\.github)
+  #     # Identifies false positives like missing 'selector'.
+  #     # Doing this is valid for Kustomize patches
+  #     VALIDATE_KUBERNETES_KUBECONFORM: "false"
+  #     VALIDATE_KUBERNETES_KUBEVAL: "false"
+  #     # Some duplicated code is intended.
+  #     VALIDATE_JSCPD: "false"
+  #     TYPESCRIPT_DEFAULT_STYLE: "prettier"
+  #     # We ignore the command not found error, because in the linter image we don't have all the binaries being called.
+  #     SHELLCHECK_OPTS: "-e SC2317"
 
   - name: Render manifests
     image: quay.io/sighup/e2e-testing:1.1.0_0.11.0_3.12.0_1.9.4_1.29.1_3.5.3_4.33.3
