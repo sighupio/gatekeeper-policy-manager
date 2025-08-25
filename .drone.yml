@@ -19,7 +19,7 @@ steps:
       - clone
     commands:
       - go install github.com/google/addlicense@latest
-      - addlicense -c "SIGHUP s.r.l" -v -l bsd -check -ignore 'chart/**' -ignore 'gpm.yaml' -ignore 'rendered_chart.yaml' .
+      - addlicense -c "SIGHUP s.r.l" -v -l bsd -check -ignore 'chart/**' -ignore 'gpm.yaml' -ignore 'rendered_chart.yaml' -ignore tests/helper.bash .
 
   - name: Lint
     image: quay.io/sighup/policeman
