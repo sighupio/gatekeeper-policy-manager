@@ -6,7 +6,7 @@
 <!-- markdownlint-enable MD033 -->
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/gatekeeper-policy-manager/status.svg)](https://ci.sighup.io/sighupio/gatekeeper-policy-manager)
-![GPM Release](https://img.shields.io/badge/GPM-v1.0.14-blue)
+![GPM Release](https://img.shields.io/badge/GPM-v1.1.0-blue)
 ![Helm Chart Release](https://img.shields.io/badge/Helm%20Chart-v0.4.1-blue)
 ![License](https://img.shields.io/github/license/sighupio/gatekeeper-policy-manager)
 
@@ -57,7 +57,7 @@ Then, execute:
 
 ```bash
 helm repo add gpm https://sighupio.github.io/gatekeeper-policy-manager
-helm upgrade --install --namespace gatekeeper-system --set image.tag=v1.0.14 --values my-values.yaml gatekeeper-policy-manager gpm/gatekeeper-policy-manager
+helm upgrade --install --namespace gatekeeper-system --set image.tag=v1.1.0 --values my-values.yaml gatekeeper-policy-manager gpm/gatekeeper-policy-manager
 ```
 
 > [!IMPORTANT]
@@ -68,7 +68,7 @@ helm upgrade --install --namespace gatekeeper-system --set image.tag=v1.0.14 --v
 GPM can also be run locally using docker and a `kubeconfig`, assuming that the `kubeconfig` file you want to use is located at `~/.kube/config` the command to run GPM locally would be:
 
 ```bash
-docker run -v ~/.kube/config:/home/gpm/.kube/config -p 8080:8080 quay.io/sighup/gatekeeper-policy-manager:v1.0.14
+docker run -v ~/.kube/config:/home/gpm/.kube/config -p 8080:8080 quay.io/sighup/gatekeeper-policy-manager:v1.1.0
 ```
 
 Then access it with your browser on: [http://127.0.0.1:8080](http://127.0.0.1:8080)
@@ -125,7 +125,7 @@ You can customize the container image with a `Dockerfile` like the following:
 FROM curlimages/curl:7.81.0 as downloader
 RUN curl https://github.com/kubernetes-sigs/aws-iam-authenticator/releases/download/v0.5.5/aws-iam-authenticator_0.5.5_linux_amd64 --output /tmp/aws-iam-authenticator
 RUN chmod +x /tmp/aws-iam-authenticator
-FROM quay.io/sighup/gatekeeper-policy-manager:v1.0.14
+FROM quay.io/sighup/gatekeeper-policy-manager:v1.1.0
 COPY --from=downloader --chown=root:root /tmp/aws-iam-authenticator /usr/local/bin/
 ```
 
