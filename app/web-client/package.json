@@ -28,7 +28,7 @@
     "react-scripts": "5.0.1",
     "sass": "^1.83.4",
     "typescript": "^5.6.3",
-    "web-vitals": "^5.0.3"
+    "web-vitals": "^5.1.0"
   },
   "resolutions": {
     "fork-ts-checker-webpack-plugin": "^8.0.0",
