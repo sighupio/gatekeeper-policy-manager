@@ -23,7 +23,7 @@ pycryptodomex==3.23.0
 pydantic==2.11.7
 pyjwkest==1.4.2
 python-dateutil==2.9.0.post0
-PyYAML==6.0.2
+PyYAML==6.0.3
 requests==2.32.4
 requests-oauthlib==2.0.0
 rsa==4.9.1
