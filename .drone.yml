@@ -230,7 +230,7 @@ type: docker
 
 depends_on:
   - license
-  - policeman
+  # - policeman
   - e2e
 
 trigger:
