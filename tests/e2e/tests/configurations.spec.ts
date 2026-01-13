@@ -8,6 +8,7 @@ import { test, expect } from '@playwright/test';
 
 test('page configurations snapshot', async ({ page }) => {
   await page.goto('configurations/');
-  await page.waitForSelector('#config > .euiPanel');
+  const config = page.locator('#config > .euiPanel');
+  await config.waitFor();
   await expect(page).toHaveScreenshot({ maxDiffPixels: 100, fullPage: true, mask: [page.locator('.dynamic')]  });
 });

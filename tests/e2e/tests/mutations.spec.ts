@@ -8,6 +8,7 @@ import { test, expect } from '@playwright/test';
 
 test('page mutations snapshot', async ({ page }) => {
   await page.goto('mutations/');
-  await page.waitForSelector('#demo-annotation-owner > .euiPanel');
+  const mutation = page.locator('#demo-annotation-owner > .euiPanel');
+  await mutation.waitFor();
   await expect(page).toHaveScreenshot({ maxDiffPixels: 100, fullPage: true, mask: [page.locator('.dynamic')] });
 });

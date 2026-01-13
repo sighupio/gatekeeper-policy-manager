@@ -8,6 +8,7 @@ import { test, expect } from '@playwright/test';
 
 test('page constrainttemplates snapshot', async ({ page }) => {
   await page.goto('constrainttemplates/', { timeout: 10000 });
-  await page.waitForSelector('span[title="Constraint Templates"]');
+  const constraintTemplatesSpan = page.locator('span[title="Constraint Templates"]');
+  await constraintTemplatesSpan.waitFor();
   await expect(page).toHaveScreenshot({ maxDiffPixels: 100, fullPage: true, mask: [page.locator('.dynamic')]  });
 });
