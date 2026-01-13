@@ -15,7 +15,7 @@ The best way to use locally these tests is to run them in a docker container, ot
 1. Get the container running:
 
 ```console
-docker run --rm -it --network=host -v $PWD:/app mcr.microsoft.com/playwright:v1.30.0-focal
+docker run --rm -it --network=host -v $PWD:/app mcr.microsoft.com/playwright:v1.55.1
 ```
 
 2. Install all the dependencies:

@@ -139,14 +139,14 @@ steps:
 
   - name: UI tests
     # This must match the version in the package.json file
-    image: mcr.microsoft.com/playwright:v1.30.0-focal
+    image: mcr.microsoft.com/playwright:v1.55.1
     network_mode: host
     commands:
       - cd tests/e2e && yarn install && yarn test
 
   - name: Print images diff on fail
     # This must match the version in the package.json file
-    image: mcr.microsoft.com/playwright:v1.30.0-focal
+    image: mcr.microsoft.com/playwright:v1.55.1
     commands:
       - for f in tests/e2e/test-results/*/*diff.png; do echo $f; base64 -w 0 $f; echo; done;
       - "echo 'Use base64 to decode the images and see the diff'"
