@@ -175,7 +175,7 @@ def login_required_conditional(f):
             path = kwargs.get("path")
             if path is not None and (
                 path.startswith("static/")
-                or path in ["logout", "favicon", "manifests.json"]
+                or path in ["logout", "favicon", "manifest.json"]
             ):
                 return f(*args, **kwargs)
             return auth.oidc_auth("oidc")(f)(*args, **kwargs)
