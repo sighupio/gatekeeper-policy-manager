@@ -9,7 +9,7 @@ COPY app/web-client /web-client
 RUN yarn build
 
 
-FROM python:3.12-slim
+FROM python:3.13-slim
 LABEL org.opencontainers.vendor="SIGHUP.io"
 LABEL org.opencontainers.image.authors="SIGHUP https://sighup.io"
 LABEL org.opencontainers.image.source="https://github.com/sighupio/gatekeeper-policy-manager"
