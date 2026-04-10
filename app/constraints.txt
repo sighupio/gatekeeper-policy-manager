@@ -24,7 +24,7 @@ pydantic==2.12.5
 pyjwkest==1.4.4
 python-dateutil==2.9.0.post0
 PyYAML==6.0.3
-requests==2.32.5
+requests==2.33.1
 requests-oauthlib==2.0.0
 rsa==4.9.1
 six==1.17.0
