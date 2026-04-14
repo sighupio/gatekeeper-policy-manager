@@ -18,7 +18,7 @@ oauthlib==3.3.1
 oic==1.6.1
 pyasn1==0.6.3
 pyasn1-modules==0.4.2
-pycparser==2.22
+pycparser==3.0
 pycryptodomex==3.23.0
 pydantic==2.12.5
 pyjwkest==1.4.4
