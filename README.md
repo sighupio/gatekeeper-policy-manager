@@ -96,7 +96,7 @@ GPM is a stateless application, but it can be configured using environment varia
 | `GPM_OIDC_INTROSPECTION_ENDPOINT` | OIDC Introspection Endpoint (optional, setting this parameter disables the discovery of the rest of the provider configuration, set all the other values also if setting this one)                                                |                        |
 | `GPM_OIDC_USERINFO_ENDPOINT`      | OIDC Userinfo Endpoint (optional, setting this parameter disables the discovery of the rest of the provider configuration, set all the other values also if setting this one)                                                     |                        |
 | `GPM_OIDC_END_SESSION_ENDPOINT`   | OIDC End Session Endpoint (optional, setting this parameter disables the discovery of the rest of the provider configuration, set all the other values also if setting this one)                                                  |                        |
-| `GPM_SKIP_TLS_VERIFY`             | Skip TLS certificate verifications while connecting to the Kubernetes API Server. USE WITH CAUTION.                                                                                                                               |                        |
+| `GPM_SKIP_TLS_VERIFY`             | Skip TLS certificate verifications while connecting to the Kubernetes API Server. USE WITH CAUTION.                                                                                                                               | `false`                |
 
 >[!WARNING]
 > Please notice that OIDC Authentication is in beta state. It has been tested to work with Keycloak as a provider.
