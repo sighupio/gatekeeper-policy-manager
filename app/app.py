@@ -31,7 +31,7 @@ from flask_pyoidc.user_session import UserSession
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from kubernetes.config.config_exception import ConfigException
-from urllib3.exceptions import MaxRetryError, NewConnectionError
+from urllib3.exceptions import MaxRetryError, NewConnectionError, SSLError
 
 app = Flask(__name__, static_folder="static-content", template_folder="templates")
 
@@ -155,6 +155,13 @@ except config.ConfigException as e:
             "assuming to be running inside a Kubernetes cluster"
         )
         config.load_incluster_config()
+        if os.environ.get("GPM_SKIP_TLS_VERIFY", "").lower() == "true":
+            app.logger.warning(
+                "GPM_SKIP_TLS_VERIFY is set: disabling TLS certificate verification for Kubernetes API calls"
+            )
+            c = client.Configuration.get_default_copy()
+            c.verify_ssl = False
+            client.Configuration.set_default(c)
         app.logger.info("In cluster configuration loaded successfully.")
         app.config["MODE"] = "CLUSTER"
     else:
@@ -247,6 +254,12 @@ def get_constraints(context=None):
             plural="",
             name="",
         )
+    except SSLError as e:
+        return {
+            "error": "TLS certificate verification failed connecting to Kubernetes API",
+            "action": "Set GPM_SKIP_TLS_VERIFY=true if the cluster CA is missing AKI/SKI extensions (e.g. EKS)",
+            "description": str(e),
+        }, 500
     except NewConnectionError as e:
         return {
             "error": "Could not connect to Kubernetes Cluster",
@@ -372,6 +385,12 @@ def get_constrainttemplates(context=None):
                         f"No constraints found for Constraint Template {ct['metadata']['name']}"
                     )
 
+    except SSLError as e:
+        return {
+            "error": "TLS certificate verification failed connecting to Kubernetes API",
+            "action": "Set GPM_SKIP_TLS_VERIFY=true if the cluster CA is missing AKI/SKI extensions (e.g. EKS)",
+            "description": str(e),
+        }, 500
     except NewConnectionError as e:
         return {
             "error": "Could not connect to Kubernetes Cluster",
@@ -422,6 +441,12 @@ def get_gatekeeperconfigs(context=None):
             plural="configs",
             name="",
         )
+    except SSLError as e:
+        return {
+            "error": "TLS certificate verification failed connecting to Kubernetes API",
+            "action": "Set GPM_SKIP_TLS_VERIFY=true if the cluster CA is missing AKI/SKI extensions (e.g. EKS)",
+            "description": str(e),
+        }, 500
     except NewConnectionError as e:
         return {
             "error": "Could not connect to Kubernetes Cluster",
