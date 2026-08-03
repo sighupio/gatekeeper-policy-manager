@@ -8,7 +8,7 @@ type: docker
 
 steps:
   - name: check
-    image: docker.io/library/golang:1.20
+    image: docker.io/library/golang:1.26
     pull: always
     commands:
       - go install github.com/google/addlicense@v1.1.1
