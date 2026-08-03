@@ -431,11 +431,12 @@ func switchKubernetesContext(c string) error {
 func main() {
 	// Get configuration from env
 	viper.SetEnvPrefix("gpm") // will be uppercased automatically
-	viper.BindEnv("log_level")
+	// BindEnv only errors when called without a key, so the error is unreachable here.
+	_ = viper.BindEnv("log_level")
 	viper.SetDefault("log_level", "INFO")
-	viper.BindEnv("listen_address")
+	_ = viper.BindEnv("listen_address")
 	viper.SetDefault("listen_address", ":8080")
-	viper.BindEnv("events_source")
+	_ = viper.BindEnv("events_source")
 	viper.SetDefault("events_source", "gatekeeper-webhook")
 
 	// Initilize Echo HTTP server

@@ -1,0 +1,14 @@
+[settings]
+experimental = true
+
+[tools]
+go = "1.26.5"
+golangci-lint = "2.12.2"
+
+[tasks.lint]
+description = "run golangci-lint"
+run = "golangci-lint run ./..."
+
+[tasks."lint-fix"]
+description = "run golangci-lint with autofix"
+run = "golangci-lint run --fix ./..."
