@@ -63,6 +63,20 @@ helm upgrade --install --namespace gatekeeper-system --set image.tag=v1.1.1 --va
 > [!IMPORTANT]
 > Don't forget to replace `my-values.yaml` with the path to your values file.
 
+### Running behind a reverse proxy on a subpath
+
+GPM assumes by default that it's served from the domain root. If you're putting it behind a reverse proxy on a subpath, for example `example.com/gpm`, set the `PUBLIC_URL` build argument when building the image so the frontend's router and API calls use that subpath instead of `/`.
+
+Build the image with:
+
+```bash
+docker build --build-arg PUBLIC_URL=/gpm -t gatekeeper-policy-manager:subpath .
+```
+
+This uses [Create React App's standard `PUBLIC_URL` mechanism](https://create-react-app.dev/docs/using-the-public-folder/). It sets the router's `basename` and the frontend's API base path at build time, so the subpath is baked into the built assets. If `PUBLIC_URL` is left unset, GPM behaves exactly as before and is served from `/`.
+
+The image published on quay.io is built for the root path. If you need a subpath deployment, build your own image with the argument above and push it to your own registry, or reference the Dockerfile from your CI pipeline with the same `--build-arg`.
+
 ## Running locally
 
 GPM can also be run locally using docker and a `kubeconfig`, assuming that the `kubeconfig` file you want to use is located at `~/.kube/config` the command to run GPM locally would be:
@@ -95,8 +109,8 @@ GPM is a stateless application, but it can be configured using environment varia
 | `GPM_OIDC_TOKEN_ENDPOINT`         | OIDC TOKEN Endpoint (optional, setting this parameter disables the discovery of the rest of the provider configuration, set all the other values also if setting this one)                                                        |                        |
 | `GPM_OIDC_INTROSPECTION_ENDPOINT` | OIDC Introspection Endpoint (optional, setting this parameter disables the discovery of the rest of the provider configuration, set all the other values also if setting this one)                                                |                        |
 | `GPM_OIDC_USERINFO_ENDPOINT`      | OIDC Userinfo Endpoint (optional, setting this parameter disables the discovery of the rest of the provider configuration, set all the other values also if setting this one)                                                     |                        |
-| `GPM_OIDC_END_SESSION_ENDPOINT`   | OIDC End Session Endpoint (optional, setting this parameter disables the discovery of the rest of the provider configuration, set all the other values also if setting this one)                                                  |                        |
-| `GPM_SKIP_TLS_VERIFY`             | Skip TLS certificate verifications while connecting to the Kubernetes API Server. USE WITH CAUTION.                                                                                                                               | `false`                |
+| `GPM_OIDC_END_SESSION_ENDPOINT`   | OIDC End Session Endpoint (optional, setting this parameter disables the discovery of the rest of the provider configuration, set all the other values also if setting this one)                                                   |                        |
+| `GPM_SKIP_TLS_VERIFY`             | Skip TLS certificate verifications while connecting to the Kubernetes API Server. USE WITH CAUTION.                                                                                                                               | `false`               |
 
 >[!WARNING]
 > Please notice that OIDC Authentication is in beta state. It has been tested to work with Keycloak as a provider.
