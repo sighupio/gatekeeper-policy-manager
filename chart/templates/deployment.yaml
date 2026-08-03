@@ -5,9 +5,7 @@ metadata:
   labels:
     {{- include "gatekeeper-policy-manager.labels" . | nindent 4 }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
-  {{- end }}
   selector:
     matchLabels:
       {{- include "gatekeeper-policy-manager.selectorLabels" . | nindent 6 }}
