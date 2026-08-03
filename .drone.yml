@@ -18,63 +18,66 @@ trigger:
     exclude:
       - refs/tags/gatekeeper-policy-manager-*
 
-# ---
-# name: qa
-# kind: pipeline
-# type: docker
-#
-# depends_on:
-#   - license
-#
-# steps:
-#   - name: lint
-#     image: quay.io/sighup/policeman
-#     pull: always
-#     environment:
-#       FILTER_REGEX_EXCLUDE: (chart/|tests/e2e/)
-#       # Identifies false positives like missing 'selector'.
-#       # Doing this is valid for Kustomize patches
-#       VALIDATE_KUBERNETES_KUBEVAL: "false"
-#       # Some duplicated code is intended.
-#       VALIDATE_JSCPD: "false"
-#       # The included version of golang-ci at the time os this writing has issues
-#       # with Go +1.18
-#       VALIDATE_GO: "false"
-#       TYPESCRIPT_DEFAULT_STYLE: "prettier"
-#     depends_on:
-#       - clone
-#
-#   - name: render
-#     image: quay.io/sighup/e2e-testing:1.1.0_0.2.2_2.16.1_1.9.4_1.22.0_3.8.7_2.4.1
-#     pull: always
-#     depends_on:
-#       - clone
-#     commands:
-#       - kustomize build . > gpm.yml
-#       - helm template --set config.secretKey=e2e chart > rendered_chart.yaml
-#
-#   - name: check-deprecated-apis
-#     image: us-docker.pkg.dev/fairwinds-ops/oss/pluto:v5
-#     pull: always
-#     depends_on:
-#       - render
-#     commands:
-#       # we use --ignore-deprecations because we don't want the CI to fail when the API has not been removed yet.
-#       - /pluto detect gpm.yaml --ignore-deprecations --target-versions=k8s=v1.33.0
-#       - /pluto detect rendered_chart.yaml --ignore-deprecations --target-versions=k8s=v1.33.0
-#
-# trigger:
-#   ref:
-#     exclude:
-#       - refs/tags/gatekeeper-policy-manager-*
-#
+---
+name: qa
+kind: pipeline
+type: docker
+
+depends_on:
+  - license
+
+steps:
+  # Superlint stays disabled: it was switched off for the Go rewrite and never re-tuned.
+  # Go linting is covered by `mise run lint` (golangci-lint); the front-end and YAML are not
+  # linted in CI yet. Re-enable or replace as part of the mise migration.
+  # - name: lint
+  #   image: quay.io/sighup/policeman
+  #   pull: always
+  #   environment:
+  #     FILTER_REGEX_EXCLUDE: (chart/|tests/e2e/)
+  #     # Identifies false positives like missing 'selector'.
+  #     # Doing this is valid for Kustomize patches
+  #     VALIDATE_KUBERNETES_KUBEVAL: "false"
+  #     # Some duplicated code is intended.
+  #     VALIDATE_JSCPD: "false"
+  #     # Go is linted with golangci-lint via mise instead.
+  #     VALIDATE_GO: "false"
+  #     TYPESCRIPT_DEFAULT_STYLE: "prettier"
+  #   depends_on:
+  #     - clone
+
+  - name: render
+    image: quay.io/sighup/e2e-testing:2.24.17_1.1.0_3.12.0_1.32.2_5.6.0_1.9.0_4.33.3
+    pull: always
+    depends_on:
+      - clone
+    commands:
+      - kustomize build . > gpm.yaml
+      - helm template --set config.secretKey=e2e chart > rendered_chart.yaml
+
+  - name: check-deprecated-apis
+    image: us-docker.pkg.dev/fairwinds-ops/oss/pluto:v5
+    pull: always
+    depends_on:
+      - render
+    commands:
+      # we use --ignore-deprecations because we don't want the CI to fail when the API has not been removed yet.
+      # Keep the target version in sync with CLUSTER_VERSION in the e2e pipeline.
+      - /pluto detect gpm.yaml --ignore-deprecations --target-versions=k8s=v1.36.0
+      - /pluto detect rendered_chart.yaml --ignore-deprecations --target-versions=k8s=v1.36.0
+
+trigger:
+  ref:
+    exclude:
+      - refs/tags/gatekeeper-policy-manager-*
+
 ---
 name: build
 kind: pipeline
 type: docker
 
-# depends_on:
-#   - qa
+depends_on:
+  - qa
 
 trigger:
   ref:
@@ -136,8 +139,8 @@ steps:
     image: docker:dind
     pull: always
     environment:
-      KIND_VERSION: v0.17.0
-      CLUSTER_VERSION: v1.24.7
+      KIND_VERSION: v0.32.0
+      CLUSTER_VERSION: v1.36.1
       LOAD_IMAGE: gatekeeper-policy-manager:test-${DRONE_BUILD_NUMBER}
       CLUSTER_NAME: ${DRONE_REPO_NAME}-${DRONE_BUILD_NUMBER}
     volumes:
@@ -147,7 +150,7 @@ steps:
         path: /var/run/docker.sock
     commands:
       - wget -qO /usr/local/bin/kind "https://kind.sigs.k8s.io/dl/$${KIND_VERSION}/kind-$(uname)-amd64"
-      - wget -qO /usr/local/bin/kubectl "https://storage.googleapis.com/kubernetes-release/release/$${CLUSTER_VERSION}/bin/linux/amd64/kubectl"
+      - wget -qO /usr/local/bin/kubectl "https://dl.k8s.io/release/$${CLUSTER_VERSION}/bin/linux/amd64/kubectl"
       - chmod +x /usr/local/bin/kind /usr/local/bin/kubectl
       - kind create cluster --name $${CLUSTER_NAME} --image registry.sighup.io/fury/kindest/node:$${CLUSTER_VERSION}
       - kind load docker-image $${LOAD_IMAGE} --name $${CLUSTER_NAME}
@@ -155,7 +158,7 @@ steps:
 
   # TODO: change to mise
   - name: tests
-    image: quay.io/sighup/e2e-testing:1.1.0_0.7.0_3.1.1_1.9.4_1.24.1_3.8.7_4.21.1
+    image: quay.io/sighup/e2e-testing:2.24.17_1.1.0_3.12.0_1.32.2_5.6.0_1.9.0_4.33.3
     pull: always
     network_mode: host
     environment:
@@ -168,7 +171,7 @@ steps:
       - bats -t tests/tests.sh
 
   - name: gpm-port-forward
-    image: quay.io/sighup/e2e-testing:1.1.0_0.7.0_3.1.1_1.9.4_1.24.1_3.8.7_4.21.1
+    image: quay.io/sighup/e2e-testing:2.24.17_1.1.0_3.12.0_1.32.2_5.6.0_1.9.0_4.33.3
     pull: always
     network_mode: host
     detach: true
@@ -198,7 +201,7 @@ steps:
     image: docker:dind
     pull: always
     environment:
-      KIND_VERSION: v0.17.0
+      KIND_VERSION: v0.32.0
       CLUSTER_NAME: ${DRONE_REPO_NAME}-${DRONE_BUILD_NUMBER}
     volumes:
       - name: dockerconfig
