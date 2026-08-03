@@ -63,20 +63,6 @@ helm upgrade --install --namespace gatekeeper-system --set image.tag=v1.1.1 --va
 > [!IMPORTANT]
 > Don't forget to replace `my-values.yaml` with the path to your values file.
 
-### Running behind a reverse proxy on a subpath
-
-GPM assumes by default that it's served from the domain root. If you're putting it behind a reverse proxy on a subpath, for example `example.com/gpm`, set the `PUBLIC_URL` build argument when building the image so the frontend's router and API calls use that subpath instead of `/`.
-
-Build the image with:
-
-```bash
-docker build --build-arg PUBLIC_URL=/gpm -t gatekeeper-policy-manager:subpath .
-```
-
-This uses [Create React App's standard `PUBLIC_URL` mechanism](https://create-react-app.dev/docs/using-the-public-folder/). It sets the router's `basename` and the frontend's API base path at build time, so the subpath is baked into the built assets. If `PUBLIC_URL` is left unset, GPM behaves exactly as before and is served from `/`.
-
-The image published on quay.io is built for the root path. If you need a subpath deployment, build your own image with the argument above and push it to your own registry, or reference the Dockerfile from your CI pipeline with the same `--build-arg`.
-
 ## Running locally
 
 GPM can also be run locally using docker and a `kubeconfig`, assuming that the `kubeconfig` file you want to use is located at `~/.kube/config` the command to run GPM locally would be:
@@ -149,6 +135,20 @@ You may need to add also the `aws` CLI, you can use the same approach as before.
 Make sure that your `kubeconfig` has the `apiVersion` set as `client.authentication.k8s.io/v1beta1`
 
 You can read more [in this issue](https://github.com/sighupio/gatekeeper-policy-manager/issues/330).
+
+### Running behind a reverse proxy on a subpath
+
+GPM assumes by default that it's served from the domain root. If you're putting it behind a reverse proxy on a subpath, for example `example.com/gpm`, set the `PUBLIC_URL` build argument when building the image so the frontend's router and API calls use that subpath instead of `/`.
+
+Build the image with:
+
+```bash
+docker build --build-arg PUBLIC_URL=/gpm -t gatekeeper-policy-manager:subpath .
+```
+
+This uses [Create React App's standard `PUBLIC_URL` mechanism](https://create-react-app.dev/docs/using-the-public-folder/). It sets the router's `basename` and the frontend's API base path at build time, so the subpath is baked into the built assets. If `PUBLIC_URL` is left unset, GPM behaves exactly as before and is served from `/`.
+
+The image published on quay.io is built for the root path. If you need a subpath deployment, build your own image with the argument above and push it to your own registry, or reference the Dockerfile from your CI pipeline with the same `--build-arg`.
 
 ## Screenshots
 
