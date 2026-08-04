@@ -142,6 +142,8 @@ steps:
     image: mcr.microsoft.com/playwright:v1.55.1
     network_mode: host
     commands:
+      # waiting 5 seconds for port-forward to be set up
+      - sleep 5
       - cd tests/e2e && yarn install && yarn test
 
   - name: Print images diff on fail
