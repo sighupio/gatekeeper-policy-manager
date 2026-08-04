@@ -94,6 +94,30 @@ GPM is a stateless application, but it can be configured using environment varia
 | `GPM_SKIP_TLS_VERIFY` | Skip TLS certificate verification while connecting to the Kubernetes API Server. Needed on clusters whose CA certificate is missing the AKI/SKI extensions, as happens on EKS. **USE WITH CAUTION.**                            | `false`              |
 | `KUBECONFIG`         | Path to a [kubeconfig](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/) file, if provided while running inside a cluster this configuration file will be used instead of the cluster's API. | `$HOME/.kube/config` |
 
+### Running behind a reverse proxy on a subpath
+
+GPM assumes by default that it is served from the domain root. If you put it behind a reverse proxy
+on a subpath, for example `example.com/gpm`, set the `PUBLIC_URL` build argument when building the
+image so the frontend's router and API calls use that subpath instead of `/`:
+
+```bash
+docker build --build-arg PUBLIC_URL=/gpm -t gatekeeper-policy-manager:subpath .
+```
+
+This uses [Create React App's standard `PUBLIC_URL` mechanism](https://create-react-app.dev/docs/using-the-public-folder/).
+It sets the router's `basename` and the frontend's API base path at build time, so the subpath is
+baked into the built assets. If `PUBLIC_URL` is left unset, GPM behaves exactly as before and is
+served from `/`.
+
+> [!IMPORTANT]
+> Configure your reverse proxy to **strip the subpath** before forwarding to GPM. The backend still
+> serves everything from the root, so it expects to receive `/api/v1/...` and `/static/...`, not
+> `/gpm/api/v1/...`. With nginx, a `proxy_pass` ending in a slash does this for you.
+
+The image published on quay.io is built for the root path. If you need a subpath deployment, build
+your own image with the argument above and push it to your own registry, or reference the
+Dockerfile from your CI pipeline with the same `--build-arg`.
+
 ### Multi-cluster support
 
 GPM supports viewing information from more than one cluster. Multi-cluster support is achieved by using a `kubeconfig` with more than one context, where each context points to a different cluster. GPM will let you choose the context (cluster) from the UI.

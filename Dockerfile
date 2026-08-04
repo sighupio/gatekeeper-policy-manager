@@ -6,6 +6,10 @@
 FROM --platform=$BUILDPLATFORM node:lts-alpine AS frontend
 ARG TARGETOS
 ARG TARGETARCH
+# Serve GPM from a subpath instead of the domain root, e.g. --build-arg PUBLIC_URL=/gpm.
+# Create React App bakes this into the built assets, so it has to be set at build time.
+ARG PUBLIC_URL=""
+ENV PUBLIC_URL=$PUBLIC_URL
 COPY ./web-client /web-client
 WORKDIR /web-client
 ENV npm_config_target_arch=${TARGETARCH} npm_config_target_platform=${TARGETOS}
