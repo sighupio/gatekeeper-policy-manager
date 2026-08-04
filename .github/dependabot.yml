@@ -2,8 +2,12 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+# Dependabot reads this file only from the default branch, so the entries for other
+# branches have to live here too, selected with `target-branch`.
+
 version: 2
 updates:
+  # --- main: Python backend, frontend under app/ ---
   - package-ecosystem: "pip" # See documentation for possible values
     directory: "/app" # Location of package manifests
     schedule:
@@ -11,5 +15,18 @@ updates:
 
   - package-ecosystem: "npm" # See documentation for possible values
     directory: "/app/web-client" # Location of package manifests
+    schedule:
+      interval: "weekly"
+
+  # --- feature/go-backend (GPM 2.x): Go backend, frontend moved to the repo root ---
+  - package-ecosystem: "gomod"
+    directory: "/"
+    target-branch: "feature/go-backend"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "npm"
+    directory: "/web-client"
+    target-branch: "feature/go-backend"
     schedule:
       interval: "weekly"
