@@ -112,7 +112,12 @@ topologySpreadConstraints: []
 config:
   preferredURLScheme: http
   logLevel: info
-  secretKey:
+  # The secret key, in plain text. Used by the OIDC authentication only, so it can be left unset
+  # while GPM runs unauthenticated.
+  secretKey: null
+  # Name of an existing secret holding the secret key, as an alternative to setting it in plain
+  # text above. If set, config.secretKey must be null. Expected field in the secret: secretKey
+  secretRef: null
   multiCluster:
     enabled: false
     kubeconfig: |
@@ -164,3 +169,26 @@ clusterRole:
   # The name of a cluster role to bind to; if not set and create is
   # true, a name based on fullname is generated
   name: "gatekeeper-policy-manager-crd-view"
+
+# Health and liveness probe configurations
+livenessProbe:
+  enabled: true
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 1
+  successThreshold: 1
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: true
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 1
+  successThreshold: 1
+  failureThreshold: 3
