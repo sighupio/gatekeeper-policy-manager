@@ -1,0 +1,5 @@
+node_modules
+build
+static-content
+test-results
+yarn.lock

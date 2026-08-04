@@ -1,0 +1,11 @@
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+# These are Prettier's own defaults, written out so that editors and CI agree even if a future
+# Prettier release changes them.
+semi: true
+singleQuote: false
+trailingComma: "all"
+printWidth: 80
+tabWidth: 2

@@ -18,6 +18,10 @@ bats = "1.1.0"
 # base the Dockerfile builds the frontend with. yarn is v1 to match the committed yarn.lock.
 node = "24"
 yarn = "1.22.22"
+# Formats the frontend. Stylelint was considered and left out: it cannot resolve a shareable
+# config when installed through mise, and adding it to web-client/package.json would break the
+# byte-for-byte match with main that keeps the dependency sync a plain copy.
+"npm:prettier" = "3.9.6"
 
 [tasks.lint]
 description = "run golangci-lint"
@@ -52,6 +56,14 @@ addlicense -c "SIGHUP s.r.l" -y 2017-present -v -l bsd \
   -ignore 'rendered_chart.yaml' \
   .
 """
+
+[tasks.format]
+description = "format the frontend with prettier"
+run = 'prettier --write "web-client/src/**/*.{ts,tsx,scss}" "tests/e2e/**/*.{ts,js}"'
+
+[tasks."format:check"]
+description = "check the frontend formatting without changing anything"
+run = 'prettier --check "web-client/src/**/*.{ts,tsx,scss}" "tests/e2e/**/*.{ts,js}"'
 
 [tasks."test:unit:go"]
 description = "run the Go unit tests"

@@ -85,6 +85,23 @@ steps:
       - eval "$(mise activate bash --shims)"
       - mise run lint
 
+  - name: format-check
+    image: quay.io/sighup/mise:v2026.6.14
+    pull: always
+    depends_on:
+      - clone
+    environment:
+      MISE_DATA_DIR: /mise-data
+      MISE_GITHUB_TOKEN:
+        from_secret: github_token
+    volumes:
+      - name: mise-cache
+        path: /mise-data
+    commands:
+      - "(flock -w 1800 9 || exit 1; mise install) 9>/mise-data/.mise-install.lock"
+      - eval "$(mise activate bash --shims)"
+      - mise run format:check
+
   - name: unit-tests-go
     image: quay.io/sighup/mise:v2026.6.14
     pull: always
