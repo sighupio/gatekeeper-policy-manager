@@ -11,6 +11,8 @@ export default defineConfig({
         headless: true,
         browserName: "chromium",
         ignoreHTTPSErrors: true,
-        baseURL: "http://localhost:8080",
+        // CI sets this to the port kubectl port-forward picked. Override it locally to point the
+        // tests somewhere else, e.g. GPM_BASE_URL=http://192.168.2.1:8080 yarn test
+        baseURL: process.env.GPM_BASE_URL ?? "http://localhost:8080",
     },
 });

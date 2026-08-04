@@ -276,14 +276,39 @@ steps:
       - "(flock -w 1800 9 || exit 1; mise install) 9>/mise-data/.mise-install.lock"
       - eval "$(mise activate bash --shims)"
       - export KUBECONFIG=$PWD/kubeconfig.yml
-      - kubectl port-forward svc/gatekeeper-policy-manager 8080:80 -n gatekeeper-system
+      # An empty local port makes kubectl pick a free one, so the build does not depend on 8080
+      # being available. ui-tests reads the chosen port back out of this log.
+      - "kubectl port-forward svc/gatekeeper-policy-manager :80 -n gatekeeper-system > port-forward.log 2>&1"
 
   - name: ui-tests
     image: mcr.microsoft.com/playwright:v1.55.1
     pull: always
     network_mode: host
     commands:
-      - cd tests/e2e && yarn install && yarn test
+      # gpm-port-forward is detached, so Drone starts this step straight away. Wait for the tunnel
+      # to report its port and start answering before handing over to Playwright.
+      # `depends_on` cannot express this: a detached step never reports completion.
+      - |
+        for i in $(seq 1 60); do
+          PORT=$(sed -nE 's/^Forwarding from 127\.0\.0\.1:([0-9]+).*/\1/p' port-forward.log 2>/dev/null | head -1)
+          if [ -n "$PORT" ] && curl -sf -o /dev/null "http://127.0.0.1:$PORT/health"; then
+            echo "GPM is answering on port $PORT after $i attempt(s)"
+            break
+          fi
+          sleep 1
+        done
+        if [ -z "$PORT" ]; then
+          echo "the port-forward never reported a port after 60s:"
+          cat port-forward.log 2>/dev/null
+          exit 1
+        fi
+        if ! curl -sf -o /dev/null "http://127.0.0.1:$PORT/health"; then
+          echo "GPM never answered on port $PORT after 60s:"
+          cat port-forward.log 2>/dev/null
+          exit 1
+        fi
+        export GPM_BASE_URL="http://127.0.0.1:$PORT"
+        cd tests/e2e && yarn install && yarn test
 
   - name: echo-diff-images
     image: mcr.microsoft.com/playwright:v1.55.1
