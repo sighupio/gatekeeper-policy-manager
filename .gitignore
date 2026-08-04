@@ -7,5 +7,3 @@ web-client/build
 # rendered by `mise run render` for the deprecated-API check
 gpm.yaml
 rendered_chart.yaml
-# written by the e2e port-forward step so the UI tests can find its port
-port-forward.log
