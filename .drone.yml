@@ -50,8 +50,8 @@ volumes:
 
 steps:
   # Superlint stays disabled: it was switched off for the Go rewrite and never re-tuned.
-  # Go linting is covered by `mise run lint` (golangci-lint); the front-end and YAML are not
-  # linted in CI yet. Re-enable or replace as part of the mise migration.
+  # Go is linted by the lint-go step below (golangci-lint via mise). The front end, YAML and
+  # shell scripts are still unlinted in CI — restore this step or replace it to cover them.
   # - name: lint
   #   image: quay.io/sighup/policeman
   #   pull: always
@@ -67,6 +67,57 @@ steps:
   #     TYPESCRIPT_DEFAULT_STYLE: "prettier"
   #   depends_on:
   #     - clone
+
+  - name: lint-go
+    image: quay.io/sighup/mise:v2026.6.14
+    pull: always
+    depends_on:
+      - clone
+    environment:
+      MISE_DATA_DIR: /mise-data
+      MISE_GITHUB_TOKEN:
+        from_secret: github_token
+    volumes:
+      - name: mise-cache
+        path: /mise-data
+    commands:
+      - "(flock -w 1800 9 || exit 1; mise install) 9>/mise-data/.mise-install.lock"
+      - eval "$(mise activate bash --shims)"
+      - mise run lint
+
+  - name: unit-tests-go
+    image: quay.io/sighup/mise:v2026.6.14
+    pull: always
+    depends_on:
+      - clone
+    environment:
+      MISE_DATA_DIR: /mise-data
+      MISE_GITHUB_TOKEN:
+        from_secret: github_token
+    volumes:
+      - name: mise-cache
+        path: /mise-data
+    commands:
+      - "(flock -w 1800 9 || exit 1; mise install) 9>/mise-data/.mise-install.lock"
+      - eval "$(mise activate bash --shims)"
+      - mise run test:unit:go
+
+  - name: unit-tests-js
+    image: quay.io/sighup/mise:v2026.6.14
+    pull: always
+    depends_on:
+      - clone
+    environment:
+      MISE_DATA_DIR: /mise-data
+      MISE_GITHUB_TOKEN:
+        from_secret: github_token
+    volumes:
+      - name: mise-cache
+        path: /mise-data
+    commands:
+      - "(flock -w 1800 9 || exit 1; mise install) 9>/mise-data/.mise-install.lock"
+      - eval "$(mise activate bash --shims)"
+      - mise run test:unit:js
 
   - name: render
     image: quay.io/sighup/mise:v2026.6.14

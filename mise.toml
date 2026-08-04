@@ -14,6 +14,10 @@ kustomize = "5.6.0"
 helm = "3.12.0"
 bats = "1.1.0"
 "ubi:google/addlicense" = "v1.1.1"
+# For the frontend unit tests. node 24 is the current LTS line, matching the `node:lts-alpine`
+# base the Dockerfile builds the frontend with. yarn is v1 to match the committed yarn.lock.
+node = "24"
+yarn = "1.22.22"
 
 [tasks.lint]
 description = "run golangci-lint"
@@ -48,6 +52,25 @@ addlicense -c "SIGHUP s.r.l" -y 2017-present -v -l bsd \
   -ignore 'rendered_chart.yaml' \
   .
 """
+
+[tasks."test:unit:go"]
+description = "run the Go unit tests"
+# node_modules vendors Go sources (flatted) that `./...` would otherwise pick up.
+run = 'go test -count=1 $(go list ./... | grep -v /node_modules/)'
+
+[tasks."test:unit:js"]
+description = "run the frontend unit tests"
+# Installs first so the task works from a clean checkout; it is a no-op once node_modules exists.
+# CI=true stops react-scripts from starting its interactive watcher.
+run = """
+cd web-client
+yarn install --frozen-lockfile
+CI=true yarn test --watchAll=false
+"""
+
+[tasks."test:unit"]
+description = "run all unit tests"
+depends = ["test:unit:go", "test:unit:js"]
 
 [tasks.render]
 description = "render the manifests and the chart for the deprecated-API check"
