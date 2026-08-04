@@ -7,6 +7,9 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -46,6 +49,24 @@ type ErrorAnswer struct {
 	ErrorMessage string `json:"error"`
 	Action       string `json:"action"`
 	Description  string `json:"description"`
+}
+
+// Builds the payload for a failed Kubernetes API call. When the failure turns out to be a TLS
+// certificate problem it replaces the message and the suggested action with a pointer to
+// GPM_SKIP_TLS_VERIFY, which is the usual fix on clusters whose CA lacks the AKI/SKI extensions.
+func kubeAPIErrorAnswer(message string, action string, err error) ErrorAnswer {
+	var (
+		verificationErr *tls.CertificateVerificationError
+		authorityErr    x509.UnknownAuthorityError
+		hostnameErr     x509.HostnameError
+		invalidCertErr  x509.CertificateInvalidError
+	)
+	if errors.As(err, &verificationErr) || errors.As(err, &authorityErr) ||
+		errors.As(err, &hostnameErr) || errors.As(err, &invalidCertErr) {
+		message = "TLS certificate verification failed while connecting to the Kubernetes API."
+		action = "Set GPM_SKIP_TLS_VERIFY=true if the cluster CA is missing the AKI/SKI extensions, as happens on EKS. Use with caution."
+	}
+	return ErrorAnswer{ErrorMessage: message, Action: action, Description: err.Error()}
 }
 
 type Template struct {
@@ -129,11 +150,10 @@ func getConfigs(c echo.Context) error {
 	configResources, err := getCustomResources(*clientset, "config.gatekeeper.sh", "v1alpha1", "configs")
 	if err != nil {
 		slog.Debug("getting config resources failed", "error", err)
-		return c.JSON(http.StatusInternalServerError, ErrorAnswer{
-			ErrorMessage: "An error ocurred while getting config objects from Kubernetes API.",
-			Description:  err.Error(),
-			Action:       "Check that the Kubeconfig file is correct and that the Kubernetes API is accessible.",
-		})
+		return c.JSON(http.StatusInternalServerError, kubeAPIErrorAnswer(
+			"An error ocurred while getting config objects from Kubernetes API.",
+			"Check that the Kubeconfig file is correct and that the Kubernetes API is accessible.",
+			err))
 	}
 	return c.JSON(http.StatusOK, configResources.Items)
 }
@@ -163,11 +183,10 @@ func getConstraintTemplates(c echo.Context) error {
 	constrainttemplates, err := getCustomResources(*clientset, "templates.gatekeeper.sh", "v1", "constrainttemplates")
 	if err != nil {
 		slog.Error("getting Constraint Templates resources failed", "error", err)
-		return c.JSON(http.StatusInternalServerError, ErrorAnswer{
-			ErrorMessage: "An error ocurred while getting Constraint Templates objects from Kubernetes API",
-			Action:       "Is Gatekeeper properly installed in the cluster?",
-			Description:  err.Error(),
-		})
+		return c.JSON(http.StatusInternalServerError, kubeAPIErrorAnswer(
+			"An error ocurred while getting Constraint Templates objects from Kubernetes API",
+			"Is Gatekeeper properly installed in the cluster?",
+			err))
 	}
 	// map all the constraints available for each constraint template
 	for _, ct := range constrainttemplates.Items {
@@ -205,11 +224,10 @@ func getConstraints(c echo.Context) error {
 	availableConstraints, err := discoveryClient.ServerResourcesForGroupVersion("constraints.gatekeeper.sh/v1beta1")
 	if err != nil {
 		slog.Error("listing constraints kinds from Kubernetes API server failed", "error", err)
-		return c.JSON(http.StatusInternalServerError, ErrorAnswer{
-			ErrorMessage: "An error ocurred while trying to list the Constraints",
-			Action:       "Is Gatekeeper properly installed in the target Kubernetes cluster?",
-			Description:  err.Error(),
-		})
+		return c.JSON(http.StatusInternalServerError, kubeAPIErrorAnswer(
+			"An error ocurred while trying to list the Constraints",
+			"Is Gatekeeper properly installed in the target Kubernetes cluster?",
+			err))
 	}
 
 	for _, constraintKind := range availableConstraints.APIResources {
@@ -219,11 +237,10 @@ func getConstraints(c echo.Context) error {
 			constraints, err := getCustomResources(*clientset, "constraints.gatekeeper.sh", "v1beta1", constraintKind.SingularName)
 			if err != nil {
 				slog.Error("getting Constraint resources failed", "error", err)
-				return c.JSON(http.StatusInternalServerError, ErrorAnswer{
-					ErrorMessage: "An error ocurred while getting constraint objects from Kubernetes API",
-					Action:       "Is Gatekeeper properly deployed in the target cluster?",
-					Description:  err.Error(),
-				})
+				return c.JSON(http.StatusInternalServerError, kubeAPIErrorAnswer(
+					"An error ocurred while getting constraint objects from Kubernetes API",
+					"Is Gatekeeper properly deployed in the target cluster?",
+					err))
 			}
 			for _, i := range constraints.Items {
 				response = append(response, i.Object)
@@ -365,11 +382,10 @@ func getEvents(c echo.Context) error {
 	events, err := getKubernetesEvents(*clientset, c.QueryParam("namespace"), eventsSource)
 	if err != nil {
 		slog.Error("got error while getting namespace events", "namespace", c.QueryParam("namespace"), "source", eventsSource, "error", err)
-		return c.JSON(http.StatusInternalServerError, ErrorAnswer{
-			ErrorMessage: "An error ocurred while getting events from Kubernetes API.",
-			Description:  err.Error(),
-			Action:       "Check that the Kubconfig file is correct and the Kubernetes API accessible.",
-		})
+		return c.JSON(http.StatusInternalServerError, kubeAPIErrorAnswer(
+			"An error ocurred while getting events from Kubernetes API.",
+			"Check that the Kubconfig file is correct and the Kubernetes API accessible.",
+			err))
 	}
 
 	return c.JSON(http.StatusOK, events)
@@ -386,6 +402,15 @@ func kubeClient(context string) (*dynamic.DynamicClient, *rest.Config, *api.Conf
 	config, err := kubeConfig.ClientConfig()
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("creating Kubernetes client failed: %w", err)
+	}
+
+	if viper.GetBool("skip_tls_verify") {
+		slog.Warn("GPM_SKIP_TLS_VERIFY is set: disabling TLS certificate verification for Kubernetes API calls")
+		// These fields belong to the embedded TLSClientConfig. client-go rejects a config that
+		// is insecure and carries a CA at the same time, so the CA has to go with it.
+		config.Insecure = true
+		config.CAFile = ""
+		config.CAData = nil
 	}
 
 	startingConfig, err := kubeConfig.ConfigAccess().GetStartingConfig()
@@ -438,6 +463,8 @@ func main() {
 	viper.SetDefault("listen_address", ":8080")
 	_ = viper.BindEnv("events_source")
 	viper.SetDefault("events_source", "gatekeeper-webhook")
+	_ = viper.BindEnv("skip_tls_verify")
+	viper.SetDefault("skip_tls_verify", false)
 
 	// Initilize Echo HTTP server
 	e := echo.New()
