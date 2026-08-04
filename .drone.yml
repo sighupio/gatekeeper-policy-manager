@@ -276,9 +276,14 @@ steps:
       - "(flock -w 1800 9 || exit 1; mise install) 9>/mise-data/.mise-install.lock"
       - eval "$(mise activate bash --shims)"
       - export KUBECONFIG=$PWD/kubeconfig.yml
-      # An empty local port makes kubectl pick a free one, so the build does not depend on 8080
-      # being available. ui-tests reads the chosen port back out of this log.
-      - "kubectl port-forward svc/gatekeeper-policy-manager :80 -n gatekeeper-system > port-forward.log 2>&1"
+      # Derive the local port from the build number rather than hardcoding 8080: it avoids
+      # collisions between concurrent builds, and ui-tests derives the same number instead of
+      # parsing it back out of kubectl's output. DRONE_BUILD_NUMBER is injected into every step.
+      - PORT=$((20000 + DRONE_BUILD_NUMBER % 20000))
+      - echo "forwarding 127.0.0.1:$PORT to the gatekeeper-policy-manager service"
+      # tee, not a plain redirect: the output has to show up in this step's log as well, otherwise
+      # a failure in ui-tests gives no way to tell when (or whether) the tunnel came up.
+      - "kubectl port-forward svc/gatekeeper-policy-manager $PORT:80 -n gatekeeper-system 2>&1 | tee port-forward.log"
 
   - name: ui-tests
     image: mcr.microsoft.com/playwright:v1.55.1
@@ -286,25 +291,27 @@ steps:
     network_mode: host
     commands:
       # gpm-port-forward is detached, so Drone starts this step straight away. Wait for the tunnel
-      # to report its port and start answering before handing over to Playwright.
+      # to start answering before handing over to Playwright.
       # `depends_on` cannot express this: a detached step never reports completion.
       - |
-        for i in $(seq 1 60); do
-          PORT=$(sed -nE 's/^Forwarding from 127\.0\.0\.1:([0-9]+).*/\1/p' port-forward.log 2>/dev/null | head -1)
-          if [ -n "$PORT" ] && curl -sf -o /dev/null "http://127.0.0.1:$PORT/health"; then
-            echo "GPM is answering on port $PORT after $i attempt(s)"
+        PORT=$((20000 + DRONE_BUILD_NUMBER % 20000))
+        echo "waiting for GPM on 127.0.0.1:$PORT"
+        READY=no
+        for i in $(seq 1 90); do
+          if curl -sf -o /dev/null "http://127.0.0.1:$PORT/health"; then
+            READY=yes
+            echo "GPM answered after $i attempt(s)"
             break
+          fi
+          if [ $((i % 15)) -eq 0 ]; then
+            echo "still waiting ($i/90); port-forward log so far:"
+            cat port-forward.log 2>/dev/null || echo "(no port-forward.log yet)"
           fi
           sleep 1
         done
-        if [ -z "$PORT" ]; then
-          echo "the port-forward never reported a port after 60s:"
-          cat port-forward.log 2>/dev/null
-          exit 1
-        fi
-        if ! curl -sf -o /dev/null "http://127.0.0.1:$PORT/health"; then
-          echo "GPM never answered on port $PORT after 60s:"
-          cat port-forward.log 2>/dev/null
+        if [ "$READY" != "yes" ]; then
+          echo "GPM never answered on 127.0.0.1:$PORT after 90s. port-forward log:"
+          cat port-forward.log 2>/dev/null || echo "(no port-forward.log at all)"
           exit 1
         fi
         export GPM_BASE_URL="http://127.0.0.1:$PORT"
