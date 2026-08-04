@@ -9,10 +9,14 @@ import { autoLink, scrollToElement } from "./utils";
 
 describe("autoLink", () => {
   it("leaves text without links untouched", () => {
-    render(<div data-testid="out">{autoLink("Pods must define a liveness probe")}</div>);
+    render(
+      <div data-testid="out">
+        {autoLink("Pods must define a liveness probe")}
+      </div>,
+    );
 
     expect(screen.getByTestId("out")).toHaveTextContent(
-      "Pods must define a liveness probe"
+      "Pods must define a liveness probe",
     );
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
@@ -21,7 +25,7 @@ describe("autoLink", () => {
     render(
       <div data-testid="out">
         {autoLink("See https://example.com/policies for details")}
-      </div>
+      </div>,
     );
 
     const link = screen.getByRole("link");
@@ -36,10 +40,12 @@ describe("autoLink", () => {
     render(
       <div data-testid="out">
         {autoLink("Read https://example.com/a and http://example.com/b now")}
-      </div>
+      </div>,
     );
 
-    const hrefs = screen.getAllByRole("link").map((a) => a.getAttribute("href"));
+    const hrefs = screen
+      .getAllByRole("link")
+      .map((a) => a.getAttribute("href"));
     expect(hrefs).toEqual(["https://example.com/a", "http://example.com/b"]);
   });
 

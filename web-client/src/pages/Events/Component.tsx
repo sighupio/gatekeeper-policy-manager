@@ -28,9 +28,7 @@ import { BackendError } from "../types";
 import { useNavigate, useParams } from "react-router-dom";
 import { IEvent } from "./types";
 
-
 function EventsComponent() {
-
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [items, setItems] = useState<IEvent[]>([]);
   const appContextData = useContext(ApplicationContext);
@@ -42,7 +40,6 @@ function EventsComponent() {
       field: "firstTimestamp",
       name: "First Timestamp",
       dataType: "date",
-
     },
     {
       field: "lastTimestamp",
@@ -66,25 +63,33 @@ function EventsComponent() {
       // field: "metadata.annotations.constraint_kind",
       name: "Template",
 
-      render: (e: IEvent) => (<EuiLink href={`/constrainttemplates${appContextData.context.currentK8sContext ? "/" + appContextData.context.currentK8sContext : ""}#${e.metadata.annotations.constraint_kind}`}>
-        <EuiText size="xs">
-          <span>{e.metadata.annotations.constraint_kind}</span>
-          <EuiIcon type="link" style={{ marginLeft: 5 }} />
-        </EuiText>
-      </EuiLink>)
+      render: (e: IEvent) => (
+        <EuiLink
+          href={`/constrainttemplates${appContextData.context.currentK8sContext ? "/" + appContextData.context.currentK8sContext : ""}#${e.metadata.annotations.constraint_kind}`}
+        >
+          <EuiText size="xs">
+            <span>{e.metadata.annotations.constraint_kind}</span>
+            <EuiIcon type="link" style={{ marginLeft: 5 }} />
+          </EuiText>
+        </EuiLink>
+      ),
     },
     {
       // field: "metadata.annotations.constraint_name",
       name: "Constraint",
 
-      render: (e: IEvent) => (<EuiLink href={`/constraints${appContextData.context.currentK8sContext ? "/" + appContextData.context.currentK8sContext : ""}#${e.metadata.annotations.constraint_name}`}>
-        <EuiText size="xs">
-          <span>{e.metadata.annotations.constraint_name}</span>
-          <EuiIcon type="link" style={{ marginLeft: 5 }} />
-        </EuiText>
-      </EuiLink>)
+      render: (e: IEvent) => (
+        <EuiLink
+          href={`/constraints${appContextData.context.currentK8sContext ? "/" + appContextData.context.currentK8sContext : ""}#${e.metadata.annotations.constraint_name}`}
+        >
+          <EuiText size="xs">
+            <span>{e.metadata.annotations.constraint_name}</span>
+            <EuiIcon type="link" style={{ marginLeft: 5 }} />
+          </EuiText>
+        </EuiLink>
+      ),
     },
-  ]
+  ];
 
   // exapand
   const [itemIdToExpandedRowMap, setItemIdToExpandedRowMap] = useState<
@@ -105,9 +110,18 @@ function EventsComponent() {
                 <h6>Event Details</h6>
               </EuiText>
               <EuiFlexGroup direction="row">
-                <EuiFlexItem grow={false}><strong>Type</strong>{k8sevent.metadata.annotations.event_type}</EuiFlexItem>
-                <EuiFlexItem grow={false}><strong>Process</strong>{k8sevent.metadata.annotations.process}</EuiFlexItem>
-                <EuiFlexItem grow={false}><strong>Request Username</strong>{k8sevent.metadata.annotations.request_username}</EuiFlexItem>
+                <EuiFlexItem grow={false}>
+                  <strong>Type</strong>
+                  {k8sevent.metadata.annotations.event_type}
+                </EuiFlexItem>
+                <EuiFlexItem grow={false}>
+                  <strong>Process</strong>
+                  {k8sevent.metadata.annotations.process}
+                </EuiFlexItem>
+                <EuiFlexItem grow={false}>
+                  <strong>Request Username</strong>
+                  {k8sevent.metadata.annotations.request_username}
+                </EuiFlexItem>
               </EuiFlexGroup>
             </EuiFlexGroup>
           </EuiFlexItem>
@@ -117,11 +131,26 @@ function EventsComponent() {
                 <h6>Resource Details</h6>
               </EuiText>
               <EuiFlexGroup direction="row">
-                <EuiFlexItem grow={false}><strong>API Version</strong>{k8sevent.metadata.annotations.resource_api_version}</EuiFlexItem>
-                <EuiFlexItem grow={false}><strong>Group</strong>{k8sevent.metadata.annotations.resource_group}</EuiFlexItem>
-                <EuiFlexItem grow={false}><strong>Kind</strong>{k8sevent.metadata.annotations.resource_kind}</EuiFlexItem>
-                <EuiFlexItem grow={false}><strong>Name</strong>{k8sevent.metadata.annotations.resource_name}</EuiFlexItem>
-                <EuiFlexItem grow={false}><strong>Namespace</strong>{k8sevent.metadata.annotations.resource_namespace}</EuiFlexItem>
+                <EuiFlexItem grow={false}>
+                  <strong>API Version</strong>
+                  {k8sevent.metadata.annotations.resource_api_version}
+                </EuiFlexItem>
+                <EuiFlexItem grow={false}>
+                  <strong>Group</strong>
+                  {k8sevent.metadata.annotations.resource_group}
+                </EuiFlexItem>
+                <EuiFlexItem grow={false}>
+                  <strong>Kind</strong>
+                  {k8sevent.metadata.annotations.resource_kind}
+                </EuiFlexItem>
+                <EuiFlexItem grow={false}>
+                  <strong>Name</strong>
+                  {k8sevent.metadata.annotations.resource_name}
+                </EuiFlexItem>
+                <EuiFlexItem grow={false}>
+                  <strong>Namespace</strong>
+                  {k8sevent.metadata.annotations.resource_namespace}
+                </EuiFlexItem>
               </EuiFlexGroup>
             </EuiFlexGroup>
           </EuiFlexItem>
@@ -131,9 +160,18 @@ function EventsComponent() {
                 <h6>Involved Object</h6>
               </EuiText>
               <EuiFlexGroup direction="row">
-                <EuiFlexItem grow={false}><strong>Namespace</strong>{k8sevent.involvedObject.namespace}</EuiFlexItem>
-                <EuiFlexItem grow={false}><strong>Kind</strong>{k8sevent.involvedObject.kind}</EuiFlexItem>
-                <EuiFlexItem grow={false}><strong>Name</strong>{k8sevent.involvedObject.name}</EuiFlexItem>
+                <EuiFlexItem grow={false}>
+                  <strong>Namespace</strong>
+                  {k8sevent.involvedObject.namespace}
+                </EuiFlexItem>
+                <EuiFlexItem grow={false}>
+                  <strong>Kind</strong>
+                  {k8sevent.involvedObject.kind}
+                </EuiFlexItem>
+                <EuiFlexItem grow={false}>
+                  <strong>Name</strong>
+                  {k8sevent.involvedObject.name}
+                </EuiFlexItem>
               </EuiFlexGroup>
             </EuiFlexGroup>
           </EuiFlexItem>
@@ -149,14 +187,13 @@ function EventsComponent() {
       );
     }
     setItemIdToExpandedRowMap(itemIdToExpandedRowMapValues);
-
   };
 
   const columnsWithExpandingRowToggle: Array<EuiBasicTableColumn<IEvent>> = [
     ...columns,
     {
-      align: 'right',
-      width: '40px',
+      align: "right",
+      width: "40px",
       isExpander: true,
       name: (
         <EuiScreenReaderOnly>
@@ -170,10 +207,14 @@ function EventsComponent() {
           <EuiButtonIcon
             onClick={() => toggleDetails(k8sevent)}
             aria-label={
-              itemIdToExpandedRowMapValues[k8sevent.metadata.name] ? 'Collapse' : 'Expand'
+              itemIdToExpandedRowMapValues[k8sevent.metadata.name]
+                ? "Collapse"
+                : "Expand"
             }
             iconType={
-              itemIdToExpandedRowMapValues[k8sevent.metadata.name] ? 'arrowDown' : 'arrowRight'
+              itemIdToExpandedRowMapValues[k8sevent.metadata.name]
+                ? "arrowDown"
+                : "arrowRight"
             }
           />
         );
@@ -184,8 +225,9 @@ function EventsComponent() {
   useEffect(() => {
     setIsLoading(true);
     fetch(
-      `${appContextData.context.apiUrl}api/v1/events/${context ?
-        context + "/" : ""}`
+      `${appContextData.context.apiUrl}api/v1/events/${
+        context ? context + "/" : ""
+      }`,
     )
       .then(async (res) => {
         const body: IEvent[] = await res.json();
@@ -244,10 +286,7 @@ function EventsComponent() {
             style={{ position: "relative" }}
             className="gpm-page"
           >
-            <EuiPageBody
-              paddingSize="m"
-              style={{ marginBottom: 350 }}
-            >
+            <EuiPageBody paddingSize="m" style={{ marginBottom: 350 }}>
               <>
                 {items && items.length > 0 ? (
                   <EuiPanel>
@@ -255,27 +294,36 @@ function EventsComponent() {
                       tableCaption="Table of Kubernetes Events generated by Gatekeeper"
                       tableLayout="auto"
                       // compressed={true}
-                      itemId={item => item.metadata.name}
+                      itemId={(item) => item.metadata.name}
                       itemIdToExpandedRowMap={itemIdToExpandedRowMap}
                       // FIXME: con el ultimo alineamento con `main` (update de las dependencias) dejo de funcionar el isExpandable
                       // isExpandable={true}
                       items={items}
                       columns={columnsWithExpandingRowToggle}
-                    // sorting={}
+                      // sorting={}
                     />
                   </EuiPanel>
                 ) : (
                   <EuiEmptyPrompt
                     iconType="alert"
-                    body={<p>No Events found.<br />Gatekeeper emiting events on violations is an <a href="https://open-policy-agent.github.io/gatekeeper/website/docs/customize-startup/#alpha-emit-admission-and-audit-events">alpha feature</a>. Make sure that it is enabled.</p>}
+                    body={
+                      <p>
+                        No Events found.
+                        <br />
+                        Gatekeeper emiting events on violations is an{" "}
+                        <a href="https://open-policy-agent.github.io/gatekeeper/website/docs/customize-startup/#alpha-emit-admission-and-audit-events">
+                          alpha feature
+                        </a>
+                        . Make sure that it is enabled.
+                      </p>
+                    }
                   />
                 )}
               </>
             </EuiPageBody>
           </EuiPage>
-        </EuiFlexGroup >
-      )
-      }
+        </EuiFlexGroup>
+      )}
     </>
   );
 }

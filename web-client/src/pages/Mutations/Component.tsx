@@ -77,15 +77,12 @@ function SingleMutation(item: IMutation) {
               </EuiText>
             </EuiFlexItem>
             <EuiFlexItem grow={false} style={{ marginLeft: "auto" }}>
-              <EuiBadge
-                color={"primary"}
-                title={"Mutator Kind: " + item.kind}
-              >
+              <EuiBadge color={"primary"} title={"Mutator Kind: " + item.kind}>
                 <p>{item.kind}</p>
               </EuiBadge>
             </EuiFlexItem>
           </EuiFlexGroup>
-          {item.metadata.annotations?.description &&
+          {item.metadata.annotations?.description && (
             <EuiFlexGroup direction="column" gutterSize="s">
               <EuiFlexItem grow={false}>
                 <EuiText size="s">
@@ -93,9 +90,9 @@ function SingleMutation(item: IMutation) {
                 </EuiText>
               </EuiFlexItem>
             </EuiFlexGroup>
-          }
+          )}
         </EuiFlexItem>
-      </EuiFlexGroup >
+      </EuiFlexGroup>
       <EuiSpacer size="s" />
       <EuiHorizontalRule margin="none" />
       <EuiSpacer size="s" />
@@ -106,10 +103,7 @@ function SingleMutation(item: IMutation) {
             buttonContent="YAML definition"
             paddingSize="none"
           >
-            <EuiCodeBlock
-              lineNumbers
-              language="json"
-            >
+            <EuiCodeBlock lineNumbers language="json">
               {JSON.stringify(
                 item,
                 (k, v) => {
@@ -119,7 +113,7 @@ function SingleMutation(item: IMutation) {
 
                   return v;
                 },
-                2
+                2,
               )}
             </EuiCodeBlock>
           </EuiAccordion>
@@ -196,7 +190,10 @@ function SingleMutation(item: IMutation) {
                         borderRadius: 0,
                         padding: 0,
                         verticalAlign: "baseline",
-                      }}>&nbsp;</EuiBadge>
+                      }}
+                    >
+                      &nbsp;
+                    </EuiBadge>
                     {pod.operations.map((operation: string) => {
                       return (
                         <EuiBadge
@@ -207,7 +204,10 @@ function SingleMutation(item: IMutation) {
                             margin: "0px",
                             borderRadius: 0,
                             verticalAlign: "baseline",
-                          }}> {operation}
+                          }}
+                        >
+                          {" "}
+                          {operation}
                         </EuiBadge>
                       );
                     })}
@@ -259,14 +259,15 @@ function MutationsComponent() {
         setFullyLoadedRefs(true);
       }
     },
-    [panelsRef, items]
+    [panelsRef, items],
   );
 
   useEffect(() => {
     setIsLoading(true);
     fetch(
-      `${appContextData.context.apiUrl}api/v1/mutations/${context ?
-        context + "/" : ""}`
+      `${appContextData.context.apiUrl}api/v1/mutations/${
+        context ? context + "/" : ""
+      }`,
     )
       .then(async (res) => {
         const body: IMutation[] = await res.json();
@@ -348,17 +349,10 @@ function MutationsComponent() {
             style={{ position: "relative" }}
             className="gpm-page gpm-page-mutations"
           >
-            <EuiPageSidebar
-              paddingSize="m"
-              style={{ height: "100vh" }}
-              sticky
-            >
+            <EuiPageSidebar paddingSize="m" style={{ height: "100vh" }} sticky>
               <EuiSideNav items={sideNav} />
             </EuiPageSidebar>
-            <EuiPageBody
-              paddingSize="m"
-              style={{ marginBottom: 350 }}
-            >
+            <EuiPageBody paddingSize="m" style={{ marginBottom: 350 }}>
               <>
                 {items && items.length > 0 ? (
                   items.map((item, index) => {

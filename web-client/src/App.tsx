@@ -26,10 +26,7 @@ function App() {
   const { pathname } = useLocation();
 
   return (
-    <EuiProvider
-      colorMode="light"
-      modify={theme}
-    >
+    <EuiProvider colorMode="light" modify={theme}>
       <ContextProvider>
         {pathname === "/logout" ? null : <Header />}
         <Routes>

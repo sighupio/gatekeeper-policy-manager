@@ -4,11 +4,15 @@
  * license that can be found in the LICENSE file.
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test('page events snapshot', async ({ page }) => {
-  await page.goto('events/');
-  const emptyPrompt = page.locator('.euiEmptyPrompt');
+test("page events snapshot", async ({ page }) => {
+  await page.goto("events/");
+  const emptyPrompt = page.locator(".euiEmptyPrompt");
   await emptyPrompt.waitFor();
-  await expect(page).toHaveScreenshot({ maxDiffPixels: 100, fullPage: true, mask: [page.locator('.dynamic')] });
+  await expect(page).toHaveScreenshot({
+    maxDiffPixels: 100,
+    fullPage: true,
+    mask: [page.locator(".dynamic")],
+  });
 });

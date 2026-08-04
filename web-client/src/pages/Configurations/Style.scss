@@ -12,7 +12,11 @@
   overflow: hidden;
 }
 
-.gpm-page-config .euiDescriptionList.euiDescriptionList--column.euiDescriptionList--compressed .euiDescriptionList__description,
-.gpm-page-config .euiDescriptionList.euiDescriptionList--responsiveColumn.euiDescriptionList--compressed .euiDescriptionList__description {
+.gpm-page-config
+  .euiDescriptionList.euiDescriptionList--column.euiDescriptionList--compressed
+  .euiDescriptionList__description,
+.gpm-page-config
+  .euiDescriptionList.euiDescriptionList--responsiveColumn.euiDescriptionList--compressed
+  .euiDescriptionList__description {
   width: calc(100% - 100px);
 }

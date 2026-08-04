@@ -28,7 +28,9 @@ type K8sContextsResponse = IK8sContext[][] | IK8sContext[];
 const getDefaultContext = (): IApplicationContextData => {
   return {
     apiUrl:
-      process.env.NODE_ENV !== "production" ? (process.env?.REACT_APP_LOCAL_GPM_SERVER_URL ?? "missing local url") : `${process.env.PUBLIC_URL}/`,
+      process.env.NODE_ENV !== "production"
+        ? (process.env?.REACT_APP_LOCAL_GPM_SERVER_URL ?? "missing local url")
+        : `${process.env.PUBLIC_URL}/`,
     authEnabled:
       JSON.parse(localStorage.getItem("authEnabled") ?? "false") || false,
     currentK8sContext: localStorage.getItem("currentK8sContext") || "",
@@ -39,9 +41,8 @@ const getDefaultContext = (): IApplicationContextData => {
 };
 
 const ContextProvider = ({ children }: ContextProviderProps) => {
-  const [appContext, setAppContext] = useState<IApplicationContextData>(
-    getDefaultContext()
-  );
+  const [appContext, setAppContext] =
+    useState<IApplicationContextData>(getDefaultContext());
 
   const setCurrentContext = useCallback(
     (updates: Partial<IApplicationContextData>) => {
@@ -57,18 +58,18 @@ const ContextProvider = ({ children }: ContextProviderProps) => {
       if (updates.k8sContexts) {
         localStorage.setItem(
           "k8sContexts",
-          JSON.stringify(updates.k8sContexts)
+          JSON.stringify(updates.k8sContexts),
         );
       }
 
       if (updates.authEnabled) {
         localStorage.setItem(
           "authEnabled",
-          JSON.stringify(updates.authEnabled)
+          JSON.stringify(updates.authEnabled),
         );
       }
     },
-    [appContext, setAppContext]
+    [appContext, setAppContext],
   );
 
   const contextValue = useMemo(
@@ -76,7 +77,7 @@ const ContextProvider = ({ children }: ContextProviderProps) => {
       context: appContext,
       setContext: setCurrentContext,
     }),
-    [appContext, setCurrentContext]
+    [appContext, setCurrentContext],
   );
 
   useEffect(() => {
@@ -119,7 +120,7 @@ const ContextProvider = ({ children }: ContextProviderProps) => {
         .then((body) => {
           localStorage.setItem(
             "authEnabled",
-            JSON.stringify(body.auth_enabled)
+            JSON.stringify(body.auth_enabled),
           );
 
           setAppContext({

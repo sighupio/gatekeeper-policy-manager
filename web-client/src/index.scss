@@ -55,9 +55,29 @@
 }
 
 $euiColorPrimary: #6b2d9f;
-$euiFontFamily: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+$euiFontFamily:
+  "Poppins",
+  -apple-system,
+  BlinkMacSystemFont,
+  "Segoe UI",
+  Helvetica,
+  Arial,
+  sans-serif,
+  "Apple Color Emoji",
+  "Segoe UI Emoji",
+  "Segoe UI Symbol";
 $euiCodeFontFamily: "JetBrains Mono", Consolas, Menlo, Courier, monospace;
-$euiTitle: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+$euiTitle:
+  "Poppins",
+  -apple-system,
+  BlinkMacSystemFont,
+  "Segoe UI",
+  Helvetica,
+  Arial,
+  sans-serif,
+  "Apple Color Emoji",
+  "Segoe UI Emoji",
+  "Segoe UI Symbol";
 
 .euiTab.euiTab-isSelected {
   box-shadow: inset 0 -2px 0 $euiColorPrimary;
@@ -79,7 +99,7 @@ $euiTitle: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, 
   border-radius: 8px !important;
 }
 
-.euiPagination__compressedText>span:first-of-type {
+.euiPagination__compressedText > span:first-of-type {
   color: $euiColorPrimary;
 }
 
@@ -107,10 +127,16 @@ $euiTitle: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, 
 .euiSelect:focus,
 .euiFieldText:focus,
 .euiSuperSelectControl.euiSuperSelect--isOpen__button,
-.euiFilePicker__input:focus+.euiFilePicker__prompt,
+.euiFilePicker__input:focus + .euiFilePicker__prompt,
 .euiComboBox.euiComboBox-isOpen .euiComboBox__inputWrap,
 .euiComboBox.euiComboBox-isOpen .euiComboBox__inputWrap--compressed {
-  background-image: linear-gradient(to top, $euiColorPrimary, $euiColorPrimary 2px, transparent 2px, transparent 100%);
+  background-image: linear-gradient(
+    to top,
+    $euiColorPrimary,
+    $euiColorPrimary 2px,
+    transparent 2px,
+    transparent 100%
+  );
   box-shadow: inset 0 0 0 1px rgb(107 45 159 / 10%);
 }
 

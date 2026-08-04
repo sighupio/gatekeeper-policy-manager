@@ -145,7 +145,10 @@ function SingleConstraintTemplate(
             paddingSize="none"
           >
             <EuiCodeBlock lineNumbers language="rego">
-              {item.spec.targets[0].rego ?? item.spec.targets[0].code?.filter(code => code.engine === "Rego")[0]?.source.rego}
+              {item.spec.targets[0].rego ??
+                item.spec.targets[0].code?.filter(
+                  (code) => code.engine === "Rego",
+                )[0]?.source.rego}
             </EuiCodeBlock>
           </EuiAccordion>
         </EuiFlexItem>
@@ -193,8 +196,9 @@ function SingleConstraintTemplate(
             {relatedConstraints.map((constraint, index) => (
               <EuiFlexItem key={constraint.metadata.name}>
                 <EuiLink
-                  href={`/constraints${context ? "/" + context : ""}#${constraint.metadata.name
-                    }`}
+                  href={`/constraints${context ? "/" + context : ""}#${
+                    constraint.metadata.name
+                  }`}
                 >
                   <EuiText size="s">
                     <span>{constraint.metadata.name}</span>
@@ -303,7 +307,8 @@ function ConstraintTemplatesComponent() {
   useEffect(() => {
     setIsLoading(true);
     fetch(
-      `${appContextData.context.apiUrl}api/v1/constrainttemplates/${context ? context + "/" : ""
+      `${appContextData.context.apiUrl}api/v1/constrainttemplates/${
+        context ? context + "/" : ""
       }`,
     )
       .then(async (res) => {
@@ -425,8 +430,7 @@ function ConstraintTemplatesComponent() {
             </EuiPageBody>
           </EuiPage>
         </EuiFlexGroup>
-      )
-      }
+      )}
     </>
   );
 }

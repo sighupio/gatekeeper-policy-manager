@@ -58,7 +58,9 @@ function generateSideNav(list: IConstraint[]): ISideNav[] {
       icon: (
         <>
           <EuiBadge
-            color={(item.status?.totalViolations ?? 0) > 0 ? "danger" : "success"}
+            color={
+              (item.status?.totalViolations ?? 0) > 0 ? "danger" : "success"
+            }
           >
             {item.status.totalViolations}
           </EuiBadge>
@@ -144,8 +146,9 @@ function SingleConstraint(item: IConstraint, context?: string) {
             </EuiFlexItem>
             <EuiFlexItem grow={false} style={{ marginLeft: "auto" }}>
               <EuiLink
-                href={`/constrainttemplates${context ? "/" + context : ""}#${item.kind
-                  }`}
+                href={`/constrainttemplates${context ? "/" + context : ""}#${
+                  item.kind
+                }`}
               >
                 <EuiText size="xs">
                   <span>TEMPLATE: {item.kind}</span>
@@ -260,7 +263,7 @@ function SingleConstraint(item: IConstraint, context?: string) {
                               return (
                                 <EuiText size="s">{autoLink(message)}</EuiText>
                               );
-                            }
+                            },
                           },
                         ]}
                       />
@@ -268,20 +271,20 @@ function SingleConstraint(item: IConstraint, context?: string) {
                     <EuiFlexItem>
                       {(item.status?.totalViolations ?? 0) >
                         item.status.violations.length && (
-                          <EuiCallOut
-                            title="Not all violations can be shown"
-                            color="warning"
-                            iconType="alert"
-                          >
-                            <p>
-                              Gatekeeper's configuration is limiting the audit
-                              violations per constraint to{" "}
-                              {item.status.violations.length}. See Gatekeeper's
-                              --constraint-violations-limit audit configuration
-                              flag.
-                            </p>
-                          </EuiCallOut>
-                        )}
+                        <EuiCallOut
+                          title="Not all violations can be shown"
+                          color="warning"
+                          iconType="alert"
+                        >
+                          <p>
+                            Gatekeeper's configuration is limiting the audit
+                            violations per constraint to{" "}
+                            {item.status.violations.length}. See Gatekeeper's
+                            --constraint-violations-limit audit configuration
+                            flag.
+                          </p>
+                        </EuiCallOut>
+                      )}
                     </EuiFlexItem>
                   </EuiFlexGroup>
                 </EuiAccordion>
@@ -376,8 +379,9 @@ function SingleConstraint(item: IConstraint, context?: string) {
                 >
                   <EuiBadge
                     iconType={pod.enforced ? shieldActive : shieldInactive}
-                    title={`Constraint is ${!pod.enforced ? "NOT " : ""
-                      }being ENFORCED by this POD`}
+                    title={`Constraint is ${
+                      !pod.enforced ? "NOT " : ""
+                    }being ENFORCED by this POD`}
                     style={{
                       paddingRight: 0,
                       borderRight: 0,
@@ -448,7 +452,8 @@ function ConstraintsComponent() {
   useEffect(() => {
     setIsLoading(true);
     fetch(
-      `${appContextData.context.apiUrl}api/v1/constraints/${context ? context + "/" : ""
+      `${appContextData.context.apiUrl}api/v1/constraints/${
+        context ? context + "/" : ""
       }`,
     )
       .then(async (res) => {
@@ -474,7 +479,12 @@ function ConstraintsComponent() {
         navigate(`/error`, { state: { error: error } });
       })
       .finally(() => setIsLoading(false));
-  }, [appContextData.context.apiUrl, appContextData.context.currentK8sContext, context, navigate]);
+  }, [
+    appContextData.context.apiUrl,
+    appContextData.context.currentK8sContext,
+    context,
+    navigate,
+  ]);
 
   useScrollToHash(hash, [fullyLoadedRefs]);
 
@@ -543,10 +553,11 @@ function ConstraintsComponent() {
                   iconSize="s"
                   iconType="popout"
                   style={{ width: "100%" }}
-                  href={`${appContextData.context.apiUrl}api/v1/constraints/${appContextData.context.currentK8sContext
-                    ? appContextData.context.currentK8sContext + "/"
-                    : ""
-                    }?report=html`}
+                  href={`${appContextData.context.apiUrl}api/v1/constraints/${
+                    appContextData.context.currentK8sContext
+                      ? appContextData.context.currentK8sContext + "/"
+                      : ""
+                  }?report=html`}
                   download
                 >
                   <EuiText size="xs">Download violations report</EuiText>

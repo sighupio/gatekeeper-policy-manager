@@ -144,10 +144,11 @@ function HeaderComponent() {
                     key={route.path}
                   >
                     <EuiButtonEmpty
-                      href={`${route.path === "/"
-                        ? route.path
-                        : route.path + "/" + (context.currentK8sContext ?? "")
-                        }`}
+                      href={`${
+                        route.path === "/"
+                          ? route.path
+                          : route.path + "/" + (context.currentK8sContext ?? "")
+                      }`}
                     >
                       {route.name}
                     </EuiButtonEmpty>

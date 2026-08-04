@@ -5,7 +5,7 @@
  */
 
 export function scrollToElement(hash: string, smooth: boolean = false) {
-  const element = document.querySelector(hash.replace(/:|\./g, '\\$&'));
+  const element = document.querySelector(hash.replace(/:|\./g, "\\$&"));
 
   if (!element) {
     return;
@@ -25,7 +25,8 @@ export function scrollToElement(hash: string, smooth: boolean = false) {
 }
 
 export function autoLink(text: string) {
-  const delimiter = /((?:https?:\/\/)(?:(?:[a-z0-9]?(?:[a-z0-9\-]{1,61}[a-z0-9])?\.[^\.|\s])+[a-z\.]*[a-z]+|(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3})(?::\d{1,5})*[a-z0-9.,_\/~#&=;%+?\-\\(\\)]*)/gi;
+  const delimiter =
+    /((?:https?:\/\/)(?:(?:[a-z0-9]?(?:[a-z0-9\-]{1,61}[a-z0-9])?\.[^\.|\s])+[a-z\.]*[a-z]+|(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3})(?::\d{1,5})*[a-z0-9.,_\/~#&=;%+?\-\\(\\)]*)/gi;
   return (
     <>
       {text.split(delimiter).map((word, index) => {
@@ -33,11 +34,13 @@ export function autoLink(text: string) {
         if (match) {
           const url = match[0];
           return (
-            <a key={index} href={url} target="_blank" rel="noreferrer">{url}</a>
+            <a key={index} href={url} target="_blank" rel="noreferrer">
+              {url}
+            </a>
           );
         }
         return word;
       })}
     </>
   );
-};
+}

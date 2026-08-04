@@ -4,11 +4,15 @@
  * license that can be found in the LICENSE file.
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test('page mutations snapshot', async ({ page }) => {
-  await page.goto('mutations/');
-  const mutation = page.locator('#demo-annotation-owner > .euiPanel');
+test("page mutations snapshot", async ({ page }) => {
+  await page.goto("mutations/");
+  const mutation = page.locator("#demo-annotation-owner > .euiPanel");
   await mutation.waitFor();
-  await expect(page).toHaveScreenshot({ maxDiffPixels: 100, fullPage: true, mask: [page.locator('.dynamic')] });
+  await expect(page).toHaveScreenshot({
+    maxDiffPixels: 100,
+    fullPage: true,
+    mask: [page.locator(".dynamic")],
+  });
 });

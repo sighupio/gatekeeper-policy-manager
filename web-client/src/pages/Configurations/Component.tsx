@@ -98,10 +98,7 @@ function SingleConfig(item: IConfig) {
             buttonContent="YAML definition"
             paddingSize="none"
           >
-            <EuiCodeBlock
-              lineNumbers
-              language="json"
-            >
+            <EuiCodeBlock lineNumbers language="json">
               {JSON.stringify(
                 item,
                 (k, v) => {
@@ -111,7 +108,7 @@ function SingleConfig(item: IConfig) {
 
                   return v;
                 },
-                2
+                2,
               )}
             </EuiCodeBlock>
           </EuiAccordion>
@@ -197,14 +194,15 @@ function ConfigurationsComponent() {
         setFullyLoadedRefs(true);
       }
     },
-    [panelsRef, items]
+    [panelsRef, items],
   );
 
   useEffect(() => {
     setIsLoading(true);
     fetch(
-      `${appContextData.context.apiUrl}api/v1/configs/${context ?
-        context + "/" : ""}`
+      `${appContextData.context.apiUrl}api/v1/configs/${
+        context ? context + "/" : ""
+      }`,
     )
       .then(async (res) => {
         const body: IConfig[] = await res.json();
@@ -292,10 +290,7 @@ function ConfigurationsComponent() {
             <EuiPageSidebar paddingSize="m" sticky>
               <EuiSideNav items={sideNav} />
             </EuiPageSidebar>
-            <EuiPageBody
-              paddingSize="m"
-              style={{ marginBottom: 350 }}
-            >
+            <EuiPageBody paddingSize="m" style={{ marginBottom: 350 }}>
               <>
                 {items && items.length > 0 ? (
                   items.map((item, index) => {

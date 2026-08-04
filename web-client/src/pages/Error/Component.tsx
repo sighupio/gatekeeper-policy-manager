@@ -39,7 +39,7 @@ function ErrorComponent() {
     ) {
       navigate("/");
     }
-  }, [appContextData.context.currentK8sContext])
+  }, [appContextData.context.currentK8sContext]);
 
   return (
     <EuiPage

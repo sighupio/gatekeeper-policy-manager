@@ -4,11 +4,17 @@
  * license that can be found in the LICENSE file.
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test('page constrainttemplates snapshot', async ({ page }) => {
-  await page.goto('constrainttemplates/', { timeout: 10000 });
-  const constraintTemplatesSpan = page.locator('span[title="Constraint Templates"]');
+test("page constrainttemplates snapshot", async ({ page }) => {
+  await page.goto("constrainttemplates/", { timeout: 10000 });
+  const constraintTemplatesSpan = page.locator(
+    'span[title="Constraint Templates"]',
+  );
   await constraintTemplatesSpan.waitFor();
-  await expect(page).toHaveScreenshot({ maxDiffPixels: 100, fullPage: true, mask: [page.locator('.dynamic')]  });
+  await expect(page).toHaveScreenshot({
+    maxDiffPixels: 100,
+    fullPage: true,
+    mask: [page.locator(".dynamic")],
+  });
 });
