@@ -6,13 +6,30 @@ name: license
 kind: pipeline
 type: docker
 
+volumes:
+  - name: mise-cache
+    host:
+      path: /root/mise_data_dir
+
 steps:
   - name: check
-    image: docker.io/library/golang:1.26
+    image: quay.io/sighup/mise:v2026.6.14
     pull: always
+    environment:
+      MISE_DATA_DIR: /mise-data
+      # Authenticate mise's GitHub API calls (tool resolution/downloads) to avoid the
+      # 60 req/h unauthenticated rate limit.
+      MISE_GITHUB_TOKEN:
+        from_secret: github_token
+    volumes:
+      - name: mise-cache
+        path: /mise-data
     commands:
-      - go install github.com/google/addlicense@v1.1.1
-      - addlicense -c "SIGHUP s.r.l" -v -l bsd -check -ignore 'chart/**' .
+      # Serialize concurrent `mise install` across pipelines sharing the host cache.
+      - "(flock -w 1800 9 || exit 1; mise install) 9>/mise-data/.mise-install.lock"
+      - eval "$(mise activate bash --shims)"
+      - mise run license-check
+
 trigger:
   ref:
     exclude:
@@ -25,6 +42,11 @@ type: docker
 
 depends_on:
   - license
+
+volumes:
+  - name: mise-cache
+    host:
+      path: /root/mise_data_dir
 
 steps:
   # Superlint stays disabled: it was switched off for the Go rewrite and never re-tuned.
@@ -47,13 +69,21 @@ steps:
   #     - clone
 
   - name: render
-    image: quay.io/sighup/e2e-testing:2.24.17_1.1.0_3.12.0_1.32.2_5.6.0_1.9.0_4.33.3
+    image: quay.io/sighup/mise:v2026.6.14
     pull: always
     depends_on:
       - clone
+    environment:
+      MISE_DATA_DIR: /mise-data
+      MISE_GITHUB_TOKEN:
+        from_secret: github_token
+    volumes:
+      - name: mise-cache
+        path: /mise-data
     commands:
-      - kustomize build . > gpm.yaml
-      - helm template --set config.secretKey=e2e chart > rendered_chart.yaml
+      - "(flock -w 1800 9 || exit 1; mise install) 9>/mise-data/.mise-install.lock"
+      - eval "$(mise activate bash --shims)"
+      - mise run render
 
   - name: check-deprecated-apis
     image: us-docker.pkg.dev/fairwinds-ops/oss/pluto:v5
@@ -136,10 +166,14 @@ trigger:
 
 steps:
   - name: kind
-    image: docker:dind
+    image: quay.io/sighup/mise:v2026.6.14
     pull: always
     environment:
-      KIND_VERSION: v0.32.0
+      MISE_DATA_DIR: /mise-data
+      MISE_GITHUB_TOKEN:
+        from_secret: github_token
+      # kind and kubectl versions come from mise.toml — keep CLUSTER_VERSION in sync
+      # with the kubectl pin there and with the pluto target in the qa pipeline.
       CLUSTER_VERSION: v1.36.1
       LOAD_IMAGE: gatekeeper-policy-manager:test-${DRONE_BUILD_NUMBER}
       CLUSTER_NAME: ${DRONE_REPO_NAME}-${DRONE_BUILD_NUMBER}
@@ -148,34 +182,48 @@ steps:
         path: /root/.docker/config.json
       - name: dockersock
         path: /var/run/docker.sock
+      - name: mise-cache
+        path: /mise-data
     commands:
-      - wget -qO /usr/local/bin/kind "https://kind.sigs.k8s.io/dl/$${KIND_VERSION}/kind-$(uname)-amd64"
-      - wget -qO /usr/local/bin/kubectl "https://dl.k8s.io/release/$${CLUSTER_VERSION}/bin/linux/amd64/kubectl"
-      - chmod +x /usr/local/bin/kind /usr/local/bin/kubectl
+      - "(flock -w 1800 9 || exit 1; mise install) 9>/mise-data/.mise-install.lock"
+      - eval "$(mise activate bash --shims)"
       - kind create cluster --name $${CLUSTER_NAME} --image registry.sighup.io/fury/kindest/node:$${CLUSTER_VERSION}
       - kind load docker-image $${LOAD_IMAGE} --name $${CLUSTER_NAME}
       - kind get kubeconfig --name $${CLUSTER_NAME} > kubeconfig.yml
 
-  # TODO: change to mise
   - name: tests
-    image: quay.io/sighup/e2e-testing:2.24.17_1.1.0_3.12.0_1.32.2_5.6.0_1.9.0_4.33.3
+    image: quay.io/sighup/mise:v2026.6.14
     pull: always
     network_mode: host
     environment:
+      MISE_DATA_DIR: /mise-data
+      MISE_GITHUB_TOKEN:
+        from_secret: github_token
       LOAD_IMAGE: gatekeeper-policy-manager:test-${DRONE_BUILD_NUMBER}
+    volumes:
+      - name: mise-cache
+        path: /mise-data
     commands:
+      - "(flock -w 1800 9 || exit 1; mise install) 9>/mise-data/.mise-install.lock"
+      - eval "$(mise activate bash --shims)"
       - export KUBECONFIG=$PWD/kubeconfig.yml
-      - cd tests
-      - kustomize edit set image quay.io/sighup/gatekeeper-policy-manager=$${LOAD_IMAGE}
-      - cd -
-      - bats -t tests/tests.sh
+      - mise run e2e
 
   - name: gpm-port-forward
-    image: quay.io/sighup/e2e-testing:2.24.17_1.1.0_3.12.0_1.32.2_5.6.0_1.9.0_4.33.3
+    image: quay.io/sighup/mise:v2026.6.14
     pull: always
     network_mode: host
     detach: true
+    environment:
+      MISE_DATA_DIR: /mise-data
+      MISE_GITHUB_TOKEN:
+        from_secret: github_token
+    volumes:
+      - name: mise-cache
+        path: /mise-data
     commands:
+      - "(flock -w 1800 9 || exit 1; mise install) 9>/mise-data/.mise-install.lock"
+      - eval "$(mise activate bash --shims)"
       - export KUBECONFIG=$PWD/kubeconfig.yml
       - kubectl port-forward svc/gatekeeper-policy-manager 8080:80 -n gatekeeper-system
 
@@ -198,19 +246,23 @@ steps:
         - failure
 
   - name: kind-destroy
-    image: docker:dind
+    image: quay.io/sighup/mise:v2026.6.14
     pull: always
     environment:
-      KIND_VERSION: v0.32.0
+      MISE_DATA_DIR: /mise-data
+      MISE_GITHUB_TOKEN:
+        from_secret: github_token
       CLUSTER_NAME: ${DRONE_REPO_NAME}-${DRONE_BUILD_NUMBER}
     volumes:
       - name: dockerconfig
         path: /root/.docker/config.json
       - name: dockersock
         path: /var/run/docker.sock
+      - name: mise-cache
+        path: /mise-data
     commands:
-      - wget -qO /usr/local/bin/kind "https://kind.sigs.k8s.io/dl/$${KIND_VERSION}/kind-$(uname)-amd64"
-      - chmod +x /usr/local/bin/kind
+      - "(flock -w 1800 9 || exit 1; mise install) 9>/mise-data/.mise-install.lock"
+      - eval "$(mise activate bash --shims)"
       - kind delete cluster --name $${CLUSTER_NAME}
       - rm kubeconfig.yml
     when:
@@ -225,6 +277,9 @@ volumes:
   - name: dockersock
     host:
       path: /var/run/docker.sock
+  - name: mise-cache
+    host:
+      path: /root/mise_data_dir
 
 ---
 name: release

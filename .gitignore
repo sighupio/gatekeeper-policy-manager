@@ -4,3 +4,6 @@ tests/e2e/test-results
 node_modules
 web-client/build
 **/mise.local.toml
+# rendered by `mise run render` for the deprecated-API check
+gpm.yaml
+rendered_chart.yaml

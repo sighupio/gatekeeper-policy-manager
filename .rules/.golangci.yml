@@ -1,0 +1,15 @@
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+version: "2"
+
+linters:
+  # Defaults (errcheck, govet, ineffassign, staticcheck, unused) are a deliberate
+  # starting point — govet already covers `go vet`, so there is no separate vet step.
+  exclusions:
+    paths:
+      # npm packages vendor Go sources (e.g. flatted/golang); they belong to no module
+      # of ours but `./...` picks them up once `yarn install` has run locally.
+      - web-client/node_modules
+      - tests/e2e/node_modules

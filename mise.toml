@@ -4,11 +4,61 @@ experimental = true
 [tools]
 go = "1.26.5"
 golangci-lint = "2.12.2"
+# Keep in sync with KIND_VERSION / CLUSTER_VERSION in .drone.yml.
+kind = "0.32.0"
+kubectl = "1.36.1"
+# Pinned to the versions the retired quay.io/sighup/e2e-testing image shipped, so moving
+# CI onto mise is a refactor and not a behaviour change. kubectl is the deliberate
+# exception: the image carried 1.32.2 against a 1.36 cluster, outside the supported skew.
+kustomize = "5.6.0"
+helm = "3.12.0"
+bats = "1.1.0"
+"ubi:google/addlicense" = "v1.1.1"
 
 [tasks.lint]
 description = "run golangci-lint"
-run = "golangci-lint run ./..."
+run = "golangci-lint run --config=.rules/.golangci.yml ./..."
 
 [tasks."lint-fix"]
 description = "run golangci-lint with autofix"
-run = "golangci-lint run --fix ./..."
+run = "golangci-lint run --fix --config=.rules/.golangci.yml ./..."
+
+[tasks."license-check"]
+description = "check license headers"
+run = """
+addlicense -c "SIGHUP s.r.l" -v -l bsd -check \
+  -ignore 'chart/**' \
+  -ignore 'static-content/**' \
+  -ignore '**/node_modules/**' \
+  -ignore 'web-client/build/**' \
+  -ignore 'gpm.yaml' \
+  -ignore 'rendered_chart.yaml' \
+  .
+"""
+
+[tasks."license-add"]
+description = "add license headers"
+run = """
+addlicense -c "SIGHUP s.r.l" -y 2017-present -v -l bsd \
+  -ignore 'chart/**' \
+  -ignore 'static-content/**' \
+  -ignore '**/node_modules/**' \
+  -ignore 'web-client/build/**' \
+  -ignore 'gpm.yaml' \
+  -ignore 'rendered_chart.yaml' \
+  .
+"""
+
+[tasks.render]
+description = "render the manifests and the chart for the deprecated-API check"
+run = [
+  "kustomize build . > gpm.yaml",
+  "helm template --set config.secretKey=e2e chart > rendered_chart.yaml",
+]
+
+[tasks.e2e]
+description = "run the bats e2e suite; expects KUBECONFIG and LOAD_IMAGE to be set"
+run = """
+(cd tests && kustomize edit set image quay.io/sighup/gatekeeper-policy-manager="$LOAD_IMAGE")
+bats -t tests/tests.sh
+"""
