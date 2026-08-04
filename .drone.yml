@@ -138,8 +138,6 @@ steps:
       - kubectl port-forward svc/gatekeeper-policy-manager 8080:80 -n gatekeeper-system
 
   - name: UI tests
-    depends_on:
-      - GPM port-forward
     # This must match the version in the package.json file
     image: mcr.microsoft.com/playwright:v1.55.1
     network_mode: host
