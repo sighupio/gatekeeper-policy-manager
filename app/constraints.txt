@@ -1,5 +1,5 @@
 Beaker==1.13.0
-cachetools==7.0.5
+cachetools==7.1.6
 certifi==2026.6.17
 cffi==2.0.0
 charset-normalizer==3.4.7
