@@ -1,6 +1,6 @@
 
 Thank you for installing SIGHUP Gatekeeper Policy Manager, part of the SIGHUP Distribution
-https://docs.sighup.io
+https://docs.sighup.io | https://sighup.io
 
 This is open source software <3 check out the source code at:
 https://github.com/sighupio/gatekeeper-policy-manager

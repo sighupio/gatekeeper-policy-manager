@@ -33,7 +33,7 @@ function FooterComponent() {
           <EuiText size="s">
             <p>
               <EuiIcon type="heart" color="red" /> Proud part of the{" "}
-              <EuiLink href="https://docs.sighup.com/" target="_blank">
+              <EuiLink href="https://docs.sighup.io/" target="_blank">
                 SIGHUP Distribution
               </EuiLink>
             </p>
