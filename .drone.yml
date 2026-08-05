@@ -85,6 +85,23 @@ steps:
       - eval "$(mise activate bash --shims)"
       - mise run lint
 
+  - name: vulncheck
+    image: quay.io/sighup/mise:v2026.6.14
+    pull: always
+    depends_on:
+      - clone
+    environment:
+      MISE_DATA_DIR: /mise-data
+      MISE_GITHUB_TOKEN:
+        from_secret: github_token
+    volumes:
+      - name: mise-cache
+        path: /mise-data
+    commands:
+      - "(flock -w 1800 9 || exit 1; mise install) 9>/mise-data/.mise-install.lock"
+      - eval "$(mise activate bash --shims)"
+      - mise run vulncheck
+
   - name: format-check
     image: quay.io/sighup/mise:v2026.6.14
     pull: always
@@ -226,7 +243,6 @@ trigger:
     include:
       - refs/tags/**
       - refs/heads/main
-      - refs/heads/snyk-**
       - refs/heads/dependabot/**
       - refs/heads/feature/go-backend
     exclude:
@@ -393,9 +409,12 @@ trigger:
       - refs/heads/**
     exclude:
       - refs/heads/dependabot/**
-      - refs/heads/snyk-**
       - refs/tags/gatekeeper-policy-manager-*
-      - refs/heads/featuer/go-backend
+    # Every push on any branch republishes the `unstable`, `go` and commit-SHA tags. That is
+    # deliberate: those tags exist for testing and `unstable` is meant to move. `latest` and the
+    # version tag only move on a tag, see the registry-tag step below.
+    # An exclusion for this branch used to sit here, misspelled `featuer/go-backend`, so it never
+    # matched anything. Removed rather than corrected, since the tags turned out to be wanted.
 
 steps:
   - name: prepare-tar-gz

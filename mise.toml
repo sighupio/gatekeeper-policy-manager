@@ -14,6 +14,8 @@ kustomize = "5.6.0"
 helm = "3.12.0"
 bats = "1.1.0"
 "ubi:google/addlicense" = "v1.1.1"
+# Checks the module graph against the Go vulnerability database.
+"go:golang.org/x/vuln/cmd/govulncheck" = "1.6.0"
 # For the frontend unit tests. node 24 is the current LTS line, matching the `node:lts-alpine`
 # base the Dockerfile builds the frontend with. yarn is v1 to match the committed yarn.lock.
 node = "24"
@@ -64,6 +66,11 @@ run = 'prettier --write "web-client/src/**/*.{ts,tsx,scss}" "tests/e2e/**/*.{ts,
 [tasks."format:check"]
 description = "check the frontend formatting without changing anything"
 run = 'prettier --check "web-client/src/**/*.{ts,tsx,scss}" "tests/e2e/**/*.{ts,js}"'
+
+[tasks.vulncheck]
+description = "check Go dependencies against the vulnerability database"
+# Same node_modules filter as the tests: npm packages vendor Go sources.
+run = 'govulncheck $(go list ./... | grep -v /node_modules/)'
 
 [tasks."test:unit:go"]
 description = "run the Go unit tests"
