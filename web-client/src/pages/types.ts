@@ -28,4 +28,6 @@ export interface BackendError {
   action: string;
   description: string;
   error: string;
+  // Present only when signing in would fix the error, so the error page can offer a way back in.
+  login_url?: string;
 }
