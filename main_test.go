@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 
@@ -24,6 +25,76 @@ const (
 	defaultMessage = "An error ocurred while getting config objects from Kubernetes API."
 	defaultAction  = "Check that the Kubeconfig file is correct and that the Kubernetes API is accessible."
 )
+
+// Gives the test the configuration a freshly started GPM has, and takes back anything it changes.
+// Any test that calls viper.Set, or that runs code reading a setting, has to call this first.
+//
+// viper is process-global and viper.Set outranks both the defaults and the environment, so a test
+// that sets a key changes the code under test for every test after it. Resetting the keys it
+// touched to "" is not enough: "" is not the default, so it leaves the process in a state GPM
+// would never be in. session_max_age is the one that bites, because zero means "never expire".
+// Tests only passed in the order the files happened to run in.
+func useTestSettings(t *testing.T) {
+	t.Helper()
+
+	// bindSettings binds GPM_*, so without this the developer's own environment reaches the code
+	// under test. viper reads an empty variable as unset.
+	for _, entry := range os.Environ() {
+		if k, _, found := strings.Cut(entry, "="); found && strings.HasPrefix(k, "GPM_") {
+			t.Setenv(k, "")
+		}
+	}
+
+	// Resetting on the way in is what makes the order stop mattering. Doing it again on the way out
+	// is for whatever runs next without calling this.
+	reset := func() {
+		viper.Reset()
+		bindSettings()
+	}
+	reset()
+	t.Cleanup(reset)
+}
+
+// Everything else in the suite trusts useTestSettings to hand it a realistic starting point, so
+// what "realistic" means is worth pinning: the values main() would produce.
+func TestUseTestSettingsGivesTheStartupDefaults(t *testing.T) {
+	useTestSettings(t)
+
+	for key, want := range map[string]any{
+		"auth_enabled":         "Anonymous",
+		"log_level":            "INFO",
+		"listen_address":       ":8080",
+		"events_source":        "gatekeeper-webhook",
+		"secret_key":           insecureDefaultSecretKey,
+		"preferred_url_scheme": "http",
+		"session_max_age":      defaultSessionMaxAge,
+	} {
+		if got := viper.Get(key); got != want {
+			t.Errorf("%s = %v, want %v", key, got, want)
+		}
+	}
+}
+
+// bindSettings binds GPM_*, and a developer running GPM locally has those set — mise.local.toml in
+// this repository sets six of them. Without the guard the suite reads them: the missing-client-id
+// case below stops being a missing-client-id case and goes out to the network instead.
+func TestUseTestSettingsIgnoresTheDevelopersEnvironment(t *testing.T) {
+	t.Setenv("GPM_AUTH_ENABLED", "OIDC")
+	t.Setenv("GPM_SESSION_MAX_AGE", "1")
+	t.Setenv("GPM_OIDC_CLIENT_ID", "someone-elses-client")
+
+	useTestSettings(t)
+
+	if got := viper.GetString("auth_enabled"); got != "Anonymous" {
+		t.Errorf("auth_enabled = %q, want the default Anonymous rather than the environment", got)
+	}
+	if got := viper.GetInt("session_max_age"); got != defaultSessionMaxAge {
+		t.Errorf("session_max_age = %d, want the %d default rather than the environment", got, defaultSessionMaxAge)
+	}
+	if got := viper.GetString("oidc_client_id"); got != "" {
+		t.Errorf("oidc_client_id = %q, want it unset rather than taken from the environment", got)
+	}
+}
 
 // The error client-go actually surfaces for an untrusted certificate: an x509 error wrapped by
 // crypto/tls, wrapped again by net/url. If errors.As stops unwrapping anywhere along that chain
@@ -140,8 +211,8 @@ func TestGetAuthReflectsConfiguration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("GPM_AUTH_ENABLED="+tt.authEnabled, func(t *testing.T) {
+			useTestSettings(t)
 			viper.Set("auth_enabled", tt.authEnabled)
-			t.Cleanup(func() { viper.Set("auth_enabled", "") })
 
 			code, body := callHandler(t, getAuth, "/api/v1/auth")
 

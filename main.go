@@ -428,8 +428,11 @@ func (s *server) getEvents(c echo.Context) error {
 	return c.JSON(http.StatusOK, events)
 }
 
-func main() {
-	// Get configuration from env
+// Declares every setting GPM reads, with its default and its GPM_-prefixed environment variable.
+//
+// Separate from main() so that a test can put viper in exactly the state a running GPM would see,
+// instead of one assembled out of whatever the previous test left behind.
+func bindSettings() {
 	viper.SetEnvPrefix("gpm") // will be uppercased automatically
 	// BindEnv only errors when called without a key, so the error is unreachable here.
 	_ = viper.BindEnv("log_level")
@@ -465,6 +468,10 @@ func main() {
 	} {
 		_ = viper.BindEnv(k)
 	}
+}
+
+func main() {
+	bindSettings()
 
 	// Initilize Echo HTTP server
 	e := echo.New()

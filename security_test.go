@@ -112,12 +112,9 @@ func TestServeIndexStillServesTheApp(t *testing.T) {
 // GPM_SESSION_MAX_AGE only shortened the cookie attribute the browser sees. The server-side check
 // is the one that matters, since an attacker replaying a stolen cookie ignores the attribute.
 func TestSessionStoreEnforcesMaxAgeServerSide(t *testing.T) {
+	useTestSettings(t)
 	viper.Set("secret_key", "a-test-key-that-is-not-the-default")
 	viper.Set("session_max_age", 1)
-	t.Cleanup(func() {
-		viper.Set("secret_key", "")
-		viper.Set("session_max_age", 0)
-	})
 
 	store, ok := newSessionStore().(*sessions.CookieStore)
 	if !ok {
@@ -148,12 +145,9 @@ func TestSessionStoreEnforcesMaxAgeServerSide(t *testing.T) {
 func TestSessionStoreRejectsAUselessMaxAge(t *testing.T) {
 	for _, raw := range []any{0, "", "8h", "not-a-number"} {
 		t.Run(fmt.Sprintf("%v", raw), func(t *testing.T) {
+			useTestSettings(t)
 			viper.Set("secret_key", "a-test-key-that-is-not-the-default")
 			viper.Set("session_max_age", raw)
-			t.Cleanup(func() {
-				viper.Set("secret_key", "")
-				viper.Set("session_max_age", defaultSessionMaxAge)
-			})
 
 			store := newSessionStore().(*sessions.CookieStore)
 			if store.Options.MaxAge != defaultSessionMaxAge {
@@ -173,12 +167,9 @@ func TestDefaultSecretKeyIsRecognised(t *testing.T) {
 	}
 
 	// Demonstrates why: a session forged offline with the published key is otherwise accepted.
+	useTestSettings(t)
 	viper.Set("secret_key", insecureDefaultSecretKey)
 	viper.Set("session_max_age", 3600)
-	t.Cleanup(func() {
-		viper.Set("secret_key", "")
-		viper.Set("session_max_age", 0)
-	})
 
 	store := newSessionStore().(*sessions.CookieStore)
 	forged, err := securecookie.EncodeMulti(sessionName,

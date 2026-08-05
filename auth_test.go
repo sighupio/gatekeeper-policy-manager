@@ -31,8 +31,8 @@ func TestAuthEnabled(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("value="+tt.value, func(t *testing.T) {
+			useTestSettings(t)
 			viper.Set("auth_enabled", tt.value)
-			t.Cleanup(func() { viper.Set("auth_enabled", "") })
 
 			if got := authEnabled(); got != tt.want {
 				t.Errorf("authEnabled() = %v, want %v", got, tt.want)
@@ -181,24 +181,12 @@ func TestNewAuthenticatorRequiresItsSettings(t *testing.T) {
 		},
 	}
 
-	keys := []string{
-		"oidc_redirect_domain", "oidc_client_id", "oidc_issuer",
-		"oidc_authorization_endpoint", "oidc_token_endpoint", "oidc_jwks_uri",
-	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			for _, k := range keys {
-				viper.Set(k, "")
-			}
+			useTestSettings(t)
 			for k, v := range tt.set {
 				viper.Set(k, v)
 			}
-			t.Cleanup(func() {
-				for _, k := range keys {
-					viper.Set(k, "")
-				}
-			})
 
 			_, err := newAuthenticator(context.Background())
 			if err == nil {

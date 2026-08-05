@@ -149,6 +149,7 @@ func writeJSON(w http.ResponseWriter, v any) {
 func newAuthTestServer(t *testing.T, p *fakeProvider) (*echo.Echo, *authenticator) {
 	t.Helper()
 
+	useTestSettings(t)
 	settings := map[string]any{
 		"auth_enabled":         "OIDC",
 		"secret_key":           "test-secret-key",
@@ -162,11 +163,6 @@ func newAuthTestServer(t *testing.T, p *fakeProvider) (*echo.Echo, *authenticato
 	for k, v := range settings {
 		viper.Set(k, v)
 	}
-	t.Cleanup(func() {
-		for k := range settings {
-			viper.Set(k, "")
-		}
-	})
 
 	auth, err := newAuthenticator(context.Background())
 	if err != nil {
