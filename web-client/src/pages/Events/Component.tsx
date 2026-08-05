@@ -27,6 +27,7 @@ import { ApplicationContext } from "../../AppContext";
 import { BackendError } from "../types";
 import { useNavigate, useParams } from "react-router-dom";
 import { IEvent } from "./types";
+import { appPath } from "../../utils";
 
 function EventsComponent() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -65,7 +66,9 @@ function EventsComponent() {
 
       render: (e: IEvent) => (
         <EuiLink
-          href={`/constrainttemplates${appContextData.context.currentK8sContext ? "/" + appContextData.context.currentK8sContext : ""}#${e.metadata.annotations.constraint_kind}`}
+          href={appPath(
+            `/constrainttemplates${appContextData.context.currentK8sContext ? "/" + appContextData.context.currentK8sContext : ""}#${e.metadata.annotations.constraint_kind}`,
+          )}
         >
           <EuiText size="xs">
             <span>{e.metadata.annotations.constraint_kind}</span>
@@ -80,7 +83,9 @@ function EventsComponent() {
 
       render: (e: IEvent) => (
         <EuiLink
-          href={`/constraints${appContextData.context.currentK8sContext ? "/" + appContextData.context.currentK8sContext : ""}#${e.metadata.annotations.constraint_name}`}
+          href={appPath(
+            `/constraints${appContextData.context.currentK8sContext ? "/" + appContextData.context.currentK8sContext : ""}#${e.metadata.annotations.constraint_name}`,
+          )}
         >
           <EuiText size="xs">
             <span>{e.metadata.annotations.constraint_name}</span>

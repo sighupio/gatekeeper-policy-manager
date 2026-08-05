@@ -37,6 +37,11 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 
 
 FROM gcr.io/distroless/static-debian11:nonroot AS target
+# The backend has to hand the browser paths under the same subpath the frontend was built for, so
+# it reads the build argument too rather than being configured separately. GPM_BASE_PATH can still
+# be set at run time, but there is no reason to.
+ARG PUBLIC_URL=""
+ENV GPM_BASE_PATH=$PUBLIC_URL
 LABEL org.opencontainers.vendor="SIGHUP.io"
 LABEL org.opencontainers.image.authors="SIGHUP https://sighup.io"
 LABEL org.opencontainers.image.source="https://github.com/sighupio/gatekeeper-policy-manager"

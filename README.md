@@ -92,6 +92,7 @@ GPM is a stateless application, but it can be configured using environment varia
 | `GPM_LOG_LEVEL`      | Log level (`DEBUG`, `INFO`, `WARN`, `ERROR`, `OFF`)                                                                                                                                                                               | `INFO`               |
 | `GPM_EVENTS_SOURCE`  | Used to filter out events by the defined source                                                                                                                                                                                   | `gatekeeper-webhook` |
 | `GPM_SKIP_TLS_VERIFY` | Skip TLS certificate verification while connecting to the Kubernetes API Server. Needed on clusters whose CA certificate is missing the AKI/SKI extensions, as happens on EKS. **USE WITH CAUTION.**                            | `false`              |
+| `GPM_BASE_PATH` | The subpath for GPM, for example `/gpm`. The image sets this value from the `PUBLIC_URL` build argument. See [Running behind a reverse proxy on a subpath](#running-behind-a-reverse-proxy-on-a-subpath). | `` (the domain root) |
 | `KUBECONFIG`         | Path to a [kubeconfig](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/) file, if provided while running inside a cluster this configuration file will be used instead of the cluster's API. | `$HOME/.kube/config` |
 
 ### Authentication
@@ -156,9 +157,13 @@ docker build --build-arg PUBLIC_URL=/gpm -t gatekeeper-policy-manager:subpath .
 ```
 
 This uses [Create React App's standard `PUBLIC_URL` mechanism](https://create-react-app.dev/docs/using-the-public-folder/).
-It sets the router's `basename` and the frontend's API base path at build time, so the subpath is
-baked into the built assets. If `PUBLIC_URL` is left unset, GPM behaves exactly as before and is
-served from `/`.
+The build puts the subpath into the assets: the router's `basename`, the API base path, and every
+in-app link.
+
+The same argument sets `GPM_BASE_PATH` in the image. The backend uses this value for the paths that
+it sends to the browser. These paths are the login URL and the OIDC redirects. You do not have to
+set `GPM_BASE_PATH`. If you set it to a different value than `PUBLIC_URL`, the links go to the
+wrong address. If you do not set `PUBLIC_URL`, GPM runs at the domain root, as before.
 
 > [!IMPORTANT]
 > Configure your reverse proxy to **strip the subpath** before forwarding to GPM. The backend still
@@ -168,6 +173,10 @@ served from `/`.
 The image published on quay.io is built for the root path. If you need a subpath deployment, build
 your own image with the argument above and push it to your own registry, or reference the
 Dockerfile from your CI pipeline with the same `--build-arg`.
+
+If you enable OIDC, keep `GPM_OIDC_REDIRECT_DOMAIN` as the scheme and host only, for example
+`https://example.com`. GPM adds the subpath. Register `https://example.com/gpm/oidc-auth` with your
+provider as the redirect URI.
 
 ### Multi-cluster support
 

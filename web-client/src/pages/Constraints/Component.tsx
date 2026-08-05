@@ -34,7 +34,7 @@ import { BackendError, ISideNav, ISideNavItem } from "../types";
 import { JSONTree } from "react-json-tree";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import theme from "../theme";
-import { scrollToElement, autoLink } from "../../utils";
+import { scrollToElement, autoLink, appPath } from "../../utils";
 import { IConstraint, IConstraintSpec } from "./types";
 import useScrollToHash from "../../hooks/useScrollToHash";
 import useCurrentElementInView from "../../hooks/useCurrentElementInView";
@@ -146,9 +146,9 @@ function SingleConstraint(item: IConstraint, context?: string) {
             </EuiFlexItem>
             <EuiFlexItem grow={false} style={{ marginLeft: "auto" }}>
               <EuiLink
-                href={`/constrainttemplates${context ? "/" + context : ""}#${
-                  item.kind
-                }`}
+                href={appPath(
+                  `/constrainttemplates${context ? "/" + context : ""}#${item.kind}`,
+                )}
               >
                 <EuiText size="xs">
                   <span>TEMPLATE: {item.kind}</span>

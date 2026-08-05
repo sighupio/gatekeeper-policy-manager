@@ -68,7 +68,9 @@ func newAuthenticator(ctx context.Context) (*authenticator, error) {
 		return nil, errors.New("GPM_OIDC_CLIENT_ID must be set when authentication is enabled")
 	}
 
-	redirectURL, err := url.JoinPath(redirectDomain, callbackPath)
+	// GPM_OIDC_REDIRECT_DOMAIN is the scheme and host only; the subpath comes from GPM_BASE_PATH,
+	// so a subpath deployment does not need it spelled out in two places.
+	redirectURL, err := url.JoinPath(redirectDomain, browserPath(callbackPath))
 	if err != nil {
 		return nil, fmt.Errorf("building the redirect URL from GPM_OIDC_REDIRECT_DOMAIN failed: %w", err)
 	}
@@ -268,7 +270,7 @@ func (a *authenticator) middleware() echo.MiddlewareFunc {
 					ErrorMessage: "Your session has expired or you are not logged in.",
 					Action:       "Sign in again to carry on.",
 					Description:  "No valid OIDC session was found for this request.",
-					LoginURL:     "/login",
+					LoginURL:     browserPath("/login"),
 				})
 			}
 			return a.startLogin(c, c.Request().URL.RequestURI())
@@ -280,11 +282,11 @@ func (a *authenticator) middleware() echo.MiddlewareFunc {
 // the user after an API call comes back 401, instead of asking them to reload the page.
 // An optional ?next= says where to land afterwards.
 func (a *authenticator) login(c echo.Context) error {
-	next := safeRedirectTarget(c.QueryParam("next"))
+	next := safeRedirectTarget(backendPath(c.QueryParam("next")))
 
 	// Already signed in: nothing to do but go where they were headed.
 	if sess, err := session.Get(sessionName, c); err == nil && sess.Values[sessionKeyUser] != nil {
-		return c.Redirect(http.StatusFound, next)
+		return c.Redirect(http.StatusFound, browserPath(next))
 	}
 	return a.startLogin(c, next)
 }
@@ -425,7 +427,7 @@ func (a *authenticator) callback(c echo.Context) error {
 	}
 
 	slog.Info("user logged in", "user", user)
-	return c.Redirect(http.StatusFound, destination)
+	return c.Redirect(http.StatusFound, browserPath(destination))
 }
 
 // Clears the local session and, when the provider advertises one, continues to its end-session
@@ -456,7 +458,7 @@ func (a *authenticator) logout(c echo.Context) error {
 		if err == nil {
 			q := u.Query()
 			if redirect != "" {
-				logoutTarget, joinErr := url.JoinPath(redirect, "/logout")
+				logoutTarget, joinErr := url.JoinPath(redirect, browserPath("/logout"))
 				if joinErr == nil {
 					q.Set("post_logout_redirect_uri", logoutTarget)
 				}

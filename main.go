@@ -443,6 +443,10 @@ func bindSettings() {
 	viper.SetDefault("events_source", "gatekeeper-webhook")
 	_ = viper.BindEnv("skip_tls_verify")
 	viper.SetDefault("skip_tls_verify", false)
+	// The subpath GPM is served from. The image sets this from the PUBLIC_URL the frontend was
+	// built with, so it is normally not something anyone has to configure by hand.
+	_ = viper.BindEnv("base_path")
+	viper.SetDefault("base_path", "")
 
 	// Authentication. Names match the Python backend's environment variables so that an existing
 	// 1.x deployment can be pointed at this image without rewriting its configuration.

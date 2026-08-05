@@ -12,6 +12,7 @@ import {
   EuiSpacer,
   EuiText,
 } from "@elastic/eui";
+import { appPath } from "../../utils";
 
 function NotFoundComponent() {
   return (
@@ -42,7 +43,7 @@ function NotFoundComponent() {
         </EuiFlexItem>
         <EuiFlexItem grow={false}>
           <EuiButton
-            href="/"
+            href={appPath("/")}
             iconSide="right"
             iconType="arrowRight"
             aria-label="Next"

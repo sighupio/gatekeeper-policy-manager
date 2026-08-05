@@ -148,9 +148,18 @@ func writeJSON(w http.ResponseWriter, v any) {
 // auth middleware installed, exactly as main() wires them.
 func newAuthTestServer(t *testing.T, p *fakeProvider) (*echo.Echo, *authenticator) {
 	t.Helper()
+	return newAuthTestServerOnSubpath(t, p, "")
+}
+
+// The same, for a GPM served from a subpath. The routes stay prefix-less, because the reverse
+// proxy strips the prefix before GPM sees the request -- that asymmetry is the whole reason the
+// base path handling exists.
+func newAuthTestServerOnSubpath(t *testing.T, p *fakeProvider, base string) (*echo.Echo, *authenticator) {
+	t.Helper()
 
 	useTestSettings(t)
 	settings := map[string]any{
+		"base_path":            base,
 		"auth_enabled":         "OIDC",
 		"secret_key":           "test-secret-key",
 		"preferred_url_scheme": "http",
@@ -562,5 +571,116 @@ func TestLoginUsesPKCE(t *testing.T) {
 	if !p.pkceOK {
 		t.Errorf("the code_verifier does not hash to the challenge: verifier=%q challenge=%q",
 			p.verifierSeen, p.challenge)
+	}
+}
+
+// Everything below is the subpath deployment: GPM behind a proxy that serves it at /gpm and
+// removes that prefix before forwarding. GPM therefore sees prefix-less paths and has to put the
+// prefix back on every path it sends to the browser, or the browser leaves the proxy's location
+// and gets a 404 from whatever else is on the domain.
+
+// The full round trip, as TestLoginFlow does at the root: the user must come back to the page they
+// asked for, under the subpath.
+func TestLoginFlowOnASubpathReturnsInsideTheApp(t *testing.T) {
+	p := newFakeProvider(t)
+	e, _ := newAuthTestServerOnSubpath(t, p, "/gpm")
+
+	// The proxy has already removed /gpm, so this is what GPM receives for /gpm/constraints.
+	req := httptest.NewRequest(http.MethodGet, "/constraints?foo=bar", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	loc, err := url.Parse(rec.Header().Get("Location"))
+	if err != nil {
+		t.Fatalf("parsing the redirect to the provider failed: %v", err)
+	}
+	if got, want := loc.Query().Get("redirect_uri"), "http://gpm.example.com/gpm/oidc-auth"; got != want {
+		t.Errorf("redirect_uri = %q, want %q — the provider would send the browser outside the app", got, want)
+	}
+
+	req = httptest.NewRequest(http.MethodGet,
+		fmt.Sprintf("%s?state=%s&code=%s", callbackPath,
+			url.QueryEscape(loc.Query().Get("state")), url.QueryEscape(loc.Query().Get("nonce"))), nil)
+	for _, ck := range rec.Result().Cookies() {
+		req.AddCookie(ck)
+	}
+	rec = httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusFound {
+		t.Fatalf("callback status = %d, want a redirect (%s)", rec.Code, rec.Body.String())
+	}
+	if got, want := rec.Header().Get("Location"), "/gpm/constraints?foo=bar"; got != want {
+		t.Errorf("landed on %q after logging in, want %q", got, want)
+	}
+}
+
+// The frontend renders this as the "Log in" button's href, so it is followed by the browser.
+func TestUnauthorisedAPIAnswerPointsInsideTheApp(t *testing.T) {
+	p := newFakeProvider(t)
+	e, _ := newAuthTestServerOnSubpath(t, p, "/gpm")
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/constraints", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", rec.Code)
+	}
+	var answer ErrorAnswer
+	if err := json.Unmarshal(rec.Body.Bytes(), &answer); err != nil {
+		t.Fatalf("decoding the answer failed: %v (%s)", err, rec.Body.String())
+	}
+	if got, want := answer.LoginURL, "/gpm/login"; got != want {
+		t.Errorf("login_url = %q, want %q", got, want)
+	}
+}
+
+func TestLogoutReturnsInsideTheApp(t *testing.T) {
+	p := newFakeProvider(t)
+	e, _ := newAuthTestServerOnSubpath(t, p, "/gpm")
+
+	req := httptest.NewRequest(http.MethodGet, "/logout", nil)
+	for _, ck := range loginForTest(t, e, p) {
+		req.AddCookie(ck)
+	}
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	loc, err := url.Parse(rec.Header().Get("Location"))
+	if err != nil {
+		t.Fatalf("parsing the redirect failed: %v", err)
+	}
+	if got, want := loc.Query().Get("post_logout_redirect_uri"), "http://gpm.example.com/gpm/logout"; got != want {
+		t.Errorf("post_logout_redirect_uri = %q, want %q", got, want)
+	}
+}
+
+// ?next= is built by the frontend, which knows only browser paths. Prefixing it a second time
+// would send the user to /gpm/gpm/constraints.
+func TestLoginRouteDoesNotPrefixTheSubpathTwice(t *testing.T) {
+	p := newFakeProvider(t)
+	e, _ := newAuthTestServerOnSubpath(t, p, "/gpm")
+
+	req := httptest.NewRequest(http.MethodGet, "/login?next=%2Fgpm%2Fconstraints", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	loc, err := url.Parse(rec.Header().Get("Location"))
+	if err != nil {
+		t.Fatalf("parsing the redirect to the provider failed: %v", err)
+	}
+
+	req = httptest.NewRequest(http.MethodGet,
+		fmt.Sprintf("%s?state=%s&code=%s", callbackPath,
+			url.QueryEscape(loc.Query().Get("state")), url.QueryEscape(loc.Query().Get("nonce"))), nil)
+	for _, ck := range rec.Result().Cookies() {
+		req.AddCookie(ck)
+	}
+	rec = httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	if got, want := rec.Header().Get("Location"), "/gpm/constraints"; got != want {
+		t.Errorf("landed on %q, want %q", got, want)
 	}
 }

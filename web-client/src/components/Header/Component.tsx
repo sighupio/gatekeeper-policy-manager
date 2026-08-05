@@ -25,6 +25,7 @@ import { ApplicationContext } from "../../AppContext";
 import { EuiSuperSelectOption } from "@elastic/eui/src/components/form/super_select/super_select_item";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./Style.scss";
+import { appPath } from "../../utils";
 
 function HeaderComponent() {
   const [optionsFromContexts, setOptionsFromContexts] = useState<
@@ -104,7 +105,7 @@ function HeaderComponent() {
     event: MouseEvent<HTMLButtonElement>,
   ): void => {
     event.preventDefault();
-    window.location.replace("/logout");
+    window.location.replace(appPath("/logout"));
   };
 
   const onChangeContext = (value: string) => {
@@ -144,11 +145,13 @@ function HeaderComponent() {
                     key={route.path}
                   >
                     <EuiButtonEmpty
-                      href={`${
+                      href={appPath(
                         route.path === "/"
                           ? route.path
-                          : route.path + "/" + (context.currentK8sContext ?? "")
-                      }`}
+                          : route.path +
+                              "/" +
+                              (context.currentK8sContext ?? ""),
+                      )}
                     >
                       {route.name}
                     </EuiButtonEmpty>

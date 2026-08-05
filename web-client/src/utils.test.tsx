@@ -5,7 +5,38 @@
  */
 
 import { render, screen } from "@testing-library/react";
-import { autoLink, scrollToElement } from "./utils";
+import { appPath, autoLink, scrollToElement } from "./utils";
+
+describe("appPath", () => {
+  const publicUrl = process.env.PUBLIC_URL;
+
+  // CRA types process.env as read-only, which is right everywhere but here.
+  const servedFrom = (value: string) => {
+    (process.env as { PUBLIC_URL?: string }).PUBLIC_URL = value;
+  };
+
+  afterEach(() => {
+    servedFrom(publicUrl ?? "");
+  });
+
+  // The deployment almost everyone has. Nothing about it must change.
+  it("leaves paths alone when GPM is served from the domain root", () => {
+    servedFrom("");
+
+    expect(appPath("/")).toBe("/");
+    expect(appPath("/constraints/staging")).toBe("/constraints/staging");
+  });
+
+  it("prefixes paths with the subpath GPM is served from", () => {
+    servedFrom("/gpm");
+
+    expect(appPath("/")).toBe("/gpm/");
+    expect(appPath("/logout")).toBe("/gpm/logout");
+    expect(appPath("/constraints/staging#name")).toBe(
+      "/gpm/constraints/staging#name",
+    );
+  });
+});
 
 describe("autoLink", () => {
   it("leaves text without links untouched", () => {

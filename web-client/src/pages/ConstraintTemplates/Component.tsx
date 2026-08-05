@@ -33,7 +33,7 @@ import { IConstraint } from "../Constraints/types";
 import { JSONTree } from "react-json-tree";
 import theme from "../theme";
 import clonedeep from "lodash.clonedeep";
-import { scrollToElement, autoLink } from "../../utils";
+import { scrollToElement, autoLink, appPath } from "../../utils";
 import {
   IConstraintTemplate,
   IConstraintTemplateResponse,
@@ -196,9 +196,9 @@ function SingleConstraintTemplate(
             {relatedConstraints.map((constraint, index) => (
               <EuiFlexItem key={constraint.metadata.name}>
                 <EuiLink
-                  href={`/constraints${context ? "/" + context : ""}#${
-                    constraint.metadata.name
-                  }`}
+                  href={appPath(
+                    `/constraints${context ? "/" + context : ""}#${constraint.metadata.name}`,
+                  )}
                 >
                   <EuiText size="s">
                     <span>{constraint.metadata.name}</span>

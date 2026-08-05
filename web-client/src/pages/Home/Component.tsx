@@ -16,6 +16,7 @@ import {
 import logo from "../../assets/gpm-logo.svg";
 import { useContext } from "react";
 import { ApplicationContext } from "../../AppContext";
+import { appPath } from "../../utils";
 
 function HomeComponent() {
   const appContextData = useContext(ApplicationContext);
@@ -54,7 +55,9 @@ function HomeComponent() {
         </EuiFlexItem>
         <EuiFlexItem grow={false}>
           <EuiButton
-            href={`/constraints/${appContextData.context.currentK8sContext}`}
+            href={appPath(
+              `/constraints/${appContextData.context.currentK8sContext}`,
+            )}
             iconSide="right"
             iconType="arrowRight"
             aria-label="Next"

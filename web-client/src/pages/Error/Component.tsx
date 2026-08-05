@@ -18,6 +18,7 @@ import { useContext, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ErrorPageState } from "./types";
 import { ApplicationContext } from "../../AppContext";
+import { appPath } from "../../utils";
 
 function ErrorComponent() {
   const { state } = useLocation();
@@ -106,7 +107,7 @@ function ErrorComponent() {
             )}
             <EuiFlexItem grow={false}>
               <EuiButton
-                href={`/${(state as ErrorPageState)?.entity ?? ""}`}
+                href={appPath(`/${(state as ErrorPageState)?.entity ?? ""}`)}
                 iconSide="right"
                 iconType="arrowRight"
                 aria-label="Next"

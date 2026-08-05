@@ -4,6 +4,18 @@
  * license that can be found in the LICENSE file.
  */
 
+/**
+ * Prefixes an in-app path with the subpath GPM is served from, if any.
+ *
+ * Needed for every root-relative `href` and every `window.location` assignment. Those leave the
+ * page rather than going through the router, so `BrowserRouter`'s `basename` never sees them and
+ * the browser asks the proxy for a path outside GPM's location. `PUBLIC_URL` is "" on a root
+ * deployment, which makes this the identity function there.
+ */
+export function appPath(path: string): string {
+  return `${process.env.PUBLIC_URL ?? ""}${path}`;
+}
+
 export function scrollToElement(hash: string, smooth: boolean = false) {
   const element = document.querySelector(hash.replace(/:|\./g, "\\$&"));
 
