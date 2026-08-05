@@ -126,7 +126,7 @@ func serveIndex(c echo.Context) error {
 		return serveSPAShell(c)
 	}
 
-	// URL.Path, never RequestURI: the latter keeps the query string and is not normalised, so
+	// URL.Path, never RequestURI: the latter keeps the query string and is not normalized, so
 	// joining it into a filesystem path lets a request like "/logout?x=/../../etc/passwd" walk out
 	// of the static root. Clean resolves the "..", then the prefix check catches anything left.
 	requested := path.Clean("/" + c.Request().URL.Path)
@@ -416,9 +416,17 @@ func (s *server) getEvents(c echo.Context) error {
 
 	// TODO: maybe we should Lookup this once at start-time and save it instead of on each call to this func
 	eventsSource := viper.GetString("events_source")
-	events, err := getKubernetesEvents(*clients.dynamic, c.QueryParam("namespace"), eventsSource)
+
+	// GPM_EVENTS_NAMESPACE wins over the query parameter. It is what the deployment's RBAC is cut
+	// to, so letting a request widen it would only produce a 403 from the Kubernetes API.
+	namespace := viper.GetString("events_namespace")
+	if namespace == "" {
+		namespace = c.QueryParam("namespace")
+	}
+
+	events, err := getKubernetesEvents(*clients.dynamic, namespace, eventsSource)
 	if err != nil {
-		slog.Error("got error while getting namespace events", "namespace", c.QueryParam("namespace"), "source", eventsSource, "error", err)
+		slog.Error("got error while getting namespace events", "namespace", namespace, "source", eventsSource, "error", err)
 		return c.JSON(http.StatusInternalServerError, kubeAPIErrorAnswer(
 			"An error ocurred while getting events from Kubernetes API.",
 			"Check that the Kubconfig file is correct and the Kubernetes API accessible.",
@@ -441,6 +449,10 @@ func bindSettings() {
 	viper.SetDefault("listen_address", ":8080")
 	_ = viper.BindEnv("events_source")
 	viper.SetDefault("events_source", "gatekeeper-webhook")
+	// Which namespace to read events from. Empty means every namespace, which needs a cluster-wide
+	// read on events; naming one lets the deployment get by with a Role in that namespace.
+	_ = viper.BindEnv("events_namespace")
+	viper.SetDefault("events_namespace", "")
 	_ = viper.BindEnv("skip_tls_verify")
 	viper.SetDefault("skip_tls_verify", false)
 	// The subpath GPM is served from. The image sets this from the PUBLIC_URL the frontend was

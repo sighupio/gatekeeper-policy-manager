@@ -393,7 +393,7 @@ func TestLogoutRoundTripDoesNotLoop(t *testing.T) {
 	}
 }
 
-// /login gives the frontend somewhere to send the user after a 401, and honours ?next=.
+// /login gives the frontend somewhere to send the user after a 401, and honors ?next=.
 func TestLoginRouteStartsTheFlow(t *testing.T) {
 	p := newFakeProvider(t)
 	e, _ := newAuthTestServer(t, p)
@@ -428,7 +428,7 @@ func TestLoginRouteStartsTheFlow(t *testing.T) {
 	}
 }
 
-// ?next= is attacker-controllable, so an off-site value must not be honoured.
+// ?next= is attacker-controllable, so an off-site value must not be honored.
 func TestLoginRouteRefusesOffsiteNext(t *testing.T) {
 	p := newFakeProvider(t)
 	e, _ := newAuthTestServer(t, p)
@@ -616,7 +616,7 @@ func TestLoginFlowOnASubpathReturnsInsideTheApp(t *testing.T) {
 }
 
 // The frontend renders this as the "Log in" button's href, so it is followed by the browser.
-func TestUnauthorisedAPIAnswerPointsInsideTheApp(t *testing.T) {
+func TestUnauthorizedAPIAnswerPointsInsideTheApp(t *testing.T) {
 	p := newFakeProvider(t)
 	e, _ := newAuthTestServerOnSubpath(t, p, "/gpm")
 

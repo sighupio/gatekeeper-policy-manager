@@ -73,6 +73,14 @@ spec:
               value: {{ .Values.config.logLevel | upper | quote }}
             - name: GPM_PREFERRED_URL_SCHEME
               value: {{ required "A valid .Values.config.preferredURLScheme entry required! Choose either http or https" .Values.config.preferredURLScheme | quote }}
+            {{- with .Values.config.eventsSource }}
+            - name: GPM_EVENTS_SOURCE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.config.eventsNamespace }}
+            - name: GPM_EVENTS_NAMESPACE
+              value: {{ . | quote }}
+            {{- end }}
             {{- if .Values.config.secretKey }}
             - name: GPM_SECRET_KEY
               valueFrom:

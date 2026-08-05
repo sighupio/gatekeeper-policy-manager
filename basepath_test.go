@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func TestBasePathNormalisation(t *testing.T) {
+func TestBasePathNormalization(t *testing.T) {
 	tests := map[string]string{
 		"":          "",
 		"/":         "",

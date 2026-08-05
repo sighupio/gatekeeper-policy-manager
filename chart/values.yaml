@@ -112,6 +112,12 @@ topologySpreadConstraints: []
 config:
   preferredURLScheme: http
   logLevel: info
+  # Which source component the events view shows. Leave unset to use GPM's own default,
+  # gatekeeper-webhook.
+  eventsSource: null
+  # Read events from this namespace only. Unset means every namespace, which needs a cluster-wide
+  # read on events. Naming one namespace moves that read into a Role in that namespace instead.
+  eventsNamespace: null
   # The secret key, in plain text. Used by the OIDC authentication only, so it can be left unset
   # while GPM runs unauthenticated.
   secretKey: null
