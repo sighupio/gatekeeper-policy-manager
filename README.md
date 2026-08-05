@@ -94,6 +94,57 @@ GPM is a stateless application, but it can be configured using environment varia
 | `GPM_SKIP_TLS_VERIFY` | Skip TLS certificate verification while connecting to the Kubernetes API Server. Needed on clusters whose CA certificate is missing the AKI/SKI extensions, as happens on EKS. **USE WITH CAUTION.**                            | `false`              |
 | `KUBECONFIG`         | Path to a [kubeconfig](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/) file, if provided while running inside a cluster this configuration file will be used instead of the cluster's API. | `$HOME/.kube/config` |
 
+### Authentication
+
+GPM is unauthenticated by default. Set `GPM_AUTH_ENABLED` to `OIDC` to require a login.
+
+| Env Var Name                      | Description                                                                                                                                              | Default                |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| `GPM_AUTH_ENABLED`                | Set to `OIDC` to protect GPM with an OpenID Connect provider. Any other value leaves it open.                                                            | `Anonymous`            |
+| `GPM_SECRET_KEY`                  | Key used to sign the session cookie. **Required when authentication is on**: GPM refuses to start if it is still the 1.x default, which is published in this repository and would let anyone forge a session. | *(none)*               |
+| `GPM_PREFERRED_URL_SCHEME`        | Set to `https` when GPM is served over TLS, so the session cookie is marked `Secure`. A `GPM_OIDC_REDIRECT_DOMAIN` that starts with `https://` also marks it `Secure`. | `http`                 |
+| `GPM_SESSION_MAX_AGE`             | How long a session lasts, in seconds.                                                                                                                    | `28800` (8 hours)      |
+| `GPM_OIDC_REDIRECT_DOMAIN`        | The public address of GPM, for example `https://gpm.example.com`. The provider sends users back to `<domain>/oidc-auth`. Required.                       |                        |
+| `GPM_OIDC_CLIENT_ID`              | Client ID registered with the provider. Required.                                                                                                        |                        |
+| `GPM_OIDC_CLIENT_SECRET`          | Client secret, if the client is confidential.                                                                                                            |                        |
+| `GPM_OIDC_ISSUER`                 | Issuer URL. GPM reads the rest of the provider's configuration from it, unless the endpoints below are set.                                              |                        |
+| `GPM_OIDC_AUTHORIZATION_ENDPOINT` | Authorization endpoint. Setting any endpoint below turns discovery off, so set them all together.                                                        |                        |
+| `GPM_OIDC_TOKEN_ENDPOINT`         | Token endpoint. See the note above.                                                                                                                      |                        |
+| `GPM_OIDC_JWKS_URI`               | JWKS URI. See the note above.                                                                                                                            |                        |
+| `GPM_OIDC_END_SESSION_ENDPOINT`   | End session endpoint. Discovered automatically when the provider advertises one. If GPM has one, logging out of GPM also logs you out of the provider.   |                        |
+| `GPM_OIDC_INTROSPECTION_ENDPOINT` | Accepted for compatibility with GPM 1.x. Not used.                                                                                                       |                        |
+| `GPM_OIDC_USERINFO_ENDPOINT`      | Accepted for compatibility with GPM 1.x. Not used.                                                                                                       |                        |
+
+> [!IMPORTANT]
+> Register `<GPM_OIDC_REDIRECT_DOMAIN>/oidc-auth` as a valid redirect URI with your provider, and
+> `<GPM_OIDC_REDIRECT_DOMAIN>/logout` as a valid post logout redirect URI.
+>
+> Set `GPM_SECRET_KEY` to a long random string. GPM will not start with the old default.
+>
+> Set `GPM_PREFERRED_URL_SCHEME=https` whenever GPM is reachable over HTTPS.
+
+GPM uses PKCE, so the authorization code cannot be used by anyone who intercepts it. Sessions are
+signed cookies: they are not stored server side, so logging out clears the cookie in your browser
+and, when the provider supports it, ends the session there too.
+
+Once authentication is on, everything requires a session except these paths, which have to stay
+reachable for a user who is not logged in yet:
+
+| Path | Why it is open |
+| --- | --- |
+| `/health` | the liveness and readiness probes run without credentials |
+| `/api/v1/auth` | the frontend asks whether there is anything to log into before showing a login |
+| `/login`, `/oidc-auth`, `/logout` | the login flow itself |
+| `/metrics` | Prometheus scrapes it; it holds request counters only, no policy data |
+| `/static/*`, `/favicon.ico`, `/manifest.json`, `/touch-icon.png` | assets the login and logout pages need |
+
+Everything else — every page and every other API endpoint, including the list of clusters — needs a
+valid session.
+
+Requests under `/api/` answer `401` when the session has expired, rather than redirecting, so that
+`fetch()` gets a readable error instead of an opaque cross-origin failure. Send users to `/login`
+to sign in again; it accepts `?next=` with a same-site path to say where they should land.
+
 ### Running behind a reverse proxy on a subpath
 
 GPM assumes by default that it is served from the domain root. If you put it behind a reverse proxy
