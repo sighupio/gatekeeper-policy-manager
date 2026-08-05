@@ -12,7 +12,7 @@ spec:
       containers:
       - name: gatekeeper-policy-manager
         volumeMounts:
-          - mountPath: /home/gpm/.kube/config
+          - mountPath: /home/nonroot/.kube/config
             name: kubeconfig
             subPath: kubeconfig
       volumes:
