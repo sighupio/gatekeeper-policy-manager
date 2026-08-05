@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/labstack/echo/v4"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -124,16 +125,32 @@ func TestGetHealth(t *testing.T) {
 	}
 }
 
-// The frontend decides whether to show the login and logout controls from this endpoint. The Go
-// backend has no authentication yet, so it must keep reporting false. When OIDC lands this test
-// should fail and be rewritten — that is the point of it.
-func TestGetAuthReportsAuthDisabled(t *testing.T) {
-	code, body := callHandler(t, getAuth, "/api/v1/auth")
-
-	if code != http.StatusOK {
-		t.Errorf("status = %d, want %d", code, http.StatusOK)
+// The frontend decides whether to show the logout control from this endpoint, so it has to follow
+// GPM_AUTH_ENABLED rather than being hardcoded.
+func TestGetAuthReflectsConfiguration(t *testing.T) {
+	tests := []struct {
+		authEnabled string
+		want        bool
+	}{
+		{"OIDC", true},
+		{"oidc", true},
+		{"Anonymous", false},
+		{"", false},
 	}
-	if body["auth_enabled"] != false {
-		t.Errorf("auth_enabled = %v, want false", body["auth_enabled"])
+
+	for _, tt := range tests {
+		t.Run("GPM_AUTH_ENABLED="+tt.authEnabled, func(t *testing.T) {
+			viper.Set("auth_enabled", tt.authEnabled)
+			t.Cleanup(func() { viper.Set("auth_enabled", "") })
+
+			code, body := callHandler(t, getAuth, "/api/v1/auth")
+
+			if code != http.StatusOK {
+				t.Errorf("status = %d, want %d", code, http.StatusOK)
+			}
+			if body["auth_enabled"] != tt.want {
+				t.Errorf("auth_enabled = %v, want %v", body["auth_enabled"], tt.want)
+			}
+		})
 	}
 }
