@@ -24,11 +24,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 
 	"github.com/labstack/echo-contrib/prometheus"
@@ -40,12 +37,28 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-var (
-	config          *rest.Config
-	startingConfig  *api.Config
-	clientset       *dynamic.DynamicClient
-	discoveryClient *discovery.DiscoveryClient
-)
+// Holds everything the handlers need. They are methods on it rather than package-level functions
+// so that nothing reaches for shared mutable state, and so tests can build one with fakes.
+type server struct {
+	k8s *clientRegistry
+}
+
+// Resolves the Kubernetes clients for the context named in the route, or the kubeconfig default
+// when the route carries no :context.
+func (s *server) clientsFor(c echo.Context) (*kubeClients, error) {
+	return s.k8s.forContext(c.Param("context"))
+}
+
+// The answer every handler gives when the requested kubeconfig context cannot be used.
+func contextErrorAnswer(c echo.Context, err error) error {
+	name := c.Param("context")
+	slog.Error("resolving the Kubernetes context failed", "context", name, "error", err)
+	return c.JSON(http.StatusInternalServerError, ErrorAnswer{
+		ErrorMessage: fmt.Sprintf("Got an error while trying to switch to context %s", name),
+		Action:       "Please check the context definition in the Kubeconfig file.",
+		Description:  err.Error(),
+	})
+}
 
 // Where the built frontend lives, relative to the working directory.
 const staticContentDir = "./static-content"
@@ -151,7 +164,7 @@ func getAuth(c echo.Context) error {
 }
 
 // Returns a list of the available contexts in the kubeconfig file and the active context
-func getContexts(c echo.Context) error {
+func (s *server) getContexts(c echo.Context) error {
 	// We need to format the response to align with the old Python backend (API v1)
 	type context struct {
 		Cluster string `json:"cluster"`
@@ -163,19 +176,23 @@ func getContexts(c echo.Context) error {
 		Context context `json:"context"`
 	}
 
+	contexts, current := s.k8s.contexts()
+
 	kubeconfigContexts := []kubeconfigContext{}
 	var currentKubeconfigContext kubeconfigContext
-	for kc := range startingConfig.Contexts {
+	for kc := range contexts {
 		c := context{
-			Cluster: startingConfig.Contexts[kc].Cluster,
-			User:    startingConfig.Contexts[kc].AuthInfo,
+			Cluster: contexts[kc].Cluster,
+			User:    contexts[kc].AuthInfo,
 		}
 		fullContext := kubeconfigContext{
 			Name:    kc,
 			Context: c,
 		}
 		kubeconfigContexts = append(kubeconfigContexts, fullContext)
-		if kc == startingConfig.CurrentContext {
+		// The kubeconfig's own default. There is no server-side "selected" context any more:
+		// the frontend tracks that and names it in the request path.
+		if kc == current {
 			currentKubeconfigContext = fullContext
 		}
 	}
@@ -186,18 +203,12 @@ func getContexts(c echo.Context) error {
 
 // Returns a JSON with all the available Gatekeeper Configuration objects.
 // Gatekeeper only supports a single configuration object defined in the cluster but we return a list for future proofing.
-func getConfigs(c echo.Context) error {
-	if c.Param("context") != "" {
-		err := switchKubernetesContext(c.Param("context"))
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, ErrorAnswer{
-				ErrorMessage: fmt.Sprintf("Got an error while trying to switch to context %s", c.Param("context")),
-				Action:       "Please check the context definition in the Kubeconfig file.",
-				Description:  err.Error(),
-			})
-		}
+func (s *server) getConfigs(c echo.Context) error {
+	clients, err := s.clientsFor(c)
+	if err != nil {
+		return contextErrorAnswer(c, err)
 	}
-	configResources, err := getCustomResources(*clientset, "config.gatekeeper.sh", "v1alpha1", "configs")
+	configResources, err := getCustomResources(*clients.dynamic, "config.gatekeeper.sh", "v1alpha1", "configs")
 	if err != nil {
 		slog.Debug("getting config resources failed", "error", err)
 		return c.JSON(http.StatusInternalServerError, kubeAPIErrorAnswer(
@@ -210,16 +221,10 @@ func getConfigs(c echo.Context) error {
 
 // Returns a JSON with all the Constraint Templates in the target cluster and a map with the all Constraints that exist
 // for each Constraint Template.
-func getConstraintTemplates(c echo.Context) error {
-	if c.Param("context") != "" {
-		err := switchKubernetesContext(c.Param("context"))
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, ErrorAnswer{
-				ErrorMessage: fmt.Sprintf("Got an error while trying to switch to context %s", c.Param("context")),
-				Action:       "Please check the context definition in the Kubeconfig file.",
-				Description:  err.Error(),
-			})
-		}
+func (s *server) getConstraintTemplates(c echo.Context) error {
+	clients, err := s.clientsFor(c)
+	if err != nil {
+		return contextErrorAnswer(c, err)
 	}
 
 	var response struct {
@@ -230,7 +235,7 @@ func getConstraintTemplates(c echo.Context) error {
 	response.Constraints_by_constrainttemplates = make(map[string][]unstructured.Unstructured)
 
 	// get all constraint templates
-	constrainttemplates, err := getCustomResources(*clientset, "templates.gatekeeper.sh", "v1", "constrainttemplates")
+	constrainttemplates, err := getCustomResources(*clients.dynamic, "templates.gatekeeper.sh", "v1", "constrainttemplates")
 	if err != nil {
 		slog.Error("getting Constraint Templates resources failed", "error", err)
 		return c.JSON(http.StatusInternalServerError, kubeAPIErrorAnswer(
@@ -241,7 +246,7 @@ func getConstraintTemplates(c echo.Context) error {
 	// map all the constraints available for each constraint template
 	for _, ct := range constrainttemplates.Items {
 		ctName := ct.GetName()
-		constraints, err := getCustomResources(*clientset, "constraints.gatekeeper.sh", "v1beta1", ctName)
+		constraints, err := getCustomResources(*clients.dynamic, "constraints.gatekeeper.sh", "v1beta1", ctName)
 		if err != nil {
 			slog.Debug("trying to get Constraints for ConstraintTemplate failed", "constraintTemplate", ctName, "error", err)
 			constraints = &unstructured.UnstructuredList{} // if there are no constraints for the template, we return an empty list
@@ -255,23 +260,17 @@ func getConstraintTemplates(c echo.Context) error {
 // Will discover all the constraint Kinds and their objects and will return:
 // - by default: a JSON with all the constraints objects sorted by 1. number of violations and 2. alphabetically.
 // - when a "report" Query parameter is present in the URL: an HTML report of the violations made from a template.
-func getConstraints(c echo.Context) error {
-	if c.Param("context") != "" {
-		err := switchKubernetesContext(c.Param("context"))
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, ErrorAnswer{
-				ErrorMessage: fmt.Sprintf("Got an error while trying to switch to context %s", c.Param("context")),
-				Action:       "Please check the context definition in the Kubeconfig file.",
-				Description:  err.Error(),
-			})
-		}
+func (s *server) getConstraints(c echo.Context) error {
+	clients, err := s.clientsFor(c)
+	if err != nil {
+		return contextErrorAnswer(c, err)
 	}
 
 	var response []map[string]interface{}
 
 	// constraints are a kind by themselves. The resource Kind is created dynamically by Gateeeper for each template.
 	// we need to discover the available Kinds for the constraints first.
-	availableConstraints, err := discoveryClient.ServerResourcesForGroupVersion("constraints.gatekeeper.sh/v1beta1")
+	availableConstraints, err := clients.discovery.ServerResourcesForGroupVersion("constraints.gatekeeper.sh/v1beta1")
 	if err != nil {
 		slog.Error("listing constraints kinds from Kubernetes API server failed", "error", err)
 		return c.JSON(http.StatusInternalServerError, kubeAPIErrorAnswer(
@@ -284,7 +283,7 @@ func getConstraints(c echo.Context) error {
 		// we are interested in the root resources only.
 		// subresources (like <kind>/status) seem to have the categories field emtpy, so we use that to filter them out.
 		if constraintKind.Categories != nil {
-			constraints, err := getCustomResources(*clientset, "constraints.gatekeeper.sh", "v1beta1", constraintKind.SingularName)
+			constraints, err := getCustomResources(*clients.dynamic, "constraints.gatekeeper.sh", "v1beta1", constraintKind.SingularName)
 			if err != nil {
 				slog.Error("getting Constraint resources failed", "error", err)
 				return c.JSON(http.StatusInternalServerError, kubeAPIErrorAnswer(
@@ -326,7 +325,7 @@ func getConstraints(c echo.Context) error {
 	if c.QueryParam("report") != "" {
 		data := map[string]interface{}{
 			"constraints":   response,
-			"apiServerHost": config.Host,
+			"apiServerHost": clients.rest.Host,
 			"timestamp":     time.Now().Format(time.ANSIC),
 		}
 
@@ -344,16 +343,10 @@ func getConstraints(c echo.Context) error {
 
 // Returns a JSON with all the Constraint Templates in the target cluster and a map with the all Constraints that exist
 // for each Constraint Template.
-func getMutations(c echo.Context) error {
-	if c.Param("context") != "" {
-		err := switchKubernetesContext(c.Param("context"))
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, ErrorAnswer{
-				ErrorMessage: fmt.Sprintf("Got an error while trying to switch to context %s", c.Param("context")),
-				Action:       "Please check the context definition in the Kubeconfig file.",
-				Description:  err.Error(),
-			})
-		}
+func (s *server) getMutations(c echo.Context) error {
+	clients, err := s.clientsFor(c)
+	if err != nil {
+		return contextErrorAnswer(c, err)
 	}
 
 	// Mutators are well-known, but we could use dynamic client like we do for the constraints
@@ -364,7 +357,7 @@ func getMutations(c echo.Context) error {
 	for _, mutator := range mutators {
 		res := fmt.Sprintf("%s.mutations.gatekeeper.sh", mutator)
 		slog.Debug("getting mutations", "kind", res)
-		mutations, err := getCustomResources(*clientset, "mutations.gatekeeper.sh", "v1", mutator)
+		mutations, err := getCustomResources(*clients.dynamic, "mutations.gatekeeper.sh", "v1", mutator)
 		if err != nil {
 			// We get an error when there are no mutations defined in the cluster also,so we don't return
 			slog.Error("getting mutator resources failed", "mutator", mutator, "error", err)
@@ -415,21 +408,15 @@ func getKubernetesEvents(clientset dynamic.DynamicClient, namespace string, even
 // TODO: I'm not sure we are getting the response from the API server in the right schema version.
 //
 //	See: https://v1-25.docs.kubernetes.io/docs/reference/kubernetes-api/cluster-resources/event-v1/
-func getEvents(c echo.Context) error {
-	if c.Param("context") != "" {
-		err := switchKubernetesContext(c.Param("context"))
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, ErrorAnswer{
-				ErrorMessage: fmt.Sprintf("Got an error while trying to switch to context %s", c.Param("context")),
-				Action:       "Please check the context definition in the Kubeconfig file.",
-				Description:  err.Error(),
-			})
-		}
+func (s *server) getEvents(c echo.Context) error {
+	clients, err := s.clientsFor(c)
+	if err != nil {
+		return contextErrorAnswer(c, err)
 	}
 
 	// TODO: maybe we should Lookup this once at start-time and save it instead of on each call to this func
 	eventsSource := viper.GetString("events_source")
-	events, err := getKubernetesEvents(*clientset, c.QueryParam("namespace"), eventsSource)
+	events, err := getKubernetesEvents(*clients.dynamic, c.QueryParam("namespace"), eventsSource)
 	if err != nil {
 		slog.Error("got error while getting namespace events", "namespace", c.QueryParam("namespace"), "source", eventsSource, "error", err)
 		return c.JSON(http.StatusInternalServerError, kubeAPIErrorAnswer(
@@ -439,68 +426,6 @@ func getEvents(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, events)
-}
-
-// Initializes the Kubernetes client from one or more kubeconfigs or an in-cluster client when there's no kubeconfig.
-// The context paramter is optional, if emtpy will use the default context form the loaded kubeconfig.
-func kubeClient(context string) (*dynamic.DynamicClient, *rest.Config, *api.Config, error) {
-	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-	configOverrides := &clientcmd.ConfigOverrides{CurrentContext: context}
-	kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
-
-	slog.Info("trying to load kubeconfigs", "paths", kubeConfig.ConfigAccess().GetLoadingPrecedence())
-	config, err := kubeConfig.ClientConfig()
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("creating Kubernetes client failed: %w", err)
-	}
-
-	if viper.GetBool("skip_tls_verify") {
-		slog.Warn("GPM_SKIP_TLS_VERIFY is set: disabling TLS certificate verification for Kubernetes API calls")
-		// These fields belong to the embedded TLSClientConfig. client-go rejects a config that
-		// is insecure and carries a CA at the same time, so the CA has to go with it.
-		config.Insecure = true
-		config.CAFile = ""
-		config.CAData = nil
-	}
-
-	startingConfig, err := kubeConfig.ConfigAccess().GetStartingConfig()
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("getting contexts information from Kubeconfig failed: %w", err)
-	}
-
-	// create the dynamic Kubernetes client
-	clientset, err := dynamic.NewForConfig(config)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("creating dynamic Kubernetes client failed: %w", err)
-	}
-
-	// discoveryClient is used to discover Cosntrains Kinds
-	discoveryClient, err = discovery.NewDiscoveryClientForConfig(config)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("creating constraints discovery Kubernetes client failed: %w", err)
-	}
-
-	return clientset, config, startingConfig, err
-}
-
-// Switches the current context in the kubeconfig and replaces the relevant kuberneetes client objects.
-// If the context name passed is not available in the kubeconfig will return an error and left the kubernetes client objects intact.
-func switchKubernetesContext(c string) error {
-	var err error
-	// FIXME: dont' recreate the clients if the context hasn't changed.
-	// notice that startingConfig.currentContext gives the kubeconfig's currentContext and not the chosen one.
-	// I could not find a way to get the context set in the client, it doesn't seem to be accessible.
-	// We should store it ourselves.
-	slog.Debug("switching kubernetes client context", "kubeconfig_context", startingConfig.CurrentContext, "requested_context", c)
-	if _, ok := startingConfig.Contexts[c]; !ok {
-		return fmt.Errorf("context '%s' not found in Kubeconfig file", c)
-	}
-	clientset, config, startingConfig, err = kubeClient(c)
-	if err != nil {
-		slog.Error("initializating the Kubernetes cilent with custom context failed", "context", c, "error", err)
-		return err
-	}
-	return nil
 }
 
 func main() {
@@ -652,12 +577,12 @@ func main() {
 		slog.Warn("authentication is disabled, GPM is readable by anyone who can reach it")
 	}
 
-	var err error
-	clientset, config, startingConfig, err = kubeClient("")
+	registry, err := newClientRegistry()
 	if err != nil {
-		slog.Error("Kubernetes cilent initialization failed", "error", err)
+		slog.Error("Kubernetes client initialization failed", "error", err)
 		os.Exit(1)
 	}
+	s := &server{k8s: registry}
 
 	// Routes configuration
 
@@ -680,33 +605,33 @@ func main() {
 	e.GET("/api/v1/auth", getAuth)
 	e.GET("/api/v1/auth/", getAuth)
 
-	e.GET("/api/v1/contexts", getContexts)
-	e.GET("/api/v1/contexts/", getContexts)
+	e.GET("/api/v1/contexts", s.getContexts)
+	e.GET("/api/v1/contexts/", s.getContexts)
 
-	e.GET("/api/v1/configs", getConfigs)
-	e.GET("/api/v1/configs/", getConfigs)
-	e.GET("/api/v1/configs/:context", getConfigs)
-	e.GET("/api/v1/configs/:context/", getConfigs)
+	e.GET("/api/v1/configs", s.getConfigs)
+	e.GET("/api/v1/configs/", s.getConfigs)
+	e.GET("/api/v1/configs/:context", s.getConfigs)
+	e.GET("/api/v1/configs/:context/", s.getConfigs)
 
-	e.GET("/api/v1/constrainttemplates", getConstraintTemplates)
-	e.GET("/api/v1/constrainttemplates/", getConstraintTemplates)
-	e.GET("/api/v1/constrainttemplates/:context", getConstraintTemplates)
-	e.GET("/api/v1/constrainttemplates/:context/", getConstraintTemplates)
+	e.GET("/api/v1/constrainttemplates", s.getConstraintTemplates)
+	e.GET("/api/v1/constrainttemplates/", s.getConstraintTemplates)
+	e.GET("/api/v1/constrainttemplates/:context", s.getConstraintTemplates)
+	e.GET("/api/v1/constrainttemplates/:context/", s.getConstraintTemplates)
 
-	e.GET("/api/v1/constraints", getConstraints)
-	e.GET("/api/v1/constraints/", getConstraints)
-	e.GET("/api/v1/constraints/:context", getConstraints)
-	e.GET("/api/v1/constraints/:context/", getConstraints)
+	e.GET("/api/v1/constraints", s.getConstraints)
+	e.GET("/api/v1/constraints/", s.getConstraints)
+	e.GET("/api/v1/constraints/:context", s.getConstraints)
+	e.GET("/api/v1/constraints/:context/", s.getConstraints)
 
-	e.GET("/api/v1/mutations", getMutations)
-	e.GET("/api/v1/mutations/", getMutations)
-	e.GET("/api/v1/mutations/:context", getMutations)
-	e.GET("/api/v1/mutations/:context/", getMutations)
+	e.GET("/api/v1/mutations", s.getMutations)
+	e.GET("/api/v1/mutations/", s.getMutations)
+	e.GET("/api/v1/mutations/:context", s.getMutations)
+	e.GET("/api/v1/mutations/:context/", s.getMutations)
 
-	e.GET("/api/v1/events", getEvents)
-	e.GET("/api/v1/events/", getEvents)
-	e.GET("/api/v1/events/:context", getEvents)
-	e.GET("/api/v1/events/:context/", getEvents)
+	e.GET("/api/v1/events", s.getEvents)
+	e.GET("/api/v1/events/", s.getEvents)
+	e.GET("/api/v1/events/:context", s.getEvents)
+	e.GET("/api/v1/events/:context/", s.getEvents)
 
 	// Returns an object with the list of available contets and the currently selected context
 	e.GET("/api/v2/contexts/", func(c echo.Context) error {
@@ -715,7 +640,8 @@ func main() {
 			Contexts map[string]*api.Context `json:"contexts"`
 		}
 
-		return c.JSON(http.StatusOK, v2Answer{startingConfig.CurrentContext, startingConfig.Contexts})
+		contexts, current := s.k8s.contexts()
+		return c.JSON(http.StatusOK, v2Answer{current, contexts})
 	})
 
 	address := viper.GetString("listen_address")
