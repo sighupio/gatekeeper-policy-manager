@@ -23,6 +23,8 @@ import (
 	"time"
 
 	jose "github.com/go-jose/go-jose/v4"
+	"github.com/gorilla/securecookie"
+	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/spf13/viper"
@@ -682,5 +684,474 @@ func TestLoginRouteDoesNotPrefixTheSubpathTwice(t *testing.T) {
 
 	if got, want := rec.Header().Get("Location"), "/gpm/constraints"; got != want {
 		t.Errorf("landed on %q, want %q", got, want)
+	}
+}
+
+// The same property as TestBackendPathCannotSmuggleAnOffsiteRedirect, but end to end: a hostile
+// ?next= must not survive the whole login round trip on a subpath deployment. Three separate
+// things stop it -- safeRedirectTarget in login(), safeRedirectTarget again in startLogin(), and
+// browserPath prefixing the base path on the way out -- so this holds even if one of them moves.
+func TestLoginRouteRefusesOffsiteNextOnASubpath(t *testing.T) {
+	p := newFakeProvider(t)
+	e, _ := newAuthTestServerOnSubpath(t, p, "/gpm")
+
+	for _, next := range []string{"/gpm//evil.com", `/gpm/\evil.com`, "//evil.com", "https://evil.com"} {
+		req := httptest.NewRequest(http.MethodGet, "/login?next="+url.QueryEscape(next), nil)
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+
+		loc, err := url.Parse(rec.Header().Get("Location"))
+		if err != nil {
+			t.Fatalf("parsing the redirect to the provider failed: %v", err)
+		}
+
+		req = httptest.NewRequest(http.MethodGet,
+			fmt.Sprintf("%s?state=%s&code=%s", callbackPath,
+				url.QueryEscape(loc.Query().Get("state")), url.QueryEscape(loc.Query().Get("nonce"))), nil)
+		for _, ck := range rec.Result().Cookies() {
+			req.AddCookie(ck)
+		}
+		rec = httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+
+		// Anything that a browser resolves off-site: an absolute URL, or a path starting with two
+		// slashes or with a backslash after the first slash.
+		landed := rec.Header().Get("Location")
+		target, err := url.Parse(landed)
+		if err != nil {
+			t.Fatalf("parsing the post-login redirect failed: %v", err)
+		}
+		if target.IsAbs() || target.Host != "" ||
+			strings.HasPrefix(landed, "//") || strings.HasPrefix(landed, `/\`) {
+			t.Errorf("?next=%q landed the user on %q, which leaves the site", next, landed)
+		}
+		if want := "/gpm/"; landed != want {
+			t.Errorf("?next=%q landed on %q, want the app root %q", next, landed, want)
+		}
+	}
+}
+
+// A cookie the store cannot decode -- after GPM_SECRET_KEY is rotated, or when it is truncated or
+// tampered with -- must send the user to log in again, not fail the request.
+//
+// Getting this wrong makes a secret rotation strand every logged-in user: a 500 on every page, and
+// no response carrying a Set-Cookie that could replace the bad value, so nothing the user does
+// clears it and nothing the operator does server-side helps either.
+func TestAStaleSessionCookieSendsTheUserToLogInAgain(t *testing.T) {
+	for _, base := range []string{"", "/gpm"} {
+		t.Run("base="+base, func(t *testing.T) {
+			p := newFakeProvider(t)
+			e, _ := newAuthTestServerOnSubpath(t, p, base)
+
+			for _, value := range []string{
+				"a-cookie-signed-with-the-previous-secret",
+				"MTc1NDQwMDAwMHxEdi1CQkFFQ180SUFBUkFCRUFBQV8|bm90LWEtdmFsaWQtbWFj",
+				"",
+			} {
+				req := httptest.NewRequest(http.MethodGet, "/constraints", nil)
+				req.AddCookie(&http.Cookie{Name: sessionName, Value: value})
+				rec := httptest.NewRecorder()
+				e.ServeHTTP(rec, req)
+
+				if rec.Code != http.StatusFound {
+					t.Errorf("a stale cookie gave status %d, want a redirect to the provider (%s)",
+						rec.Code, strings.TrimSpace(rec.Body.String()))
+					continue
+				}
+				// A usable replacement, not just any Set-Cookie: on a subpath the legacy-root
+				// deletion also appears here, and it carries no session at all.
+				if !hasUsableSession(rec) {
+					t.Errorf("the redirect set no usable session cookie, so the stale one survives: %v",
+						rec.Result().Cookies())
+				}
+			}
+		})
+	}
+}
+
+// Logging out has to clear a cookie that does not decode. That is the one a stuck user most needs
+// rid of, and it used to be the one case logout skipped.
+func TestLogoutClearsACookieThatDoesNotDecode(t *testing.T) {
+	p := newFakeProvider(t)
+	e, _ := newAuthTestServerOnSubpath(t, p, "/gpm")
+
+	req := httptest.NewRequest(http.MethodGet, "/logout", nil)
+	req.AddCookie(&http.Cookie{Name: sessionName, Value: "a-cookie-signed-with-the-previous-secret"})
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	var cleared bool
+	for _, ck := range rec.Result().Cookies() {
+		if ck.Name == sessionName && ck.Path == "/gpm" && ck.MaxAge < 0 {
+			cleared = true
+		}
+	}
+	if !cleared {
+		t.Errorf("logout did not expire the session cookie: %v", rec.Result().Cookies())
+	}
+}
+
+// On a subpath deployment a cookie left at Path=/ by an earlier build shadows the scoped one and
+// keeps reaching every other application on the host. GPM cannot overwrite it -- deletion has to
+// match the path -- so it has to send an explicit expiry for it.
+func TestTheLegacyRootCookieIsDeletedOnASubpath(t *testing.T) {
+	p := newFakeProvider(t)
+	e, _ := newAuthTestServerOnSubpath(t, p, "/gpm")
+
+	for _, path := range []string{"/constraints", "/logout"} {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		req.AddCookie(&http.Cookie{Name: sessionName, Value: "a-cookie-signed-with-the-previous-secret"})
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+
+		var deleted bool
+		for _, ck := range rec.Result().Cookies() {
+			if ck.Name == sessionName && ck.Path == "/" && ck.MaxAge < 0 {
+				deleted = true
+			}
+		}
+		if !deleted {
+			t.Errorf("%s did not expire the root-scoped cookie: %v", path, rec.Result().Cookies())
+		}
+	}
+}
+
+// At the root, Path=/ is the live session cookie. Expiring it there would cancel the very cookie
+// startLogin just wrote -- the one carrying the state, the nonce and the PKCE verifier -- so the
+// login could never complete. The request has to be one that reaches startLogin, which means no
+// session: with a session the middleware passes straight through and proves nothing.
+func TestTheRootDeploymentNeverDeletesItsOwnCookie(t *testing.T) {
+	p := newFakeProvider(t)
+	e, _ := newAuthTestServerOnSubpath(t, p, "")
+
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/constraints", nil))
+
+	var live int
+	for _, ck := range rec.Result().Cookies() {
+		if ck.Name != sessionName {
+			continue
+		}
+		if ck.MaxAge < 0 || ck.Value == "" {
+			t.Errorf("a root deployment expired its own session cookie: %+v", ck)
+			continue
+		}
+		live++
+	}
+	if live == 0 {
+		t.Error("startLogin set no usable session cookie at the root")
+	}
+
+	// And the flow still completes end to end.
+	if cookies := loginForTest(t, e, p); len(cookies) == 0 {
+		t.Error("the login round trip produced no session")
+	}
+}
+
+// Each of the layers that keep a hostile ?next= on-site has to hold on its own. The end to end
+// test cannot see any single one of them fail, because the other two still catch it.
+func TestEachRedirectGuardHoldsIndependently(t *testing.T) {
+	p := newFakeProvider(t)
+	e, _ := newAuthTestServerOnSubpath(t, p, "/gpm")
+
+	store, ok := newSessionStore().(*sessions.CookieStore)
+	if !ok {
+		t.Fatal("expected a CookieStore")
+	}
+	storedDestination := func(t *testing.T, rec *httptest.ResponseRecorder) interface{} {
+		t.Helper()
+		for _, ck := range rec.Result().Cookies() {
+			if ck.Name != sessionName || ck.MaxAge < 0 {
+				continue
+			}
+			values := map[interface{}]interface{}{}
+			if err := securecookie.DecodeMulti(sessionName, ck.Value, &values, store.Codecs...); err != nil {
+				t.Fatalf("decoding the session cookie failed: %v", err)
+			}
+			return values[sessionKeyDestination]
+		}
+		t.Fatal("no session cookie was set")
+		return nil
+	}
+
+	// Layer 2: startLogin sanitizes whatever the middleware hands it. The middleware passes the
+	// raw request URI, so a request for a hostile path is the real way in.
+	// The proxy strips the prefix, so what reaches GPM is already prefix-less. A "/gpm/..." path
+	// belongs to the ?next= layer below, not to this one.
+	for _, target := range []string{"//evil.com", `/\evil.com`} {
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, target, nil))
+
+		if got := storedDestination(t, rec); got != "/" {
+			t.Errorf("a request for %q stored destination %v, want %q", target, got, "/")
+		}
+	}
+
+	// Layer 3: even a destination planted straight into the session must not escape the callback.
+	// Run at the root as well, because that is where this guard is load-bearing: with a base path,
+	// browserPath prefixes the result and makes it same-origin whatever the destination was.
+	for _, base := range []string{"", "/gpm"} {
+		t.Run("callback base="+base, func(t *testing.T) {
+			p := newFakeProvider(t)
+			e, _ := newAuthTestServerOnSubpath(t, p, base)
+
+			for _, target := range []string{"//evil.com", `/\evil.com`, "https://evil.com", "/gpm//evil.com"} {
+				planted := startLoginWithPlantedDestination(t, e, target)
+
+				req := httptest.NewRequest(http.MethodGet, planted.callbackURL, nil)
+				for _, ck := range planted.jar {
+					req.AddCookie(ck)
+				}
+				rec := httptest.NewRecorder()
+				e.ServeHTTP(rec, req)
+
+				// The property is same-origin, not the absence of a string: "/gpm/gpm//evil.com"
+				// contains "evil.com" but stays inside the app.
+				landed := rec.Header().Get("Location")
+				u, err := url.Parse(landed)
+				if err != nil {
+					t.Fatalf("parsing the post-login redirect %q failed: %v", landed, err)
+				}
+				if u.IsAbs() || u.Host != "" ||
+					strings.HasPrefix(landed, "//") || strings.HasPrefix(landed, `/\`) {
+					t.Errorf("a planted destination %q landed the user on %q, which leaves the site",
+						target, landed)
+				}
+			}
+		})
+	}
+}
+
+type plantedLogin struct {
+	jar         []*http.Cookie
+	callbackURL string
+}
+
+// Runs the first leg of a login, then rewrites the destination stored in the session cookie. This
+// is what an attacker who could plant session state would have, and it is the only way to reach
+// the callback's own check on the destination -- every other route sanitizes before storing.
+func startLoginWithPlantedDestination(t *testing.T, e *echo.Echo, destination string) plantedLogin {
+	t.Helper()
+
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/login", nil))
+
+	loc, err := url.Parse(rec.Header().Get("Location"))
+	if err != nil {
+		t.Fatalf("parsing the redirect to the provider failed: %v", err)
+	}
+
+	// A separate store instance, but the keys come from the same secret, so the codecs match.
+	store, ok := newSessionStore().(*sessions.CookieStore)
+	if !ok {
+		t.Fatal("expected a CookieStore")
+	}
+
+	var values map[interface{}]interface{}
+	for _, ck := range rec.Result().Cookies() {
+		// startLogin also expires the legacy root-scoped cookie, which carries no value.
+		if ck.Name != sessionName || ck.MaxAge < 0 || ck.Value == "" {
+			continue
+		}
+		values = map[interface{}]interface{}{}
+		if err := securecookie.DecodeMulti(sessionName, ck.Value, &values, store.Codecs...); err != nil {
+			t.Fatalf("decoding the login cookie failed: %v", err)
+		}
+	}
+	if values == nil {
+		t.Fatal("the login leg set no session cookie")
+	}
+	values[sessionKeyDestination] = destination
+
+	encoded, err := securecookie.EncodeMulti(sessionName, values, store.Codecs...)
+	if err != nil {
+		t.Fatalf("re-encoding the session failed: %v", err)
+	}
+
+	return plantedLogin{
+		jar: []*http.Cookie{{Name: sessionName, Value: encoded}},
+		callbackURL: fmt.Sprintf("%s?state=%s&code=%s", callbackPath,
+			url.QueryEscape(loc.Query().Get("state")), url.QueryEscape(loc.Query().Get("nonce"))),
+	}
+}
+
+// A login whose keys changed between its start and its callback arrives here with a session that
+// will not decode. The callback is a top-level navigation, so raw JSON in the address bar is the
+// wrong answer: start a clean login instead.
+func TestTheCallbackRestartsTheLoginWhenTheSessionIsUnreadable(t *testing.T) {
+	p := newFakeProvider(t)
+	e, _ := newAuthTestServerOnSubpath(t, p, "/gpm")
+
+	req := httptest.NewRequest(http.MethodGet, callbackPath+"?state=whatever&code=whatever", nil)
+	req.AddCookie(&http.Cookie{Name: sessionName, Value: "a-cookie-signed-with-the-previous-secret"})
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status = %d, want a redirect into a fresh login (%s)",
+			rec.Code, strings.TrimSpace(rec.Body.String()))
+	}
+	if loc := rec.Header().Get("Location"); !strings.HasPrefix(loc, p.issuer()+"/authorize") {
+		t.Errorf("redirected to %q, want the provider's authorize endpoint", loc)
+	}
+	if !hasUsableSession(rec) {
+		t.Errorf("the restart set no usable session cookie, so the login cannot complete: %v",
+			rec.Result().Cookies())
+	}
+}
+
+// The frontend's first request is usually an API call, and that branch answers 401 without going
+// through startLogin. It still has to expire a root-scoped cookie, or that cookie keeps reaching
+// every other application on the host until the user navigates.
+func TestTheAPIAnswerAlsoClearsTheLegacyRootCookie(t *testing.T) {
+	p := newFakeProvider(t)
+	e, _ := newAuthTestServerOnSubpath(t, p, "/gpm")
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/constraints", nil)
+	req.AddCookie(&http.Cookie{Name: sessionName, Value: "a-cookie-signed-with-the-previous-secret"})
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", rec.Code)
+	}
+	var deleted bool
+	for _, ck := range rec.Result().Cookies() {
+		if ck.Name == sessionName && ck.Path == "/" && ck.MaxAge < 0 {
+			deleted = true
+		}
+	}
+	if !deleted {
+		t.Errorf("the 401 did not expire the root-scoped cookie: %v", rec.Result().Cookies())
+	}
+}
+
+// True when the response carries a session cookie the browser will keep and GPM will read back:
+// scoped to the base path, not an expiry, and not empty. A bare count is not enough, because the
+// legacy-root deletion is also a Set-Cookie named gpm-session.
+func hasUsableSession(rec *httptest.ResponseRecorder) bool {
+	for _, ck := range rec.Result().Cookies() {
+		if ck.Name == sessionName && ck.Path == cookiePath() && ck.MaxAge >= 0 && ck.Value != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// A session made before the deployment was given a base path still decodes, so the request is
+// authenticated and no login path runs. GPM has to move it onto the base path anyway, or its
+// cookie keeps reaching every other application on the host until it expires.
+func TestAValidRootSessionIsMovedOntoTheBasePath(t *testing.T) {
+	p := newFakeProvider(t)
+
+	// Log in with no base path, which produces a Path=/ cookie.
+	rootServer, _ := newAuthTestServerOnSubpath(t, p, "")
+	rootCookies := loginForTest(t, rootServer, p)
+
+	// The same GPM, now served from a subpath. Same secret, so the cookie still decodes.
+	e, _ := newAuthTestServerOnSubpath(t, p, "/gpm")
+
+	req := httptest.NewRequest(http.MethodGet, "/constraints", nil)
+	for _, ck := range rootCookies {
+		req.AddCookie(ck)
+	}
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	// Still logged in: this must not cost the user their session.
+	if rec.Code == http.StatusFound {
+		t.Fatalf("the request was bounced to the provider, so the migration logged the user out")
+	}
+	if !hasUsableSession(rec) {
+		t.Errorf("no /gpm-scoped session was written: %v", rec.Result().Cookies())
+	}
+	var rootExpired bool
+	for _, ck := range rec.Result().Cookies() {
+		if ck.Name == sessionName && ck.Path == "/" && ck.MaxAge < 0 {
+			rootExpired = true
+		}
+	}
+	if !rootExpired {
+		t.Errorf("the root-scoped cookie was not expired, so it keeps leaking: %v",
+			rec.Result().Cookies())
+	}
+}
+
+// At the root there is nothing to move, and rewriting the cookie on every authenticated request
+// would be pure noise.
+func TestAValidRootSessionIsLeftAloneAtTheRoot(t *testing.T) {
+	p := newFakeProvider(t)
+	e, _ := newAuthTestServerOnSubpath(t, p, "")
+
+	req := httptest.NewRequest(http.MethodGet, "/constraints", nil)
+	for _, ck := range loginForTest(t, e, p) {
+		req.AddCookie(ck)
+	}
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	if cookies := rec.Result().Cookies(); len(cookies) != 0 {
+		t.Errorf("an authenticated request at the root rewrote cookies: %v", cookies)
+	}
+}
+
+// A cookie GPM cannot overwrite -- one on a more specific path, or one carrying a Domain attribute
+// -- makes every callback restart land back on an unreadable session. Unbounded, that bounces the
+// browser between GPM and the provider forever and asks for a new authorization each time.
+func TestTheCallbackRestartsTheLoginAtMostOnce(t *testing.T) {
+	p := newFakeProvider(t)
+	e, _ := newAuthTestServerOnSubpath(t, p, "/gpm")
+
+	stale := &http.Cookie{Name: sessionName, Value: "a-cookie-signed-with-the-previous-secret"}
+
+	// First hop: restart, and take the marker the response sets.
+	req := httptest.NewRequest(http.MethodGet, callbackPath+"?state=x&code=y", nil)
+	req.AddCookie(stale)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusFound {
+		t.Fatalf("first callback status = %d, want a restart", rec.Code)
+	}
+	var marker *http.Cookie
+	for _, ck := range rec.Result().Cookies() {
+		if ck.Name == retryCookieName && ck.MaxAge > 0 {
+			marker = ck
+		}
+	}
+	if marker == nil {
+		t.Fatalf("the restart set no retry marker: %v", rec.Result().Cookies())
+	}
+
+	// Second hop: the same unreadable cookie comes back, and so does the marker.
+	req = httptest.NewRequest(http.MethodGet, callbackPath+"?state=x&code=y", nil)
+	req.AddCookie(stale)
+	req.AddCookie(marker)
+	rec = httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	if rec.Code == http.StatusFound {
+		t.Fatalf("the callback restarted a second time, to %q — this is the loop",
+			rec.Header().Get("Location"))
+	}
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("status = %d, want 401", rec.Code)
+	}
+	var answer ErrorAnswer
+	if err := json.Unmarshal(rec.Body.Bytes(), &answer); err != nil {
+		t.Fatalf("decoding the answer failed: %v (%s)", err, rec.Body.String())
+	}
+	if answer.LoginURL != browserPath("/login") {
+		t.Errorf("login_url = %q, want %q", answer.LoginURL, browserPath("/login"))
+	}
+	// The marker has to go, or the next genuine login cannot use its one restart.
+	var cleared bool
+	for _, ck := range rec.Result().Cookies() {
+		if ck.Name == retryCookieName && ck.MaxAge < 0 {
+			cleared = true
+		}
+	}
+	if !cleared {
+		t.Errorf("the retry marker was not cleared: %v", rec.Result().Cookies())
 	}
 }

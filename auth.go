@@ -8,7 +8,9 @@ package main
 
 import (
 	"context"
+	"crypto/hkdf"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -37,6 +39,10 @@ const (
 	sessionKeyNonce       = "nonce"
 	sessionKeyDestination = "destination"
 	sessionKeyVerifier    = "pkce_verifier"
+
+	// Set for one hop when the callback restarts a login, so a second failure in a row stops
+	// instead of bouncing the browser between GPM and the provider forever.
+	retryCookieName = "gpm-login-retry"
 )
 
 // Holds everything needed to run the OIDC flow. Nil when authentication is disabled.
@@ -157,7 +163,34 @@ func newAuthenticator(ctx context.Context) (*authenticator, error) {
 	}, nil
 }
 
-// Cookie store for the session. The key comes from GPM_SECRET_KEY, matching the Python backend.
+// Derives the pair of keys the cookie store needs from GPM_SECRET_KEY: one to sign the cookie, one
+// to encrypt it. They must differ, and GPM_SECRET_KEY is a single string of whatever length the
+// operator chose, so HKDF expands it into 96 bytes and the halves are taken from that. 32 bytes for
+// the block key selects AES-256.
+//
+// No salt, deliberately: the keys have to come out the same on every replica and after every
+// restart, or a session stops decoding the moment a request reaches a different pod.
+//
+// Changing the label or the lengths invalidates every existing session, so treat them as part of
+// the cookie format.
+func sessionKeys(secret string) (hashKey, blockKey []byte) {
+	const info = "gpm session cookie keys v1"
+
+	k, err := hkdf.Key(sha256.New, []byte(secret), nil, info, 96)
+	if err != nil {
+		// Only for a length HKDF cannot produce, and 96 is a constant well inside the limit.
+		panic(fmt.Sprintf("deriving the session keys failed: %v", err))
+	}
+	return k[:64], k[64:]
+}
+
+// Cookie store for the session. GPM_SECRET_KEY is the same variable the Python backend used, but
+// the key material and the cookie format are not, so a 1.x cookie does not decode here.
+//
+// A cookie that will not decode means the user is not logged in, and every place that reads one
+// treats it that way. Rotating GPM_SECRET_KEY invalidates them all at once, so answering with an
+// error instead would let one operator action strand every user for a full GPM_SESSION_MAX_AGE,
+// with no server-side repair.
 func newSessionStore() sessions.Store {
 	// GetInt yields 0 for an empty or unparseable value, and 0 tells securecookie to skip the
 	// timestamp check entirely — a typo would hand out sessions that never expire.
@@ -168,9 +201,16 @@ func newSessionStore() sessions.Store {
 		maxAge = defaultSessionMaxAge
 	}
 
-	store := sessions.NewCookieStore([]byte(viper.GetString("secret_key")))
+	// Two keys: without the block key the value base64-decodes to readable gob -- the username, and
+	// during the login leg the state, the nonce and the PKCE verifier.
+	hashKey, blockKey := sessionKeys(viper.GetString("secret_key"))
+	store := sessions.NewCookieStore(hashKey, blockKey)
 	store.Options = &sessions.Options{
-		Path:     "/",
+		// Scoped to the subpath, not the whole origin. A subpath is normally chosen because
+		// something else already answers on that host, and "/" would hand that application a
+		// session it can replay against GPM. HttpOnly does not help: the leak is to the other
+		// server, not to script.
+		Path:     cookiePath(),
 		HttpOnly: true,
 		// Lax rather than Strict: the browser arrives back on the callback from the provider as a
 		// top-level navigation, and Strict would drop the cookie on that hop.
@@ -188,6 +228,68 @@ func newSessionStore() sessions.Store {
 	store.MaxAge(maxAge)
 
 	return store
+}
+
+// Moves a still-valid session off the origin root, for a deployment that has just been given a
+// base path. Its cookie decodes perfectly -- the keys do not depend on the base path -- so the
+// request is authenticated and none of the login paths run. Without this the session token keeps
+// going to every other application on the host for a full GPM_SESSION_MAX_AGE, which is the leak
+// the scoping exists to close.
+//
+// Save first, expire second. Expiring the root cookie without writing the scoped one would log the
+// user out, because the root cookie may be the only session they have.
+func (a *authenticator) migrateSessionOffTheRoot(c echo.Context, sess *sessions.Session) {
+	if basePath() == "" {
+		return
+	}
+	// Nothing to move once the browser is sending the scoped cookie. Options came from the store,
+	// so this is the scoped path; a request that still carries only the root cookie has no way to
+	// say so, which is why the save is unconditional and idempotent.
+	sess.Options.MaxAge = viper.GetInt("session_max_age")
+	if sess.Options.MaxAge <= 0 {
+		sess.Options.MaxAge = defaultSessionMaxAge
+	}
+	if err := sess.Save(c.Request(), c.Response()); err != nil {
+		slog.Error("could not rewrite the session onto the base path", "error", err)
+		return
+	}
+	a.clearLegacyRootCookie(c)
+}
+
+// Writes the one-hop marker the callback uses to avoid restarting a login twice. A negative maxAge
+// deletes it. Scoped like the session cookie so it goes away with the rest.
+func (a *authenticator) setRetryMarker(c echo.Context, maxAge int) {
+	value := "1"
+	if maxAge < 0 {
+		value = ""
+	}
+	http.SetCookie(c.Response(), &http.Cookie{
+		Name:     retryCookieName,
+		Value:    value,
+		Path:     cookiePath(),
+		MaxAge:   maxAge,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+// Expires a session cookie scoped to the origin root. GPM cannot overwrite one -- deletion has to
+// match the path, and GPM now writes to the subpath -- and until it expires the browser keeps
+// sending it to every other application on the host. One appears whenever a deployment moves to a
+// subpath: GPM_BASE_PATH set on a running instance, or a PUBLIC_URL image replacing one without.
+//
+// Subpath only. At the root, that cookie is the live session.
+func (a *authenticator) clearLegacyRootCookie(c echo.Context) {
+	if basePath() == "" {
+		return
+	}
+	http.SetCookie(c.Response(), &http.Cookie{
+		Name:     sessionName,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+	})
 }
 
 func randomString() (string, error) {
@@ -262,10 +364,15 @@ func (a *authenticator) middleware() echo.MiddlewareFunc {
 
 			sess, err := session.Get(sessionName, c)
 			if err == nil && sess.Values[sessionKeyUser] != nil {
+				a.migrateSessionOffTheRoot(c, sess)
 				return next(c)
 			}
 
 			if isAPIPath(path) {
+				// The browser keeps sending a root-scoped cookie to every other application on
+				// the host until something expires it, and an API call is usually the first
+				// request the frontend makes.
+				a.clearLegacyRootCookie(c)
 				return c.JSON(http.StatusUnauthorized, ErrorAnswer{
 					ErrorMessage: "Your session has expired or you are not logged in.",
 					Action:       "Sign in again to carry on.",
@@ -308,9 +415,17 @@ func (a *authenticator) startLogin(c echo.Context, destination string) error {
 	// but TLS and the registered redirect URI protecting the authorization code.
 	verifier := oauth2.GenerateVerifier()
 
+	// See newSessionStore: an undecodable cookie means logged out. gorilla hands back a usable
+	// empty session alongside the error; reset it in case a partial decode left anything behind.
 	sess, err := session.Get(sessionName, c)
+	if sess == nil {
+		// Only when the session middleware is not installed, which is a wiring mistake rather than
+		// anything a request can cause. Nothing can be stored, so the flow cannot continue.
+		return fmt.Errorf("the session store is not available: %w", err)
+	}
 	if err != nil {
-		return fmt.Errorf("reading the session before starting the login failed: %w", err)
+		slog.Debug("could not read the existing session, starting a fresh one", "error", err)
+		sess.Values = map[interface{}]interface{}{}
 	}
 	sess.Values[sessionKeyState] = state
 	sess.Values[sessionKeyNonce] = nonce
@@ -319,6 +434,8 @@ func (a *authenticator) startLogin(c echo.Context, destination string) error {
 	if err := sess.Save(c.Request(), c.Response()); err != nil {
 		return fmt.Errorf("saving the OIDC session failed: %w", err)
 	}
+
+	a.clearLegacyRootCookie(c)
 
 	slog.Debug("starting the OIDC login flow", "destination", destination)
 	return c.Redirect(http.StatusFound,
@@ -329,13 +446,41 @@ func (a *authenticator) startLogin(c echo.Context, destination string) error {
 func (a *authenticator) callback(c echo.Context) error {
 	ctx := c.Request().Context()
 
+	// A top-level navigation, so raw JSON in the address bar is the wrong answer. Without the state,
+	// the nonce and the verifier this login cannot finish, so start a clean one.
 	sess, err := session.Get(sessionName, c)
-	if err != nil {
-		return c.JSON(http.StatusUnauthorized, ErrorAnswer{
+	if sess == nil {
+		slog.Error("the session store is not available while completing the login", "error", err)
+		return c.JSON(http.StatusInternalServerError, ErrorAnswer{
 			ErrorMessage: "Could not read the session while completing the login.",
 			Action:       "Try logging in again.",
 			Description:  err.Error(),
 		})
+	}
+	if err != nil {
+		// One restart only. Something can shadow this cookie with one GPM cannot overwrite -- a
+		// more specific path, or a Domain attribute -- and then every restart lands back here and
+		// asks the provider for another authorization. Bounded, the common case still recovers in
+		// one hop: a key rotation between the start of a login and its callback.
+		if _, seen := c.Cookie(retryCookieName); seen == nil {
+			slog.Warn("the session is still unreadable after restarting the login, giving up",
+				"error", err)
+			a.setRetryMarker(c, -1)
+			return c.JSON(http.StatusUnauthorized, ErrorAnswer{
+				ErrorMessage: "Could not read the session while completing the login.",
+				Action:       "Check that your browser accepts cookies from this site, then log in again.",
+				Description:  err.Error(),
+				LoginURL:     browserPath("/login"),
+			})
+		}
+		slog.Debug("the session could not be read on the callback, restarting the login", "error", err)
+		a.setRetryMarker(c, 300)
+		return a.startLogin(c, "/")
+	}
+
+	// Got a readable session, so whatever the marker was for is over.
+	if _, seen := c.Cookie(retryCookieName); seen == nil {
+		a.setRetryMarker(c, -1)
 	}
 
 	if errParam := c.QueryParam("error"); errParam != "" {
@@ -439,18 +584,25 @@ func (a *authenticator) callback(c echo.Context) error {
 func (a *authenticator) logout(c echo.Context) error {
 	hadSession := false
 
+	// Clear it whether or not it decoded: that is the one a stuck user most needs rid of.
 	sess, err := session.Get(sessionName, c)
-	if err == nil {
-		if user, ok := sess.Values[sessionKeyUser].(string); ok && user != "" {
-			hadSession = true
-			slog.Info("user logged out", "user", user)
-		}
-		sess.Values = map[interface{}]interface{}{}
-		sess.Options.MaxAge = -1
-		if err := sess.Save(c.Request(), c.Response()); err != nil {
-			slog.Error("clearing the session failed", "error", err)
-		}
+	if sess == nil {
+		slog.Error("the session store is not available, logging out locally only", "error", err)
+		return serveSPAShell(c)
 	}
+	if err != nil {
+		slog.Debug("could not read the session being logged out, clearing it anyway", "error", err)
+	}
+	if user, ok := sess.Values[sessionKeyUser].(string); ok && user != "" {
+		hadSession = true
+		slog.Info("user logged out", "user", user)
+	}
+	sess.Values = map[interface{}]interface{}{}
+	sess.Options.MaxAge = -1
+	if err := sess.Save(c.Request(), c.Response()); err != nil {
+		slog.Error("clearing the session failed", "error", err)
+	}
+	a.clearLegacyRootCookie(c)
 
 	if hadSession && a.endSessionEndpoint != "" {
 		redirect := viper.GetString("oidc_redirect_domain")

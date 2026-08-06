@@ -5,9 +5,11 @@
 package main
 
 import (
+	"path"
 	"strings"
 
 	"github.com/spf13/viper"
+	"golang.org/x/exp/slog"
 )
 
 // The subpath GPM is served from, as the browser sees it: "" for the domain root, or something
@@ -20,46 +22,65 @@ import (
 //
 // Set from the PUBLIC_URL the frontend was built with, so the two cannot disagree.
 func basePath() string {
-	p := strings.TrimSpace(viper.GetString("base_path"))
-	p = strings.TrimSuffix(p, "/")
-	if p == "" {
+	// path.Clean does the whole job: the leading slash makes a bare "gpm" absolute, and Clean then
+	// collapses repeated slashes and resolves "." and "..". Trimming one trailing slash instead
+	// leaves "//" as "/", which puts the session cookie back at origin-wide scope and makes
+	// browserPath("/login") return the off-site "//login" -- from nothing worse than a typo.
+	p := path.Clean("/" + strings.TrimSpace(viper.GetString("base_path")))
+	if p == "/" {
 		return ""
 	}
-	if !strings.HasPrefix(p, "/") {
-		p = "/" + p
+	// Browsers treat "\" as a segment delimiter for http and https (WHATWG URL), so a base path of
+	// "\evil.com" makes browserPath("/login") into "/\evil.com/login", which resolves off site.
+	// safeRedirectTarget already rejects a "/\" prefix on redirect targets; this is the one place
+	// the same rule was not applied.
+	if strings.Contains(p, `\`) {
+		slog.Error("GPM_BASE_PATH contains a backslash, which browsers read as a path delimiter; ignoring it",
+			"configured", p)
+		return ""
 	}
 	return p
 }
 
 // Turns a path GPM sees into the one the browser has to ask for. The identity function when GPM is
 // served from the domain root, which is why the root deployment is unaffected by any of this.
-func browserPath(path string) string {
+func browserPath(p string) string {
 	base := basePath()
 	if base == "" {
-		return path
+		return p
 	}
-	if path == "" {
+	if p == "" {
 		return base + "/"
 	}
-	if !strings.HasPrefix(path, "/") {
-		path = "/" + path
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
 	}
-	return base + path
+	return base + p
+}
+
+// The Path attribute for the session cookie: the subpath GPM is served from, or "/" at the root.
+// Without the trailing slash, so that it matches the base path itself as well as everything under
+// it.
+func cookiePath() string {
+	if base := basePath(); base != "" {
+		return base
+	}
+	return "/"
 }
 
 // The reverse of browserPath, for a path arriving from the browser. Anything that is not under the
 // base path is returned unchanged and left for safeRedirectTarget to reject or accept on its own
 // terms.
-func backendPath(path string) string {
+func backendPath(p string) string {
 	base := basePath()
-	if base == "" || path == "" {
-		return path
+	if base == "" || p == "" {
+		return p
 	}
-	if path == base {
+	if p == base {
 		return "/"
 	}
-	if rest, found := strings.CutPrefix(path, base+"/"); found {
+	if rest, found := strings.CutPrefix(p, base+"/"); found {
 		return "/" + rest
 	}
-	return path
+	return p
 }

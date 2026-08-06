@@ -103,7 +103,7 @@ GPM is unauthenticated by default. Set `GPM_AUTH_ENABLED` to `OIDC` to require a
 | Env Var Name                      | Description                                                                                                                                              | Default                |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
 | `GPM_AUTH_ENABLED`                | Set to `OIDC` to protect GPM with an OpenID Connect provider. Any other value leaves it open.                                                            | `Anonymous`            |
-| `GPM_SECRET_KEY`                  | Key used to sign the session cookie. **Required when authentication is on**: GPM refuses to start if it is still the 1.x default, which is published in this repository and would let anyone forge a session. | *(none)*               |
+| `GPM_SECRET_KEY`                  | Key used to sign and encrypt the session cookie. **Required when authentication is on**: GPM refuses to start if it is still the 1.x default, which is published in this repository and would let anyone forge a session. | *(none)*               |
 | `GPM_PREFERRED_URL_SCHEME`        | Set to `https` when GPM is served over TLS, so the session cookie is marked `Secure`. A `GPM_OIDC_REDIRECT_DOMAIN` that starts with `https://` also marks it `Secure`. | `http`                 |
 | `GPM_SESSION_MAX_AGE`             | How long a session lasts, in seconds.                                                                                                                    | `28800` (8 hours)      |
 | `GPM_OIDC_REDIRECT_DOMAIN`        | The public address of GPM, for example `https://gpm.example.com`. The provider sends users back to `<domain>/oidc-auth`. Required.                       |                        |
@@ -125,9 +125,20 @@ GPM is unauthenticated by default. Set `GPM_AUTH_ENABLED` to `OIDC` to require a
 >
 > Set `GPM_PREFERRED_URL_SCHEME=https` whenever GPM is reachable over HTTPS.
 
-GPM uses PKCE, so the authorization code cannot be used by anyone who intercepts it. Sessions are
-signed cookies: they are not stored server side, so logging out clears the cookie in your browser
-and, when the provider supports it, ends the session there too.
+GPM uses PKCE, so the authorization code cannot be used by anyone who intercepts it.
+
+The session is a cookie. GPM signs the cookie and also encrypts it, so the contents are not
+readable. GPM derives the two keys for this from `GPM_SECRET_KEY` with HKDF. Every replica derives
+the same keys from the same secret, and so does the same replica after a restart.
+
+> [!NOTE]
+> GPM does not keep sessions on the server. A logout clears the cookie in your browser. When the
+> provider supports it, GPM also ends the session at the provider. But GPM cannot cancel a copy of
+> the cookie that someone took to a different machine. Such a copy stays valid until
+> `GPM_SESSION_MAX_AGE` expires it. If this risk is a problem for you, use a short value.
+>
+> On a subpath deployment the cookie is scoped to that subpath. A different application on
+> the same host does not receive it.
 
 Once authentication is on, everything requires a session except these paths, which have to stay
 reachable for a user who is not logged in yet:

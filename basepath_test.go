@@ -5,6 +5,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/spf13/viper"
@@ -21,6 +22,23 @@ func TestBasePathNormalization(t *testing.T) {
 		" /gpm ":    "/gpm",
 		"/gpm/sub":  "/gpm/sub",
 		"/gpm/sub/": "/gpm/sub",
+		// Typos with extra slashes. Before these were normalized, "//" came out as "/", which made
+		// browserPath("/login") return "//login" -- a protocol-relative URL the browser resolves
+		// off-site -- and put the session cookie back at origin-wide scope.
+		"//":         "",
+		"///":        "",
+		"/gpm//":     "/gpm",
+		"/gpm//sub":  "/gpm/sub",
+		"/gpm/./sub": "/gpm/sub",
+		// path.Clean resolves ".." but a rooted path cannot escape above "/", so these land on a
+		// sibling or on the root, never on a parent.
+		"/gpm/..":      "",
+		"..":           "",
+		"/gpm/../../x": "/x",
+		// Browsers read "\\" as a path delimiter, so "\\evil.com" would make browserPath("/login")
+		// resolve off site. Refused rather than passed through.
+		`\evil.com`:     "",
+		`/gpm\evil.com`: "",
 	}
 
 	for configured, want := range tests {
@@ -105,5 +123,54 @@ func TestBrowserAndBackendPathRoundTrip(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// A base path that normalizes away must leave GPM behaving exactly like a root deployment, rather
+// than half way between the two.
+func TestASlashOnlyBasePathIsTheRootDeployment(t *testing.T) {
+	for _, configured := range []string{"/", "//", "///", "  /  "} {
+		t.Run("GPM_BASE_PATH="+configured, func(t *testing.T) {
+			useTestSettings(t)
+			viper.Set("base_path", configured)
+
+			if got := basePath(); got != "" {
+				t.Errorf("basePath() = %q, want empty", got)
+			}
+			if got := cookiePath(); got != "/" {
+				t.Errorf("cookiePath() = %q, want /", got)
+			}
+			// The one that used to bite: "//login" is protocol-relative and leaves the site.
+			if got := browserPath("/login"); got != "/login" {
+				t.Errorf("browserPath(\"/login\") = %q, want /login", got)
+			}
+		})
+	}
+}
+
+// Both directions of the one property, with the RFC 6265 section 5.1.4 prefix rule written once:
+// everything GPM serves is inside the cookie's scope, and nothing else on the host is.
+func TestCookiePathCoversTheAppAndNothingElse(t *testing.T) {
+	useTestSettings(t)
+	viper.Set("base_path", "/gpm")
+
+	scope := cookiePath()
+	covers := func(requestPath string) bool {
+		return requestPath == scope || strings.HasPrefix(requestPath, strings.TrimSuffix(scope, "/")+"/")
+	}
+
+	for _, mine := range []string{
+		browserPath("/"), browserPath("/login"), browserPath("/logout"), browserPath(callbackPath),
+		browserPath("/api/v1/constraints"), "/gpm",
+	} {
+		if !covers(mine) {
+			t.Errorf("cookie Path %q does not cover %q, so the session is dropped there", scope, mine)
+		}
+	}
+
+	for _, theirs := range []string{"/", "/other", "/gpmadmin", "/api/v1/constraints", "/admin/gpm"} {
+		if covers(theirs) {
+			t.Errorf("cookie Path %q reaches %q, which belongs to another application", scope, theirs)
+		}
 	}
 }
