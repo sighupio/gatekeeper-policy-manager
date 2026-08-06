@@ -77,6 +77,49 @@ load ./helper
   loop_it wait_violations 10 5
 }
 
+# Test chart installation, `helm template` is not enough to test the chart actually works.
+#
+# The chart uses its own namespace here. Its ServiceAccount name is fixed, so it collides with the
+# one the manifests above create. The ClusterRole is cluster-scoped and needs a different name.
+@test "[CHART] installs and becomes ready" {
+    info
+    install(){
+        helm install gpmchart chart/ \
+            --namespace gpmchart --create-namespace \
+            --set image.repository="${LOAD_IMAGE%:*}" \
+            --set image.tag="${LOAD_IMAGE##*:}" \
+            --set clusterRole.name=gpmchart-crd-view \
+            --wait --timeout 3m
+    }
+    run install
+    echo "$output"
+    [ "$status" -eq 0 ]
+}
+
+# `helm template` cannot show whether the ServiceAccount can read what the views need. Ask the API
+# server. This check finds the missing rules.
+@test "[CHART] grants every permission the views need" {
+    info
+    sa=system:serviceaccount:gpmchart:gatekeeper-policy-manager
+    for resource in \
+        k8slivenessprobe.constraints.gatekeeper.sh \
+        constrainttemplates.templates.gatekeeper.sh \
+        configs.config.gatekeeper.sh \
+        assign.mutations.gatekeeper.sh \
+        events; do
+        run kubectl auth can-i list "$resource" --as="$sa"
+        echo "can-i list $resource -> $output"
+        [ "$status" -eq 0 ]
+    done
+}
+
+@test "[CHART] uninstalls cleanly" {
+    info
+    run helm uninstall gpmchart --namespace gpmchart --wait
+    echo "$output"
+    [ "$status" -eq 0 ]
+}
+
 # Teardown gets called after each test.
 # There's also teardown_file that gets called once but I could not make it work.
 # Leving this for debug purposes
