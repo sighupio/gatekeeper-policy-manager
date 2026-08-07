@@ -349,22 +349,31 @@ func TestBackendPathCannotSmuggleAnOffsiteRedirect(t *testing.T) {
 
 // A symlink planted inside static-content that points out of it must not be followed. Not reachable
 // in the distroless image, where the directory is copied at build time, but reachable the moment
-// anyone mounts a volume or a ConfigMap over it. os.Root refuses the traversal at the syscall level.
+// anyone mounts a volume or a ConfigMap over it. os.Root refuses the traversal at the syscall
+// level, at any depth -- the /static/ case was a real hole while a separate e.Static route served
+// it over http.Dir. The fixture chdirs to <tmp>/app with staticContentDir ./static-content, so the
+// targets climb to <tmp>/secret.txt.
 func TestServeIndexRefusesToFollowSymlinksOutOfTheRoot(t *testing.T) {
-	withStaticContent(t)
-
-	// static-content/leak.txt -> ../../secret.txt, which resolves to the secret outside the root.
-	// The fixture chdirs to <tmp>/app and staticContentDir is ./static-content, so two levels up.
-	if err := os.Symlink(filepath.Join("..", "..", "secret.txt"), filepath.Join("static-content", "leak.txt")); err != nil {
-		t.Skipf("symlinks not supported here: %v", err)
+	cases := map[string]struct{ link, target string }{
+		"/leak.txt":       {filepath.Join("static-content", "leak.txt"), filepath.Join("..", "..", "secret.txt")},
+		"/static/leak.js": {filepath.Join("static-content", "static", "leak.js"), filepath.Join("..", "..", "..", "secret.txt")},
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/leak.txt", nil)
-	rec := httptest.NewRecorder()
-	if err := serveIndex(echo.New().NewContext(req, rec)); err != nil {
-		t.Fatalf("serveIndex returned an error: %v", err)
-	}
-	if strings.Contains(rec.Body.String(), "SERVICE-ACCOUNT-TOKEN") {
-		t.Fatalf("followed a symlink out of the static root: %q", rec.Body.String())
+	for request, c := range cases {
+		t.Run(request, func(t *testing.T) {
+			withStaticContent(t)
+			if err := os.Symlink(c.target, c.link); err != nil {
+				t.Skipf("symlinks not supported here: %v", err)
+			}
+
+			req := httptest.NewRequest(http.MethodGet, request, nil)
+			rec := httptest.NewRecorder()
+			if err := serveIndex(echo.New().NewContext(req, rec)); err != nil {
+				t.Fatalf("serveIndex returned an error: %v", err)
+			}
+			if strings.Contains(rec.Body.String(), "SERVICE-ACCOUNT-TOKEN") {
+				t.Fatalf("followed a symlink out of the static root: %q", rec.Body.String())
+			}
+		})
 	}
 }

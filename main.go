@@ -219,11 +219,11 @@ func main() {
 	// One rewrite instead of registering every route twice. Pre, so it runs before routing.
 	e.Pre(middleware.RemoveTrailingSlash())
 
-	e.Static("/static/", "./static-content/static")
-	// Fallback route for all non-matching URLs.
-	// We need to serve index.html for react routing to work. See:
-	// https://create-react-app.dev/docs/deployment#serving-apps-with-client-side-routing.
-	// We could avoid this by serving the frontend from another process/container instead of from the backend
+	// Everything under the frontend goes through serveIndex, /static included: it serves any real
+	// file and falls back to index.html for client-side routes (see
+	// https://create-react-app.dev/docs/deployment#serving-apps-with-client-side-routing).
+	// Do not add a separate e.Static route: it serves over http.Dir, which follows symlinks out of
+	// the root, the escape serveIndex closes with os.Root.
 	e.GET("/*", serveIndex)
 
 	e.GET("/health", getHealth)
