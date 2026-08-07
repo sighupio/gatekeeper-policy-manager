@@ -20,8 +20,6 @@ bats = "1.1.0"
 # base the Dockerfile builds the frontend with. yarn is v1 to match the committed yarn.lock.
 node = "24"
 yarn = "1.22.22"
-# Generates chart/README.md from values.yaml. MAINTENANCE.md prescribes it at release time.
-"pipx:frigate" = "latest"
 # Formats the frontend. Stylelint was considered and left out: it cannot resolve a shareable
 # config when installed through mise, and adding it to web-client/package.json would break the
 # byte-for-byte match with main that keeps the dependency sync a plain copy.
@@ -96,6 +94,9 @@ depends = ["test:unit:go", "test:unit:js"]
 [tasks."chart-readme"]
 description = "regenerate chart/README.md from values.yaml"
 # Generated, never hand-edited: the committed copy had drifted to values that no longer existed.
+# frigate is not pinned here on purpose. It is a python tool, needed once per release, and pinning
+# it through the pipx backend makes `mise install` fail wherever uv is missing. Install it with
+# `uvx --from frigate frigate` or `pipx install frigate`.
 run = "cd chart && frigate gen . > README.md"
 
 [tasks.render]
