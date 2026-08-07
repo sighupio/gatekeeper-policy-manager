@@ -19,6 +19,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/spf13/viper"
+	"golang.org/x/exp/slog"
 )
 
 const (
@@ -221,6 +222,36 @@ func TestGetAuthReflectsConfiguration(t *testing.T) {
 			}
 			if body["auth_enabled"] != tt.want {
 				t.Errorf("auth_enabled = %v, want %v", body["auth_enabled"], tt.want)
+			}
+		})
+	}
+}
+
+func TestLogLevel(t *testing.T) {
+	tests := map[string]slog.Level{
+		"DEBUG": slog.LevelDebug,
+		"debug": slog.LevelDebug,
+		"INFO":  slog.LevelInfo,
+		"WARN":  slog.LevelWarn,
+		"ERROR": slog.LevelError,
+		// Python's logging took these; slog does not. The release notes say so, so pin it here.
+		"WARNING":  slog.LevelInfo,
+		"CRITICAL": slog.LevelInfo,
+		"FATAL":    slog.LevelInfo,
+		"NOTSET":   slog.LevelInfo,
+		// Documented in the README from 2023 to 2026 and never implemented. Now gone from both.
+		"OFF":      slog.LevelInfo,
+		"nonsense": slog.LevelInfo,
+		"":         slog.LevelInfo,
+	}
+
+	for configured, want := range tests {
+		t.Run("GPM_LOG_LEVEL="+configured, func(t *testing.T) {
+			level := new(slog.LevelVar)
+			setLogLevel(level, configured)
+
+			if got := level.Level(); got != want {
+				t.Errorf("level = %v, want %v", got, want)
 			}
 		})
 	}

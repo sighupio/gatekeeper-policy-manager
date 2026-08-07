@@ -9,7 +9,6 @@ import (
 	"context"
 	"net/http"
 	"os"
-	"strings"
 	"text/template"
 	"time"
 
@@ -43,6 +42,16 @@ const insecureDefaultSecretKey = "g8k1p3rp0l1c7m4n4g3r"
 
 // How long a session lasts when GPM_SESSION_MAX_AGE is unset or not a positive number.
 const defaultSessionMaxAge = 60 * 60 * 8
+
+// Applies GPM_LOG_LEVEL. slog's own parsing takes DEBUG, INFO, WARN and ERROR in any case. An
+// unusable value falls back to INFO and says so.
+func setLogLevel(level *slog.LevelVar, configured string) {
+	if err := level.UnmarshalText([]byte(configured)); err != nil {
+		slog.Warn("the requested log level is not a valid option", "log_level", "INFO",
+			"requested_level", configured)
+		level.Set(slog.LevelInfo)
+	}
+}
 
 // Declares every setting GPM reads, with its default and its GPM_-prefixed environment variable.
 //
@@ -145,23 +154,7 @@ func main() {
 	slog.SetDefault(logger)
 
 	slog.Info("starting Gatekeeper Policy Manager", "version", "v2.0.0-alpha1")
-	switch strings.ToLower(viper.GetString("log_level")) {
-	case "debug":
-		slog.Info("changed log level", "log_level", "DEBUG")
-		programLevel.Set(slog.LevelDebug)
-	case "info":
-		slog.Info("changed log level", "log_level", "INFO")
-		programLevel.Set(slog.LevelInfo)
-	case "warn":
-		slog.Info("changed log level", "log_level", "WARN")
-		programLevel.Set(slog.LevelWarn)
-	case "error":
-		slog.Info("changed log level", "log_level", "ERROR")
-		programLevel.Set(slog.LevelError)
-	default:
-		slog.Warn("the requested log level is not a valid option", "log_level", "INFO", "requested_level", viper.GetString("log_level"))
-		programLevel.Set(slog.LevelInfo)
-	}
+	setLogLevel(programLevel, viper.GetString("log_level"))
 
 	// We compile the HTML templates here
 	// This is used later to render templates in the routes (i.e. to render the HTML report in the `/constraints/?report=html` route).
@@ -223,6 +216,9 @@ func main() {
 		e.GET("/logout", auth.logout)
 	}
 
+	// One rewrite instead of registering every route twice. Pre, so it runs before routing.
+	e.Pre(middleware.RemoveTrailingSlash())
+
 	e.Static("/static/", "./static-content/static")
 	// Fallback route for all non-matching URLs.
 	// We need to serve index.html for react routing to work. See:
@@ -231,38 +227,25 @@ func main() {
 	e.GET("/*", serveIndex)
 
 	e.GET("/health", getHealth)
-	e.GET("/health/", getHealth)
 
 	e.GET("/api/v1/auth", getAuth)
-	e.GET("/api/v1/auth/", getAuth)
 
 	e.GET("/api/v1/contexts", s.getContexts)
-	e.GET("/api/v1/contexts/", s.getContexts)
 
 	e.GET("/api/v1/configs", s.getConfigs)
-	e.GET("/api/v1/configs/", s.getConfigs)
 	e.GET("/api/v1/configs/:context", s.getConfigs)
-	e.GET("/api/v1/configs/:context/", s.getConfigs)
 
 	e.GET("/api/v1/constrainttemplates", s.getConstraintTemplates)
-	e.GET("/api/v1/constrainttemplates/", s.getConstraintTemplates)
 	e.GET("/api/v1/constrainttemplates/:context", s.getConstraintTemplates)
-	e.GET("/api/v1/constrainttemplates/:context/", s.getConstraintTemplates)
 
 	e.GET("/api/v1/constraints", s.getConstraints)
-	e.GET("/api/v1/constraints/", s.getConstraints)
 	e.GET("/api/v1/constraints/:context", s.getConstraints)
-	e.GET("/api/v1/constraints/:context/", s.getConstraints)
 
 	e.GET("/api/v1/mutations", s.getMutations)
-	e.GET("/api/v1/mutations/", s.getMutations)
 	e.GET("/api/v1/mutations/:context", s.getMutations)
-	e.GET("/api/v1/mutations/:context/", s.getMutations)
 
 	e.GET("/api/v1/events", s.getEvents)
-	e.GET("/api/v1/events/", s.getEvents)
 	e.GET("/api/v1/events/:context", s.getEvents)
-	e.GET("/api/v1/events/:context/", s.getEvents)
 
 	// Returns an object with the list of available contets and the currently selected context
 	e.GET("/api/v2/contexts/", func(c echo.Context) error {
