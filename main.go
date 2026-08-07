@@ -153,7 +153,7 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: programLevel}))
 	slog.SetDefault(logger)
 
-	slog.Info("starting Gatekeeper Policy Manager", "version", "v2.0.0-alpha1")
+	slog.Info("starting Gatekeeper Policy Manager", "version", "v2.0.0-rc.0")
 	setLogLevel(programLevel, viper.GetString("log_level"))
 
 	// We compile the HTML templates here

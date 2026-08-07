@@ -20,6 +20,8 @@ bats = "1.1.0"
 # base the Dockerfile builds the frontend with. yarn is v1 to match the committed yarn.lock.
 node = "24"
 yarn = "1.22.22"
+# Generates chart/README.md from values.yaml. MAINTENANCE.md prescribes it at release time.
+"pipx:frigate" = "latest"
 # Formats the frontend. Stylelint was considered and left out: it cannot resolve a shareable
 # config when installed through mise, and adding it to web-client/package.json would break the
 # byte-for-byte match with main that keeps the dependency sync a plain copy.
@@ -90,6 +92,11 @@ CI=true yarn test --watchAll=false
 [tasks."test:unit"]
 description = "run all unit tests"
 depends = ["test:unit:go", "test:unit:js"]
+
+[tasks."chart-readme"]
+description = "regenerate chart/README.md from values.yaml"
+# Generated, never hand-edited: the committed copy had drifted to values that no longer existed.
+run = "cd chart && frigate gen . > README.md"
 
 [tasks.render]
 description = "render the manifests and the chart for the deprecated-API check"
