@@ -43,7 +43,7 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             [
-              "curl -s http://gatekeeper-policy-manager.gatekeeper-system.svc.cluster.local/api/v1/events/ | grep 'null'",
+              "curl -s http://gatekeeper-policy-manager.gatekeeper-system.svc.cluster.local/api/v1/events/ | grep 'gatekeeper-webhook'",
             ]
       restartPolicy: Never
   backoffLimit: 9

@@ -47,6 +47,36 @@ load ./helper
     [ "$status" -eq 0 ]
 }
 
+@test "Trigger an admission event" {
+    info
+    # A bare Pod violates the deny constraints (no liveness/readiness probe, no limits). With
+    # --emit-admission-events on, gatekeeper rejects it at admission and writes a gatekeeper-webhook
+    # Event -- what the events view reads. default is not an excluded namespace.
+    #
+    # loop_it retries until the pod is denied, because the webhook is not enforcing the instant GPM
+    # reports ready: the ValidatingWebhookConfiguration and the constraints sync a moment later.
+    # Each attempt deletes first, so an apply that slips through before enforcement leaves nothing
+    # behind. The winning, denied apply is a real request, so it emits the event; a dry-run would
+    # not, because gatekeeper skips side effects on dry-run.
+    expect_denied(){
+        kubectl -n default delete pod gpm-events-probe --ignore-not-found >/dev/null 2>&1
+        out=$(kubectl -n default apply -f - <<'POD' 2>&1
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gpm-events-probe
+spec:
+  containers:
+    - name: c
+      image: registry.k8s.io/pause:3.9
+POD
+)
+        echo "$out" | grep -q "denied the request"
+    }
+    loop_it expect_denied 30 5
+    [ "$loop_it_result" -eq 0 ]
+}
+
 @test "Run tests" {
     info
     deploy_test(){

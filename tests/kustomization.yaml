@@ -6,9 +6,9 @@ namespace: gatekeeper-system
 
 resources:
   # Deploy Gatekeeper from KFD OPA Module
-  - github.com/sighupio/module-policy/katalog/gatekeeper/core?ref=v1.15.0
-  - github.com/sighupio/module-policy/katalog/gatekeeper/rules?ref=v1.15.0
-  - github.com/sighupio/module-policy/katalog/gatekeeper/monitoring?ref=v1.15.0
+  - github.com/sighupio/module-policy/katalog/gatekeeper/core?ref=v1.17.0
+  - github.com/sighupio/module-policy/katalog/gatekeeper/rules?ref=v1.17.0
+  - github.com/sighupio/module-policy/katalog/gatekeeper/monitoring?ref=v1.17.0
   - mutation.yaml
 
   # Deploy GPM itself
@@ -18,6 +18,18 @@ resources:
 
 patches:
   - path: deploy-patch.yaml
+  # Turn on admission events so the events view has something to show. Gatekeeper emits none by
+  # default, which is why that view went untested. A kustomize patch, not kubectl patch: the
+  # deploy step re-applies until the CRDs settle, and a kubectl patch would be reverted next apply.
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: gatekeeper-controller-manager
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --emit-admission-events=true
 
 images:
   - name: quay.io/sighup/gatekeeper-policy-manager
