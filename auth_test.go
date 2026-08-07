@@ -68,6 +68,13 @@ func TestIsPublicPath(t *testing.T) {
 		"/api/v2/contexts/",
 		// Must not be reachable just because it starts with a public prefix.
 		"/static", "/healthz", "/api/v1/authorized",
+		// Neither the raw nor the cleaned form may sneak past the allowlist.
+		"/static/../api/v1/constraints",
+		"/static/../../api/v1/constraints",
+		"/static/./../api/v1/contexts",
+		"/metrics/../api/v1/events",
+		"/api/v1/../../static/x",
+		"/constraints/../static/js/main.js",
 	}
 	for _, p := range private {
 		if isPublicPath(p) {
@@ -243,5 +250,34 @@ func TestFirstNonEmpty(t *testing.T) {
 	}
 	if got := firstNonEmpty("", ""); got != "" {
 		t.Errorf("firstNonEmpty of all-empty = %q, want empty", got)
+	}
+}
+
+// Do not fold this into TestIsPublicPath's table. It looks redundant and is not: this is the only
+// test that pins which string the middleware passes in. Clean the path here instead of inside
+// isPublicPath -- the obvious fix, and one of the two the original report suggested -- and
+// "/api/v1/../../static/x" turns public. The table cannot see that; this does.
+func TestMiddlewareStopsATraversalDressedAsAPublicPath(t *testing.T) {
+	for _, target := range []string{
+		"/static/../api/v1/constraints",
+		"/metrics/../api/v1/events",
+		"/api/v1/../../static/x",
+	} {
+		a := &authenticator{}
+		handlerRan := false
+		h := a.middleware()(func(echo.Context) error {
+			handlerRan = true
+			return nil
+		})
+
+		req := httptest.NewRequest(http.MethodGet, target, nil)
+		rec := httptest.NewRecorder()
+		// No session store is installed, so startLogin cannot run; the error it returns is itself
+		// proof that the request was not treated as public.
+		_ = h(echo.New().NewContext(req, rec))
+
+		if handlerRan {
+			t.Errorf("%q reached the handler without a session", target)
+		}
 	}
 }

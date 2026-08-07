@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path"
 	"sort"
 	"strings"
 
@@ -326,7 +327,15 @@ func safeRedirectTarget(target string) string {
 // True for the handful of paths that must stay reachable without a session: the health probe, the
 // endpoint the frontend calls to discover whether auth is on at all, the logout page, and the
 // static assets that make up the login-time UI.
+//
+// Both the raw path and its cleaned form have to pass. Echo routes on the raw one, so checking
+// only the cleaned form opens "/api/v1/../../static/x", and checking only the raw form opens
+// "/static/../api/v1/constraints".
 func isPublicPath(p string) bool {
+	return isAllowlistedPath(p) && isAllowlistedPath(path.Clean(p))
+}
+
+func isAllowlistedPath(p string) bool {
 	switch {
 	case p == "/health", p == "/health/":
 		return true
@@ -357,8 +366,8 @@ func isAPIPath(p string) bool {
 func (a *authenticator) middleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			path := c.Request().URL.Path
-			if isPublicPath(path) {
+			requestPath := c.Request().URL.Path
+			if isPublicPath(requestPath) {
 				return next(c)
 			}
 
@@ -368,7 +377,7 @@ func (a *authenticator) middleware() echo.MiddlewareFunc {
 				return next(c)
 			}
 
-			if isAPIPath(path) {
+			if isAPIPath(requestPath) {
 				// The browser keeps sending a root-scoped cookie to every other application on
 				// the host until something expires it, and an API call is usually the first
 				// request the frontend makes.
