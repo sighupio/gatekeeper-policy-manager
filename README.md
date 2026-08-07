@@ -6,8 +6,8 @@
 <!-- markdownlint-enable MD033 -->
 
 [![Build Status](https://ci.sighup.io/api/badges/sighupio/gatekeeper-policy-manager/status.svg)](https://ci.sighup.io/sighupio/gatekeeper-policy-manager)
-![GPM Release](https://img.shields.io/badge/GPM-v2.0.0--rc.0-blue)
-![Helm Chart Release](https://img.shields.io/badge/Helm%20Chart-v0.7.0-blue)
+![GPM Release](https://img.shields.io/github/v/tag/sighupio/gatekeeper-policy-manager?filter=v*&sort=semver&label=GPM&color=blue)
+![Helm Chart Release](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fsighupio%2Fgatekeeper-policy-manager%2Fmain%2Fchart%2FChart.yaml&query=%24.version&label=Helm%20Chart&prefix=v&color=blue)
 ![License](https://img.shields.io/github/license/sighupio/gatekeeper-policy-manager)
 
 **Gatekeeper Policy Manager** is a simple *read-only* web UI for viewing OPA Gatekeeper policies' status in a Kubernetes Cluster.
