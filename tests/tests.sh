@@ -49,27 +49,49 @@ load ./helper
 
 @test "Trigger an admission event" {
     info
-    # A bare Pod violates the deny constraints (no liveness/readiness probe, no limits). With
-    # --emit-admission-events on, gatekeeper rejects it at admission and writes a gatekeeper-webhook
-    # Event -- what the events view reads. default is not an excluded namespace.
-    #
-    # loop_it retries until the pod is denied, because the webhook is not enforcing the instant GPM
-    # reports ready: the ValidatingWebhookConfiguration and the constraints sync a moment later.
-    # Each attempt deletes first, so an apply that slips through before enforcement leaves nothing
-    # behind. The winning, denied apply is a real request, so it emits the event; a dry-run would
-    # not, because gatekeeper skips side effects on dry-run.
-    expect_denied(){
-        kubectl -n default delete pod gpm-events-probe --ignore-not-found >/dev/null 2>&1
-        out=$(kubectl -n default apply -f - <<'POD' 2>&1
-apiVersion: v1
-kind: Pod
+    # K8sUniqueIngressHost is the one deny constraint that matches Ingress and nothing else, so a
+    # duplicate host produces exactly one gatekeeper-webhook event. That is a deterministic single
+    # row for the events-view snapshot; a bare Pod trips several constraints at once, in an order
+    # that is not stable. The first Ingress is admitted and stays so the second is a duplicate.
+    kubectl -n default apply -f - <<'ING'
+apiVersion: networking.k8s.io/v1
+kind: Ingress
 metadata:
-  name: gpm-events-probe
+  name: gpm-events-a
 spec:
-  containers:
-    - name: c
-      image: registry.k8s.io/pause:3.9
-POD
+  rules:
+    - host: gpm-events.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: x
+                port:
+                  number: 80
+ING
+    # loop_it retries until the duplicate is denied: the webhook is not enforcing the instant GPM
+    # reports ready, and the constraint needs gpm-events-a in its cache, which lags the apply above.
+    expect_denied(){
+        out=$(kubectl -n default apply -f - <<'ING' 2>&1
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gpm-events-b
+spec:
+  rules:
+    - host: gpm-events.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: x
+                port:
+                  number: 80
+ING
 )
         echo "$out" | grep -q "denied the request"
     }
