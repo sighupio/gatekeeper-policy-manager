@@ -346,3 +346,25 @@ func TestBackendPathCannotSmuggleAnOffsiteRedirect(t *testing.T) {
 		t.Errorf("safeRedirectTarget(backendPath(%q)) = %q, want %q", "/gpm/constraints", got, want)
 	}
 }
+
+// A symlink planted inside static-content that points out of it must not be followed. Not reachable
+// in the distroless image, where the directory is copied at build time, but reachable the moment
+// anyone mounts a volume or a ConfigMap over it. os.Root refuses the traversal at the syscall level.
+func TestServeIndexRefusesToFollowSymlinksOutOfTheRoot(t *testing.T) {
+	withStaticContent(t)
+
+	// static-content/leak.txt -> ../../secret.txt, which resolves to the secret outside the root.
+	// The fixture chdirs to <tmp>/app and staticContentDir is ./static-content, so two levels up.
+	if err := os.Symlink(filepath.Join("..", "..", "secret.txt"), filepath.Join("static-content", "leak.txt")); err != nil {
+		t.Skipf("symlinks not supported here: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/leak.txt", nil)
+	rec := httptest.NewRecorder()
+	if err := serveIndex(echo.New().NewContext(req, rec)); err != nil {
+		t.Fatalf("serveIndex returned an error: %v", err)
+	}
+	if strings.Contains(rec.Body.String(), "SERVICE-ACCOUNT-TOKEN") {
+		t.Fatalf("followed a symlink out of the static root: %q", rec.Body.String())
+	}
+}

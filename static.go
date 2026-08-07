@@ -7,6 +7,7 @@ package main
 
 import (
 	"io"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -32,31 +33,38 @@ func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Con
 // works. See https://create-react-app.dev/docs/deployment#serving-apps-with-client-side-routing.
 // We could avoid this by serving the frontend from another process/container instead.
 func serveIndex(c echo.Context) error {
-	root, err := filepath.Abs(staticContentDir)
+	root, err := os.OpenRoot(staticContentDir)
 	if err != nil {
-		slog.Error("could not resolve the static content directory", "error", err)
+		slog.Error("could not open the static content directory", "error", err)
+		return serveSPAShell(c)
+	}
+	defer func() { _ = root.Close() }()
+
+	// os.Root refuses at the syscall level anything that escapes the directory, whether by ".." or
+	// by a symlink pointing out of it. That replaces the old lexical prefix check, which trusted
+	// os.Stat and c.File to stay inside and both follow symlinks. URL.Path, not RequestURI: the
+	// latter carries the query string, so "/logout?x=/../../etc/passwd" would reach the filesystem.
+	requested := strings.TrimPrefix(path.Clean("/"+c.Request().URL.Path), "/")
+	if requested == "" {
 		return serveSPAShell(c)
 	}
 
-	// URL.Path, never RequestURI: the latter keeps the query string and is not normalized, so
-	// joining it into a filesystem path lets a request like "/logout?x=/../../etc/passwd" walk out
-	// of the static root. Clean resolves the "..", then the prefix check catches anything left.
-	requested := path.Clean("/" + c.Request().URL.Path)
-	target := filepath.Join(root, filepath.FromSlash(requested))
-	if target != root && !strings.HasPrefix(target, root+string(os.PathSeparator)) {
-		slog.Warn("refusing to serve a path outside the static content directory",
-			"requested", requested)
+	f, err := root.Open(requested)
+	if err != nil {
+		slog.Debug("file not served, falling back to index.html", "requested", requested, "error", err)
+		return serveSPAShell(c)
+	}
+	defer func() { _ = f.Close() }()
+
+	info, err := f.Stat()
+	if err != nil || info.IsDir() {
 		return serveSPAShell(c)
 	}
 
-	if requested != "/" {
-		if info, statErr := os.Stat(target); statErr == nil && !info.IsDir() {
-			slog.Debug("found file, serving it", "path", target)
-			return c.File(target)
-		}
-	}
-	slog.Debug("file not found, falling back to index.html")
-	return serveSPAShell(c)
+	// ServeContent picks the content type from the name and handles range requests, the same as
+	// echo's c.File, but from an already-opened handle inside the root rather than a path.
+	http.ServeContent(c.Response(), c.Request(), info.Name(), info.ModTime(), f)
+	return nil
 }
 
 // Serves the SPA entry point without consulting the request path at all.
