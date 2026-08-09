@@ -33,9 +33,15 @@ import (
 type fakeProvider struct {
 	server *httptest.Server
 	key    *rsa.PrivateKey
+	// Each test builds its own fakeProvider, and every write precedes the ServeHTTP that hands it
+	// to a handler, so the fields are never shared across goroutines without ordering -- no mutex
+	// needed, even under t.Parallel. (The blocker to parallel tests is the global viper that
+	// useTestSettings mutates, not this struct.)
 	// Overrides for the next ID token, so tests can forge a bad one.
 	nonceOverride string
 	audOverride   string
+	// When set, /.well-known returns 500 so a test can prove manual-endpoint mode never calls it.
+	breakDiscovery bool
 	// Recorded from the authorize request so /token can check the PKCE verifier against it.
 	challenge       string
 	challengeMethod string
@@ -54,6 +60,10 @@ func newFakeProvider(t *testing.T) *fakeProvider {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/.well-known/openid-configuration", func(w http.ResponseWriter, _ *http.Request) {
+		if p.breakDiscovery {
+			http.Error(w, "discovery disabled for this test", http.StatusInternalServerError)
+			return
+		}
 		writeJSON(w, map[string]any{
 			"issuer":                 p.issuer(),
 			"authorization_endpoint": p.issuer() + "/authorize",
@@ -156,7 +166,7 @@ func newAuthTestServer(t *testing.T, p *fakeProvider) (*echo.Echo, *authenticato
 // The same, for a GPM served from a subpath. The routes stay prefix-less, because the reverse
 // proxy strips the prefix before GPM sees the request -- that asymmetry is the whole reason the
 // base path handling exists.
-func newAuthTestServerOnSubpath(t *testing.T, p *fakeProvider, base string) (*echo.Echo, *authenticator) {
+func newAuthTestServerOnSubpath(t *testing.T, p *fakeProvider, base string, extra ...map[string]any) (*echo.Echo, *authenticator) {
 	t.Helper()
 
 	useTestSettings(t)
@@ -170,6 +180,11 @@ func newAuthTestServerOnSubpath(t *testing.T, p *fakeProvider, base string) (*ec
 		"oidc_client_id":       "gpm",
 		"oidc_client_secret":   "gpm-secret",
 		"oidc_redirect_domain": "http://gpm.example.com",
+	}
+	for _, m := range extra {
+		for k, v := range m {
+			settings[k] = v
+		}
 	}
 	for k, v := range settings {
 		viper.Set(k, v)
@@ -314,6 +329,14 @@ func TestCallbackRejectsWrongNonce(t *testing.T) {
 	if rec.Code != http.StatusUnauthorized {
 		t.Errorf("status = %d, want %d for a mismatched nonce", rec.Code, http.StatusUnauthorized)
 	}
+	// Assert why it was rejected, so a broken stub cannot pass as a working nonce check.
+	var answer ErrorAnswer
+	if err := json.Unmarshal(rec.Body.Bytes(), &answer); err != nil {
+		t.Fatalf("decoding the answer failed: %v (%s)", err, rec.Body.String())
+	}
+	if !strings.Contains(answer.Description, "nonce") {
+		t.Errorf("rejection description = %q, want it to mention the nonce", answer.Description)
+	}
 }
 
 // An ID token minted for a different client must not be accepted.
@@ -339,6 +362,13 @@ func TestCallbackRejectsWrongAudience(t *testing.T) {
 
 	if rec.Code != http.StatusUnauthorized {
 		t.Errorf("status = %d, want %d for a token minted for another client", rec.Code, http.StatusUnauthorized)
+	}
+	var answer ErrorAnswer
+	if err := json.Unmarshal(rec.Body.Bytes(), &answer); err != nil {
+		t.Fatalf("decoding the answer failed: %v (%s)", err, rec.Body.String())
+	}
+	if !strings.Contains(answer.Description, "audience") {
+		t.Errorf("rejection description = %q, want it to mention the audience", answer.Description)
 	}
 }
 
@@ -567,12 +597,12 @@ func TestLoginUsesPKCE(t *testing.T) {
 	rec = httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 
-	if p.verifierSeen == "" {
+	verifierSeen, pkceOK := p.verifierSeen, p.pkceOK
+	if verifierSeen == "" {
 		t.Fatal("no code_verifier sent on the token request; the exchange is not completing PKCE")
 	}
-	if !p.pkceOK {
-		t.Errorf("the code_verifier does not hash to the challenge: verifier=%q challenge=%q",
-			p.verifierSeen, p.challenge)
+	if !pkceOK {
+		t.Errorf("the code_verifier does not hash to the challenge; verifier was %q", verifierSeen)
 	}
 }
 
@@ -1153,5 +1183,32 @@ func TestTheCallbackRestartsTheLoginAtMostOnce(t *testing.T) {
 	}
 	if !cleared {
 		t.Errorf("the retry marker was not cleared: %v", rec.Result().Cookies())
+	}
+}
+
+// The manually-configured endpoint path (no discovery) has to complete a real login, not just pass
+// the settings validation. This is the configuration that once shipped the empty-issuer bug.
+func TestManualEndpointConfigurationCompletesALogin(t *testing.T) {
+	p := newFakeProvider(t)
+	// Break discovery: if newAuthenticator still succeeds and the login completes, the manual
+	// endpoints -- not a discovery fallback -- are what drove it.
+	p.breakDiscovery = true
+	e, _ := newAuthTestServerOnSubpath(t, p, "", map[string]any{
+		"oidc_authorization_endpoint": p.issuer() + "/authorize",
+		"oidc_token_endpoint":         p.issuer() + "/token",
+		"oidc_jwks_uri":               p.issuer() + "/jwks",
+	})
+
+	cookies := loginForTest(t, e, p)
+
+	req := httptest.NewRequest(http.MethodGet, "/constraints", nil)
+	for _, ck := range cookies {
+		req.AddCookie(ck)
+	}
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || rec.Body.String() != "protected" {
+		t.Fatalf("after a manual-endpoint login, /constraints = %d %q, want 200 \"protected\"",
+			rec.Code, rec.Body.String())
 	}
 }

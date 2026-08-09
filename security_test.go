@@ -377,3 +377,45 @@ func TestServeIndexRefusesToFollowSymlinksOutOfTheRoot(t *testing.T) {
 		})
 	}
 }
+
+// The session cookie's protective attributes. HttpOnly keeps it away from script; SameSite=Lax
+// survives the top-level redirect back from the provider while blocking cross-site sends; Secure
+// follows the scheme so TLS deployments never leak it over plain HTTP.
+func TestSessionCookieFlags(t *testing.T) {
+	base := func() *sessions.Options {
+		return newSessionStore().(*sessions.CookieStore).Options
+	}
+
+	// HttpOnly and SameSite do not vary, so assert them once.
+	useTestSettings(t)
+	viper.Set("secret_key", "a-test-key-that-is-not-the-default")
+	o := base()
+	if !o.HttpOnly {
+		t.Error("session cookie is not HttpOnly")
+	}
+	if o.SameSite != http.SameSiteLaxMode {
+		t.Errorf("SameSite = %v, want Lax", o.SameSite)
+	}
+
+	// Secure follows the scheme: off over plain http, on once TLS is in play either way it is signalled.
+	for _, tc := range []struct {
+		name       string
+		set        map[string]any
+		wantSecure bool
+	}{
+		{"default http", nil, false},
+		{"preferred scheme https", map[string]any{"preferred_url_scheme": "https"}, true},
+		{"redirect domain https", map[string]any{"oidc_redirect_domain": "https://gpm.example.com"}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			useTestSettings(t)
+			viper.Set("secret_key", "a-test-key-that-is-not-the-default")
+			for k, v := range tc.set {
+				viper.Set(k, v)
+			}
+			if got := base().Secure; got != tc.wantSecure {
+				t.Errorf("Secure = %v, want %v", got, tc.wantSecure)
+			}
+		})
+	}
+}
