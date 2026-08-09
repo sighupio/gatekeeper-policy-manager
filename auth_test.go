@@ -52,6 +52,7 @@ func TestIsPublicPath(t *testing.T) {
 		"/metrics",
 		"/static/js/main.abc123.js", "/static/css/main.abc123.css",
 		"/favicon.ico", "/manifest.json", "/touch-icon.png",
+		"/logo192.png", "/logo512.png", "/asset-manifest.json", "/robots.txt",
 	}
 	for _, p := range public {
 		if !isPublicPath(p) {
