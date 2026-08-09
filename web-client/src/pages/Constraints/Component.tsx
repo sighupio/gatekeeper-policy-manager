@@ -430,7 +430,7 @@ function ConstraintsComponent() {
   const [fullyLoadedRefs, setFullyLoadedRefs] = useState<boolean>(false);
   const panelsRef = useRef<HTMLDivElement[]>([]);
   const appContextData = useContext(ApplicationContext);
-  const { hash } = useLocation();
+  const { hash, pathname } = useLocation();
   const navigate = useNavigate();
   const { context } = useParams<"context">();
 
@@ -476,7 +476,7 @@ function ConstraintsComponent() {
             action: "Please try again later",
           };
         }
-        navigate(`/error`, { state: { error: error } });
+        navigate(`/error`, { state: { error: error, entity: pathname } });
       })
       .finally(() => setIsLoading(false));
   }, [

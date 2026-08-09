@@ -8,5 +8,5 @@ import { BackendError } from "../types";
 
 export interface ErrorPageState {
   error: BackendError;
-  entity: string;
+  entity?: string;
 }

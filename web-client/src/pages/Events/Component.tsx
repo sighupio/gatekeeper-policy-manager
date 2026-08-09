@@ -25,7 +25,7 @@ import {
 import { useContext, useEffect, useState, ReactNode } from "react";
 import { ApplicationContext } from "../../AppContext";
 import { BackendError } from "../types";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { IEvent } from "./types";
 import { appPath } from "../../utils";
 
@@ -34,6 +34,7 @@ function EventsComponent() {
   const [items, setItems] = useState<IEvent[]>([]);
   const appContextData = useContext(ApplicationContext);
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { context } = useParams<"context">();
 
   const columns: Array<EuiBasicTableColumn<IEvent>> = [
@@ -253,7 +254,7 @@ function EventsComponent() {
             action: "Please try again later",
           };
         }
-        navigate(`/error`, { state: { error: error } });
+        navigate(`/error`, { state: { error: error, entity: pathname } });
       })
       .finally(() => setIsLoading(false));
   }, [appContextData.context.currentK8sContext]);

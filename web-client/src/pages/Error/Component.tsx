@@ -26,11 +26,16 @@ function ErrorComponent() {
   const [initialContext, setInitialContext] = useState<string>();
   const appContextData = useContext(ApplicationContext);
 
-  // The backend sets login_url only when signing in would fix the error, so the button shows up
-  // for an expired session and stays out of the way for every other failure.
-  // No ?next= here: nothing populates ErrorPageState.entity today, so it would always resolve to
-  // the home page anyway. /login accepts one if that ever changes.
-  const loginUrl = (state as ErrorPageState | null)?.error?.login_url;
+  // The backend sets login_url only when a sign-in fixes the error. So the button shows up for an
+  // expired session and stays out of the way for every other failure. entity holds the path of the
+  // page that failed: the Go-back button returns there, and ?next= sends the user back after login.
+  const errorState = state as ErrorPageState | null;
+  const entity = errorState?.entity;
+  const loginUrl = errorState?.error?.login_url;
+  const loginHref =
+    loginUrl && entity
+      ? `${loginUrl}?next=${encodeURIComponent(appPath(entity))}`
+      : loginUrl;
 
   useEffect(() => {
     if (
@@ -96,7 +101,7 @@ function ErrorComponent() {
                 {/* A full page load, not client-side routing: signing in leaves the app for the
                     identity provider and comes back through the backend. */}
                 <EuiButton
-                  href={loginUrl}
+                  href={loginHref}
                   fill
                   iconType="push"
                   aria-label="Log in"
@@ -107,7 +112,7 @@ function ErrorComponent() {
             )}
             <EuiFlexItem grow={false}>
               <EuiButton
-                href={appPath(`/${(state as ErrorPageState)?.entity ?? ""}`)}
+                href={appPath(entity || "/")}
                 iconSide="right"
                 iconType="arrowRight"
                 aria-label="Next"

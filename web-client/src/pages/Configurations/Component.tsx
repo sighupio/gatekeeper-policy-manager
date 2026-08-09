@@ -178,7 +178,7 @@ function ConfigurationsComponent() {
   const [fullyLoadedRefs, setFullyLoadedRefs] = useState<boolean>(false);
   const panelsRef = useRef<HTMLDivElement[]>([]);
   const appContextData = useContext(ApplicationContext);
-  const { hash } = useLocation();
+  const { hash, pathname } = useLocation();
   const navigate = useNavigate();
   const { context } = useParams<"context">();
 
@@ -226,7 +226,7 @@ function ConfigurationsComponent() {
           };
         }
         navigate(`/error`, {
-          state: { error: error },
+          state: { error: error, entity: pathname },
         });
       })
       .finally(() => setIsLoading(false));
