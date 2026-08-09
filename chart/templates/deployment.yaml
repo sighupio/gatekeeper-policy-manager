@@ -1,3 +1,6 @@
+{{- if not (has .Values.config.preferredURLScheme (list "http" "https")) }}
+{{- fail "config.preferredURLScheme must be either \"http\" or \"https\": it drives the Secure flag on the session cookie" }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -72,7 +75,7 @@ spec:
             - name: GPM_LOG_LEVEL
               value: {{ .Values.config.logLevel | upper | quote }}
             - name: GPM_PREFERRED_URL_SCHEME
-              value: {{ required "A valid .Values.config.preferredURLScheme entry required! Choose either http or https" .Values.config.preferredURLScheme | quote }}
+              value: {{ .Values.config.preferredURLScheme | quote }}
             {{- with .Values.config.eventsSource }}
             - name: GPM_EVENTS_SOURCE
               value: {{ . | quote }}
