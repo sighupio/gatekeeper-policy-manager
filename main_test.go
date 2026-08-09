@@ -256,3 +256,21 @@ func TestLogLevel(t *testing.T) {
 		})
 	}
 }
+
+// When authentication is on the session cookie is only as strong as GPM_SECRET_KEY. The published
+// 1.x default and anything trivially short must be refused; a real key must pass.
+func TestSecretKeyError(t *testing.T) {
+	cases := map[string]bool{ // key -> should be rejected
+		insecureDefaultSecretKey: true,
+		"x":                      true,
+		"short":                  true,
+		strings.Repeat("a", minSecretKeyLength-1): true,
+		strings.Repeat("a", minSecretKeyLength):   false,
+		"a-real-long-random-secret-key-value":     false,
+	}
+	for key, wantRejected := range cases {
+		if rejected := secretKeyError(key) != ""; rejected != wantRejected {
+			t.Errorf("secretKeyError(%q): rejected=%v, want %v", key, rejected, wantRejected)
+		}
+	}
+}

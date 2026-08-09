@@ -7,9 +7,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
-	"text/template"
 	"time"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -42,6 +42,22 @@ const insecureDefaultSecretKey = "g8k1p3rp0l1c7m4n4g3r"
 
 // How long a session lasts when GPM_SESSION_MAX_AGE is unset or not a positive number.
 const defaultSessionMaxAge = 60 * 60 * 8
+
+// Shortest GPM_SECRET_KEY accepted when authentication is on. The key is the entropy behind the
+// session cookie's signature and encryption, so a trivially short one is forgeable.
+const minSecretKeyLength = 16
+
+// Reports why GPM_SECRET_KEY is unfit for enabling authentication, or "" when it is fine. The 1.x
+// default is published in the source tree, so a cookie signed with it can be forged by anyone.
+func secretKeyError(key string) string {
+	switch {
+	case key == insecureDefaultSecretKey:
+		return "GPM_SECRET_KEY is still the published GPM 1.x default, so anyone could forge a session cookie."
+	case len(key) < minSecretKeyLength:
+		return fmt.Sprintf("GPM_SECRET_KEY is shorter than %d characters, too short to protect the session cookie.", minSecretKeyLength)
+	}
+	return ""
+}
 
 // Applies GPM_LOG_LEVEL. slog's own parsing takes DEBUG, INFO, WARN and ERROR in any case. An
 // unusable value falls back to INFO and says so.
@@ -117,6 +133,11 @@ func main() {
 	p.RequestCounterHostLabelMappingFunc = func(echo.Context) string { return "" }
 	p.Use(e)
 
+	// Response security headers: X-Content-Type-Options nosniff, X-Frame-Options SAMEORIGIN, the
+	// legacy XSS header. echo's defaults; deliberately no CSP (a strict one breaks the built React
+	// app) and no HSTS (that is the operator's TLS decision, not GPM's to force).
+	e.Use(middleware.Secure())
+
 	// Setup logging
 	e.Use(middleware.Recover())
 	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
@@ -156,11 +177,8 @@ func main() {
 	slog.Info("starting Gatekeeper Policy Manager", "version", "v2.0.0-rc.0")
 	setLogLevel(programLevel, viper.GetString("log_level"))
 
-	// We compile the HTML templates here
-	// This is used later to render templates in the routes (i.e. to render the HTML report in the `/constraints/?report=html` route).
-	e.Renderer = &Template{
-		templates: template.Must(template.ParseGlob("templates/*.html.gotpl")),
-	}
+	// Renders the HTML violations report at /constraints?report=html.
+	e.Renderer = newRenderer()
 
 	// CORS configuration for frontend development purposes
 	if os.Getenv("APP_ENV") == "development" {
@@ -177,10 +195,8 @@ func main() {
 	// unauthenticated path stays exactly as it was.
 	var auth *authenticator
 	if authEnabled() {
-		if viper.GetString("secret_key") == insecureDefaultSecretKey {
-			slog.Error("GPM_SECRET_KEY is still the default value from GPM 1.x. " +
-				"It is published in the source tree, so anyone could forge a session cookie. " +
-				"Set it to a long random string before enabling authentication.")
+		if msg := secretKeyError(viper.GetString("secret_key")); msg != "" {
+			slog.Error(msg, "action", "set GPM_SECRET_KEY to a long random string before enabling authentication")
 			os.Exit(1)
 		}
 
@@ -259,6 +275,13 @@ func main() {
 	})
 
 	address := viper.GetString("listen_address")
+
+	// echo's default server sets no timeouts, so a slow or idle client can hold a connection open
+	// forever. ReadHeaderTimeout in particular bounds a slowloris-style stall.
+	e.Server.ReadHeaderTimeout = 10 * time.Second
+	e.Server.ReadTimeout = 30 * time.Second
+	e.Server.WriteTimeout = 60 * time.Second
+	e.Server.IdleTimeout = 120 * time.Second
 
 	slog.Info("starting HTTP server", "address", address)
 	slog.Error("starting HTTP server failed", "error", e.Start(address), "address", address)
