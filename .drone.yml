@@ -441,7 +441,7 @@ steps:
         exclude:
           - refs/tags/gatekeeper-policy-manager-* # Exclude helm chart releases
 
-  - name: registry-sha
+  - name: registry-unstable
     image: docker:dind
     pull: always
     depends_on: [clone]
@@ -490,7 +490,11 @@ steps:
       - "apk add git"
       - "docker login $${registry} -u $${username} -p $${password}"
       - "docker buildx create --name sighup-builder --use"
-      - "docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 --pull --push -f $${DOCKERFILE} -t $${repo}:latest -t $${repo}:${DRONE_TAG} $${BUILD_CONTEXT}"
+      # :latest tracks stable releases only. A release candidate (v*-rc*) gets its version tag but
+      # must not move :latest, so users pulling :latest never land on a candidate.
+      - 'IMAGE_TAGS="-t $${repo}:${DRONE_TAG}"'
+      - 'case "${DRONE_TAG}" in *-rc*) echo "release candidate ${DRONE_TAG}: leaving :latest unchanged" ;; *) IMAGE_TAGS="$${IMAGE_TAGS} -t $${repo}:latest" ;; esac'
+      - "docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 --pull --push -f $${DOCKERFILE} $${IMAGE_TAGS} $${BUILD_CONTEXT}"
     when:
       event:
         - tag
