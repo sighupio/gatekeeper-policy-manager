@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -152,5 +153,25 @@ func TestEventsQueryParameterCannotEscapeTheConfiguredNamespace(t *testing.T) {
 				t.Errorf("asked the API for %v, want %q", got, want)
 			}
 		})
+	}
+}
+
+// The list call must honor the request context, so a client that disconnects (or a request that
+// hits the server's WriteTimeout) cancels the in-flight Kubernetes call instead of finishing it.
+// With the old context.TODO() a cancelled context was ignored and this returned no error.
+func TestGetKubernetesEventsHonorsContextCancellation(t *testing.T) {
+	api := newRecordingAPI(t)
+	useTestSettings(t)
+	s := newEventsTestServer(t, api)
+	clients, err := s.k8s.forContext(defaultKubeContext)
+	if err != nil {
+		t.Fatalf("resolving clients failed: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // already cancelled before the call
+
+	if _, err := getKubernetesEvents(ctx, *clients.dynamic, "", "gatekeeper-webhook"); err == nil {
+		t.Error("a cancelled context did not abort the events list; the context is not threaded")
 	}
 }
