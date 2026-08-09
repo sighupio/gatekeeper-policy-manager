@@ -240,9 +240,16 @@ func (s *server) getConstraints(c echo.Context) error {
 
 	// We support HTML reports only for now, so we don't check the param value, just that is present.
 	if c.QueryParam("report") != "" {
+		// The context named in the route, or the kubeconfig's current one when the route names none.
+		// Which cluster the report describes is otherwise ambiguous on a multi-context kubeconfig.
+		selectedContext := c.Param("context")
+		if selectedContext == "" {
+			_, selectedContext = s.k8s.contexts()
+		}
 		data := map[string]interface{}{
 			"constraints":   response,
 			"apiServerHost": clients.rest.Host,
+			"context":       selectedContext,
 			"timestamp":     time.Now().Format(time.ANSIC),
 		}
 

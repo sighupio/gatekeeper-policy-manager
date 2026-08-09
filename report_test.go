@@ -50,3 +50,27 @@ func TestConstraintsReportEscapesClusterData(t *testing.T) {
 		t.Errorf("the report did not render the (benign) API server host as-is")
 	}
 }
+
+// The report names the selected context so it is clear which cluster it describes on a
+// multi-context kubeconfig, and omits it in-cluster where there is no context.
+func TestConstraintsReportShowsContext(t *testing.T) {
+	render := func(context string) string {
+		data := map[string]interface{}{
+			"apiServerHost": "https://api.example:6443",
+			"timestamp":     "now",
+			"context":       context,
+		}
+		var buf bytes.Buffer
+		if err := newRenderer().Render(&buf, "report", data, nil); err != nil {
+			t.Fatalf("rendering the report failed: %v", err)
+		}
+		return buf.String()
+	}
+
+	if out := render("prod-eu"); !strings.Contains(out, "(context prod-eu)") {
+		t.Errorf("the report did not name the selected context")
+	}
+	if out := render(""); strings.Contains(out, "(context ") {
+		t.Errorf("the report showed an empty context")
+	}
+}
