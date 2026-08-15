@@ -30,7 +30,7 @@ nav, context switcher and footer data (see ssrLayoutData in ssr.go).
           x-data="{ dark: document.documentElement.getAttribute('data-theme') === 'dark'
                         || (!document.documentElement.getAttribute('data-theme')
                             && window.matchMedia('(prefers-color-scheme: dark)').matches) }">
-    <a class="brand" href="{{ browserPath `/ssr/configurations` }}">
+    <a class="brand" href="{{ browserPath `/` }}" title="Home">
       <img class="brand-logo" src="{{ .Layout.AssetBase }}/logo.svg" alt="" height="30">
       <span class="brand-text">Gatekeeper Policy Manager</span>
     </a>

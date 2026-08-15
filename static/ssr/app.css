@@ -263,6 +263,71 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 }
 .empty h2 { margin: 0 0 6px; font-size: 18px; }
 
+/* --- Events table -------------------------------------------------------- */
+/* A grid "table" rather than a real <table>, so a native <details> per row expands with no JS.
+   The header and every summary share one grid-template-columns, which keeps the columns aligned.
+   The leading 18px column holds the disclosure caret (summary::before). */
+
+.table-scroll { overflow-x: auto; }
+
+.events {
+  min-width: 720px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.events-head,
+.event-row > summary {
+  display: grid;
+  grid-template-columns: 18px 160px 140px minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
+  gap: 12px;
+  align-items: center;
+  padding: 10px 14px;
+}
+
+.events-head {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.event-row { border-bottom: 1px solid var(--border); }
+.event-row:last-child { border-bottom: none; }
+
+.event-row > summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.event-row > summary::-webkit-details-marker { display: none; }
+.event-row > summary::before { content: "▸"; color: var(--text-muted); }
+.event-row[open] > summary::before { content: "▾"; }
+.event-row > summary:hover { background: var(--surface-2); }
+.event-row > summary > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.event-detail {
+  padding: 8px 14px 18px 44px;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  background: var(--surface-2);
+  border-top: 1px solid var(--border);
+}
+.event-detail .field-label { margin-bottom: 8px; }
+.event-message { grid-column: 1 / -1; }
+.event-message p:last-child { margin: 0; }
+
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; }
+.kv dt { color: var(--text-muted); font-weight: 600; }
+.kv dd { margin: 0; word-break: break-word; }
+
 /* --- Footer -------------------------------------------------------------- */
 
 .footer {

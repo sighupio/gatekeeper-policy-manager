@@ -1,0 +1,120 @@
+{{- /*
+Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+
+Events view. A grid "table" of the Kubernetes events getEvents returns, one native <details> per
+row for the fuller detail. No sidebar. Emitting events is a Gatekeeper alpha feature.
+*/ -}}
+{{- define "content" -}}
+<div class="view">
+  <div class="view-head">
+    <h1>Events <span class="tag tag-key">alpha</span></h1>
+    <p class="muted">Kubernetes events emitted by Gatekeeper in the selected cluster.
+      Emitting events is an
+      <a href="https://open-policy-agent.github.io/gatekeeper/website/docs/customize-startup/#alpha-emit-admission-and-audit-events"
+         target="_blank" rel="noopener">alpha feature</a>. Make sure it is enabled.</p>
+  </div>
+
+  {{- if .Error }}
+  <div class="alert alert-error">{{ .Error }}</div>
+
+  {{- else if not .Events }}
+  <div class="empty">
+    <h2>No events</h2>
+    <p class="muted">No Gatekeeper events found. Emitting events is an alpha feature. Make sure it is enabled.</p>
+  </div>
+
+  {{- else }}
+  <div class="table-scroll">
+    <div class="events">
+      <div class="events-head">
+        <span></span>
+        <span>Last Seen</span>
+        <span>Reason</span>
+        <span>Object</span>
+        <span>Template</span>
+        <span>Constraint</span>
+        <span>Message</span>
+      </div>
+
+      {{- range .Events }}
+      <details class="event-row">
+        <summary>
+          <span>{{ .LastTimestamp }}</span>
+          <span>{{ .Reason }}</span>
+          <span>{{ with .ObjKind }}{{ . }}{{ end }}{{ if and .ObjKind .ObjName }}/{{ end }}{{ .ObjName }}</span>
+          <span>
+            {{- if .ConstraintKind }}
+            <a href="{{ browserPath `/ssr/constrainttemplates` }}#{{ .ConstraintKind }}">{{ .ConstraintKind }}</a>
+            {{- else }}—{{ end }}
+          </span>
+          <span>
+            {{- if .ConstraintName }}
+            <a href="{{ browserPath `/constraints` }}#{{ .ConstraintName }}">{{ .ConstraintName }}</a>
+            {{- else }}—{{ end }}
+          </span>
+          <span class="ev-msg">{{ .Message }}</span>
+        </summary>
+
+        <div class="event-detail">
+          <div>
+            <p class="field-label">Event</p>
+            <dl class="kv">
+              {{- with .Reason }}<dt>Reason</dt><dd>{{ . }}</dd>{{ end }}
+              {{- with .EventType }}<dt>Type</dt><dd>{{ . }}</dd>{{ end }}
+              {{- with .Action }}<dt>Action</dt><dd>{{ . }}</dd>{{ end }}
+              {{- with .Process }}<dt>Process</dt><dd>{{ . }}</dd>{{ end }}
+              {{- with .RequestUsername }}<dt>Request user</dt><dd>{{ . }}</dd>{{ end }}
+              {{- with .Count }}<dt>Count</dt><dd>{{ . }}</dd>{{ end }}
+              {{- with .FirstTimestamp }}<dt>First seen</dt><dd>{{ . }}</dd>{{ end }}
+              {{- with .LastTimestamp }}<dt>Last seen</dt><dd>{{ . }}</dd>{{ end }}
+            </dl>
+          </div>
+
+          <div>
+            <p class="field-label">Involved object</p>
+            <dl class="kv">
+              {{- with .ObjKind }}<dt>Kind</dt><dd>{{ . }}</dd>{{ end }}
+              {{- with .ObjName }}<dt>Name</dt><dd>{{ . }}</dd>{{ end }}
+              {{- with .ObjNamespace }}<dt>Namespace</dt><dd>{{ . }}</dd>{{ end }}
+            </dl>
+          </div>
+
+          {{- if or .ResourceKind .ResourceName .ResourceNamespace .ResourceAPIVersion .ResourceGroup }}
+          <div>
+            <p class="field-label">Resource</p>
+            <dl class="kv">
+              {{- with .ResourceAPIVersion }}<dt>API version</dt><dd>{{ . }}</dd>{{ end }}
+              {{- with .ResourceGroup }}<dt>Group</dt><dd>{{ . }}</dd>{{ end }}
+              {{- with .ResourceKind }}<dt>Kind</dt><dd>{{ . }}</dd>{{ end }}
+              {{- with .ResourceName }}<dt>Name</dt><dd>{{ . }}</dd>{{ end }}
+              {{- with .ResourceNamespace }}<dt>Namespace</dt><dd>{{ . }}</dd>{{ end }}
+            </dl>
+          </div>
+          {{- end }}
+
+          {{- if or .SourceComponent .SourceHost }}
+          <div>
+            <p class="field-label">Source</p>
+            <dl class="kv">
+              {{- with .SourceComponent }}<dt>Component</dt><dd>{{ . }}</dd>{{ end }}
+              {{- with .SourceHost }}<dt>Host</dt><dd>{{ . }}</dd>{{ end }}
+            </dl>
+          </div>
+          {{- end }}
+
+          {{- with .Message }}
+          <div class="event-message">
+            <p class="field-label">Message</p>
+            <p>{{ . }}</p>
+          </div>
+          {{- end }}
+        </div>
+      </details>
+      {{- end }}
+    </div>
+  </div>
+  {{- end }}
+</div>
+{{- end -}}

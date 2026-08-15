@@ -1,0 +1,99 @@
+{{- /*
+Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+
+Constraint Templates view. Renders the ConstraintTemplate objects and the Constraints that use
+each one, as getConstraintTemplates returns them. The card anchor is the template Kind, so the
+cross-links from the Events view (#<kind>) land on the right card.
+*/ -}}
+{{- define "content" -}}
+<div class="view">
+  <div class="view-head">
+    <h1>Constraint Templates</h1>
+    <p class="muted">Gatekeeper <code>ConstraintTemplate</code> objects in the selected cluster.</p>
+  </div>
+
+  {{- if .Error }}
+  <div class="alert alert-error">{{ .Error }}</div>
+
+  {{- else if not .Templates }}
+  <div class="empty">
+    <h2>No constraint templates</h2>
+    <p class="muted">There are no Gatekeeper <code>ConstraintTemplate</code> objects defined in this cluster.</p>
+  </div>
+
+  {{- else }}
+  <div class="layout-sidebar">
+    <aside class="sidebar">
+      <p class="sidebar-title">Constraint Templates</p>
+      <nav class="sidebar-nav">
+        {{- range .Templates }}
+        <a href="#{{ .Kind }}">{{ .Kind }}</a>
+        {{- end }}
+      </nav>
+    </aside>
+
+    <div class="stack">
+      {{- range .Templates }}
+      <section class="card" id="{{ .Kind }}">
+        <div class="card-head">
+          <h2>{{ .Kind }}</h2>
+          <span class="tag"><span class="tag-key">name</span> {{ .Name }}</span>
+        </div>
+
+        {{- with .Description }}
+        <p class="muted">{{ . }}</p>
+        {{- end }}
+
+        <div class="field">
+          <p class="field-label">Rego{{ with .Target }} · target {{ . }}{{ end }}</p>
+          {{- if .Rego }}
+          <pre class="code"><code>{{ .Rego }}</code></pre>
+          {{- else }}
+          <p class="muted no-spec">This template defines no Rego source.</p>
+          {{- end }}
+        </div>
+
+        {{- range .Libs }}
+        <details class="field">
+          <summary>Libs definition</summary>
+          <pre class="code"><code>{{ . }}</code></pre>
+        </details>
+        {{- end }}
+
+        {{- with .Schema }}
+        <div class="field">
+          <p class="field-label">Parameters schema</p>
+          <pre class="code"><code>{{ toYAML . }}</code></pre>
+        </div>
+        {{- end }}
+
+        <div class="field">
+          <p class="field-label">Constraints using this template</p>
+          {{- if .Constraints }}
+          <nav class="sidebar-nav">
+            {{- range .Constraints }}
+            <a href="{{ browserPath `/constraints` }}#{{ . }}">{{ . }}</a>
+            {{- end }}
+          </nav>
+          {{- else }}
+          <p class="muted no-spec">No Constraint uses this Constraint Template.</p>
+          {{- end }}
+        </div>
+
+        <details class="field">
+          <summary>Full YAML definition</summary>
+          <pre class="code"><code>{{ toYAML .Raw }}</code></pre>
+        </details>
+
+        {{- with .Created }}
+        <p class="card-foot muted">Created on {{ . }}</p>
+        {{- end }}
+      </section>
+      {{- end }}
+    </div>
+  </div>
+  {{- end }}
+</div>
+{{- end -}}
