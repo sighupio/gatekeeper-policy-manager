@@ -1,0 +1,88 @@
+{{- /*
+Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+
+Base layout for the server-rendered UI. Pages fill the "content" block and pass a .Layout with the
+nav, context switcher and footer data (see ssrLayoutData in ssr.go).
+*/ -}}
+{{- define "layout" -}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ .Layout.Title }} · Gatekeeper Policy Manager</title>
+  <link rel="stylesheet" href="{{ .Layout.AssetBase }}/app.css">
+  {{- /* Apply the saved theme before first paint so there is no light/dark flash.
+         Under the future strict CSP this moves to a nonce or an external file. */}}
+  <script>
+    (function () {
+      var t = localStorage.getItem("gpm-theme");
+      if (t) document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
+  <script defer src="{{ .Layout.AssetBase }}/alpine.min.js"></script>
+</head>
+<body>
+  <header class="topbar"
+          x-data="{ dark: document.documentElement.getAttribute('data-theme') === 'dark'
+                        || (!document.documentElement.getAttribute('data-theme')
+                            && window.matchMedia('(prefers-color-scheme: dark)').matches) }">
+    <a class="brand" href="{{ browserPath `/ssr/configurations` }}">
+      <span class="brand-mark">GPM</span>
+      <span class="brand-text">Gatekeeper Policy Manager</span>
+    </a>
+
+    <nav class="nav" aria-label="Main">
+      {{- range .Layout.Nav }}
+      <a class="nav-link{{ if .Active }} is-active{{ end }}" href="{{ .Href }}"
+         {{ if .Active }}aria-current="page"{{ end }}>{{ .Name }}</a>
+      {{- end }}
+    </nav>
+
+    <div class="topbar-actions">
+      {{- if .Layout.HasContexts }}
+      <label class="ctx" >
+        <span class="ctx-label">Context</span>
+        <select class="ctx-select" aria-label="Kubernetes context"
+                x-on:change="if ($event.target.value) window.location.href = $event.target.value">
+          {{- range .Layout.Contexts }}
+          <option value="{{ .URL }}"{{ if .Selected }} selected{{ end }}>{{ .Name }}</option>
+          {{- end }}
+        </select>
+      </label>
+      {{- end }}
+
+      <button type="button" class="icon-btn" title="Toggle light/dark"
+              x-on:click="dark = !dark;
+                          document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+                          localStorage.setItem('gpm-theme', dark ? 'dark' : 'light')">
+        <span x-text="dark ? '☀' : '☾'">☾</span>
+      </button>
+
+      {{- if .Layout.AuthEnabled }}
+      <a class="btn" href="{{ .Layout.LogoutURL }}">Log out</a>
+      {{- end }}
+    </div>
+  </header>
+
+  <main class="page">
+    {{- block "content" . }}{{ end }}
+  </main>
+
+  <footer class="footer">
+    <div>
+      <strong>Gatekeeper Policy Manager {{ .Layout.Version }}</strong>
+      <span class="muted">A simple web UI for OPA Gatekeeper</span>
+    </div>
+    <div class="footer-right muted">
+      Proud part of the
+      <a href="https://docs.sighup.io/" target="_blank" rel="noopener">SIGHUP Distribution</a>
+      ·
+      <a href="https://github.com/sighupio/gatekeeper-policy-manager" target="_blank" rel="noopener">Source</a>
+    </div>
+  </footer>
+</body>
+</html>
+{{- end -}}

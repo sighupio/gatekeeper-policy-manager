@@ -1,0 +1,188 @@
+<!--
+Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+-->
+
+# Drop React: migration plan
+
+This plan describes how to replace the React single-page application (SPA) with a server-rendered
+UI. The backend renders HTML with the Go standard library (`html/template`) and adds a light touch
+of interactivity with Alpine.js. The plan builds on the feasibility evaluation in `PORTING.md`
+(find the item "drop React (and the SPA) entirely").
+
+The goal is one language (Go), no Node build, and no Elastic UI (EUI). This removes almost all of
+the Dependabot churn and the separate frontend build stage.
+
+## Status
+
+A proof of concept (POC) is in the tree. It is **additive**: it adds routes under `/ssr`, and it
+does not change or remove `web-client/`, the existing routes, or the existing handlers. The POC has:
+
+- an app shell (top nav, context switcher, footer) as a base layout template;
+- one view rendered end to end on the server: **Configurations**;
+- a fresh, minimal stylesheet (a custom house style, not a clone of EUI or Fury);
+- Alpine.js vendored as a local static asset (no CDN).
+
+Open the POC at `/ssr/configurations` (or `/ssr/configurations/:context`). See the repository
+`README.md` for how to build and run GPM.
+
+## POC files
+
+| File | Purpose |
+| --- | --- |
+| `ssr.go` | The SSR renderer, the layout view model, the Configurations handler, and the route registration. |
+| `templates/ssr/layout.html.gotpl` | The base layout: `<head>`, top nav, context switcher, theme toggle, footer, and a `content` block. |
+| `templates/ssr/configurations.html.gotpl` | The Configurations view. It fills the `content` block. |
+| `static/ssr/app.css` | The house style. Neutral palette, one accent, light and dark. |
+| `static/ssr/alpine.min.js` | Alpine.js v3.14.9, vendored (official cdnjs build). |
+
+The templates and the static assets are embedded in the binary with `go:embed`. This SSR path does
+not depend on the working directory. (The existing report template is still read from disk by
+`static.go`. See "Retirement" below.)
+
+## Target structure
+
+Keep the flat package layout that GPM already uses. Do not add sub-packages for the POC scope.
+
+```
+templates/ssr/
+  layout.html.gotpl          base layout (one "content" block)
+  configurations.html.gotpl  one file per view; each defines "content"
+  constraints.html.gotpl
+  ...
+static/ssr/
+  app.css
+  alpine.min.js
+ssr.go                       renderer + handlers + route registration
+```
+
+### Base layout and template sets
+
+`html/template` cannot hold all the pages in one flat template set, because every page defines the
+`content` block and the definitions collide. The POC solves this the standard way: it clones the
+layout once per page, then it parses that page's file into the clone (see `newSSRRenderer` in
+`ssr.go`). To add a view, add one line to the `ssrPages` map and one handler.
+
+Each page receives a `.Layout` value with the shared data (nav with the active item, the context
+switcher options, the footer). A handler builds it with `ssrLayoutData`.
+
+### Routing
+
+Today `static.go` serves the SPA. `serveIndex` returns any real file, and it falls back to
+`index.html` for every unknown path, so the React router can do client-side routing. This is the
+`e.GET("/*", serveIndex)` catch-all in `main.go`.
+
+The SSR routes are specific paths (`/ssr/...`). Echo matches a specific path before the `/*`
+catch-all, so the SSR routes and the SPA fallback do not conflict. This is why the POC is safe to
+add without a change to the existing routes.
+
+At the end of the migration (big-bang on this branch), the routing changes as follows:
+
+1. Register a real server route for each view, at its final path (for example `/constraints` and
+   `/constraints/:context`), not under `/ssr`.
+2. Serve the static assets (CSS and Alpine) from an embedded filesystem under a fixed prefix (for
+   example `/static/*`).
+3. Replace the `/*` catch-all with routes for the real views, a redirect from `/` to the default
+   view, and a `404` handler. There is no more SPA fallback to `index.html`.
+
+Keep the base-path helpers in `basepath.go`. They already put the reverse-proxy prefix back on the
+links. The POC uses `browserPath` for every link and asset URL.
+
+## View-by-view order
+
+Do the small, static views first to prove the pattern. Do the one stateful view last.
+
+1. **Configurations** — done in the POC. Sidebar list, `<details>` accordion, spec as YAML in a
+   `<pre>`. Small.
+2. **Mutations** — same shape as Configurations (list of objects, YAML spec). Small. Good second
+   view, because it reuses the Configurations template almost unchanged.
+3. **Configs/Home** — Home is static text and links. Small.
+4. **Constraint Templates** — a list, each with its constraints and the rego source in a `<pre>`.
+   Medium.
+5. **Events** — a table of events, each row a `<details>`. Medium. Note that the events path has no
+   end-to-end test and is alpha (see `handlers.go`).
+6. **Constraints (violations table)** — the big one. Do it last. See below.
+
+### The Constraints violations table is the big later piece
+
+Every other view is native HTML. The Constraints view has the one genuinely stateful widget: a
+per-constraint violations table. Today (EUI `EuiInMemoryTable`) it has, per table:
+
+- incremental search;
+- sort on every column;
+- pagination.
+
+There are several of these tables on one page (one per constraint). This must reach **full parity**.
+
+The plan: render each table as a small **Alpine.js component over a JSON data island**. The handler
+puts the violations for a constraint in a `<script type="application/json">` block. An Alpine
+component reads that block once, then it does the search, the sort, and the pagination on the
+client. The rows are already in the page, so there is no extra request.
+
+Keep the components independent, one per constraint, so a large cluster does not build one huge
+table. Consider a shared Alpine component definition (registered once) that each table element
+instantiates with its own data island.
+
+Do this view only after the pattern is proven on the simple views. It is the largest single piece
+of work in the migration.
+
+## Interactivity with Alpine.js
+
+Alpine covers the small amount of interactivity GPM needs. The POC already wires it:
+
+- **Context switcher** — a native `<select>`. On change, an Alpine handler sets
+  `window.location.href` to the selected option's URL. This is a full page reload, which matches the
+  behavior of the React app today (`navigate(0)`).
+- **Accordions** — native `<details>`/`<summary>`. No JavaScript.
+- **Theme toggle** — an Alpine component toggles `data-theme` on `<html>` and saves the choice in
+  `localStorage`.
+
+Alpine loads as a local `<script defer>`. There is no CDN and no build step.
+
+## Look and feel
+
+The house style is a fresh, minimal, custom design. It is not a clone of EUI or Fury. It uses:
+
+- CSS custom properties for the palette, so a theme change is one place;
+- one accent color, neutral surfaces, and system fonts;
+- light by default, dark with `prefers-color-scheme`, and a `data-theme` attribute that overrides
+  the media query for the manual toggle;
+- responsive layout (the sidebar collapses, the brand text hides on small screens).
+
+## Retirement (at the end of the big-bang change)
+
+When every view is server-rendered, remove the React surface in one change:
+
+1. Delete `web-client/`.
+2. In `Dockerfile`, remove the `frontend` build stage (the `node`/`yarn` stage) and the
+   `COPY --from=frontend /web-client/build/ ./static-content/` line. The image no longer needs Node.
+3. In `static.go`, remove `serveIndex` and `serveSPAShell`, and in `main.go` remove the `/*`
+   catch-all. Keep only the real view routes and the embedded static assets.
+4. Move the existing violations **report** template into the embedded set (the SSR renderer), then
+   remove the `COPY templates ./templates` line and the disk-based `ParseGlob` in `static.go`. Until
+   this step, keep the `templates` copy in the Dockerfile, because the report still loads from disk.
+5. Remove the `static-content/` directory (the built SPA and its assets).
+6. Add a strict Content Security Policy in `main.go`. EUI needed inline styles, so GPM ships no CSP
+   today. The SSR UI has one small inline `<script>` (the pre-paint theme read in the layout). Move
+   it to an external file or give it a nonce, then set the CSP.
+7. Remove the now-dead `APP_ENV=development` CORS block and the `/api/v2/contexts/` route. The
+   evaluation notes that `/api/v2/contexts/` is unused. Confirm before removal.
+8. Decide the future of `/api/v1/*`. The SSR views read the Kubernetes data directly, so the JSON
+   API is not needed by the UI. Keep it only if an external consumer needs it, and document that.
+
+## Remaining decisions for the user
+
+- **Default landing route.** Today `/` is Home. Keep Home, or redirect `/` to Constraints (the most
+  used view)?
+- **Static asset prefix.** The POC serves assets under `/ssr/static`. Choose the final prefix (for
+  example `/static` or `/assets`) before the big-bang change.
+- **Keep `/api/v1/*`?** Decide whether any external consumer depends on the JSON API. If not, remove
+  it with the SPA and drop a large amount of code.
+- **Constraints table scope.** Confirm full parity (search, all-column sort, pagination). The
+  evaluation offers a smaller scope if parity is not required. Full parity is the current
+  assumption.
+- **Alpine.js version and update path.** The POC pins v3.14.9. Decide how the vendored file is
+  updated (a `mise` task that re-downloads a pinned version, or a checked-in file bumped by hand).
+- **Report template.** Fold the violations report into the SSR layout, or keep it as a standalone
+  printable page? It is a different use (a printable report), so a standalone page may be correct.

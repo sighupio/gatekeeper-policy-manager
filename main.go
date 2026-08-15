@@ -28,7 +28,11 @@ import (
 // so that nothing reaches for shared mutable state, and so tests can build one with fakes.
 type server struct {
 	k8s *clientRegistry
+	ssr *ssrRenderer
 }
+
+// The single source of truth for the version string shown in logs and the UI.
+const appVersion = "v2.0.0-rc.0"
 
 // Resolves the Kubernetes clients for the context named in the route, or the kubeconfig default
 // when the route carries no :context.
@@ -174,7 +178,7 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: programLevel}))
 	slog.SetDefault(logger)
 
-	slog.Info("starting Gatekeeper Policy Manager", "version", "v2.0.0-rc.0")
+	slog.Info("starting Gatekeeper Policy Manager", "version", appVersion)
 	setLogLevel(programLevel, viper.GetString("log_level"))
 
 	// Renders the HTML violations report at /constraints?report=html.
@@ -222,7 +226,10 @@ func main() {
 		slog.Error("Kubernetes client initialization failed", "error", err)
 		os.Exit(1)
 	}
-	s := &server{k8s: registry}
+	s := &server{k8s: registry, ssr: newSSRRenderer()}
+
+	// Server-rendered UI (proof of concept), additive under /ssr. See ssr.go.
+	registerSSR(e, s)
 
 	// Routes configuration
 

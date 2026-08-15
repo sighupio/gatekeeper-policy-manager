@@ -52,6 +52,7 @@ addlicense -c "SIGHUP s.r.l" -v -l bsd -check \
   -ignore 'static-content/**' \
   -ignore '**/node_modules/**' \
   -ignore 'web-client/build/**' \
+  -ignore 'static/ssr/*.min.js' \
   -ignore 'gpm.yaml' \
   -ignore 'rendered_chart.yaml' \
   .
@@ -65,6 +66,7 @@ addlicense -c "SIGHUP s.r.l" -y 2017-present -v -l bsd \
   -ignore 'static-content/**' \
   -ignore '**/node_modules/**' \
   -ignore 'web-client/build/**' \
+  -ignore 'static/ssr/*.min.js' \
   -ignore 'gpm.yaml' \
   -ignore 'rendered_chart.yaml' \
   .
