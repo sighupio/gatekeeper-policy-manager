@@ -31,6 +31,7 @@ var ssrStaticFS embed.FS
 // here and a handler below; the layout, nav and asset wiring are shared.
 var ssrPages = map[string]string{
 	"configurations": "templates/ssr/configurations.html.gotpl",
+	"mutations":      "templates/ssr/mutations.html.gotpl",
 }
 
 type ssrRenderer struct {
@@ -117,7 +118,7 @@ var ssrNavRoutes = []struct {
 	{"home", "Home", "/", false},
 	{"constrainttemplates", "Constraint Templates", "/constrainttemplates", false},
 	{"constraints", "Constraints", "/constraints", false},
-	{"mutations", "Mutations", "/mutations", false},
+	{"mutations", "Mutations", "/ssr/mutations", true},
 	{"events", "Events", "/events", false},
 	{"configurations", "Configurations", "/ssr/configurations", true},
 }
@@ -200,6 +201,40 @@ func (s *server) getSSRConfigurations(c echo.Context) error {
 	return s.ssr.render(c, "configurations", data)
 }
 
+// getSSRMutations renders the Mutations view. It reads the very same Gatekeeper mutator objects as
+// the JSON handler getMutations (assign, assignmetadata, modifyset, assignimage under
+// mutations.gatekeeper.sh/v1), then hands them to the template instead of to c.JSON.
+func (s *server) getSSRMutations(c echo.Context) error {
+	layout := s.ssrLayoutData(c, "mutations", "/ssr/mutations", "Mutations")
+
+	data := map[string]any{"Layout": layout}
+
+	clients, err := s.clientsFor(c)
+	if err != nil {
+		slog.Error("SSR mutations: resolving context failed", "error", err)
+		data["Error"] = "GPM could not switch to the requested Kubernetes context. Make sure the kubeconfig defines it correctly."
+		return s.ssr.render(c, "mutations", data)
+	}
+
+	// Mutators are well-known; the same list the JSON handler uses. A missing kind just means no
+	// such mutations are defined, so we log and continue rather than failing the whole page.
+	mutators := []string{"assign", "assignmetadata", "modifyset", "assignimage"}
+	items := make([]map[string]any, 0)
+	for _, mutator := range mutators {
+		mutations, err := getCustomResources(c.Request().Context(), *clients.dynamic,
+			"mutations.gatekeeper.sh", "v1", mutator)
+		if err != nil {
+			slog.Error("SSR mutations: getting mutator resources failed", "mutator", mutator, "error", err)
+			continue
+		}
+		for i := range mutations.Items {
+			items = append(items, mutations.Items[i].Object)
+		}
+	}
+	data["Mutations"] = items
+	return s.ssr.render(c, "mutations", data)
+}
+
 // registerSSR wires the server-rendered POC: embedded static assets and the ported views. Called
 // from main after the server is built. Echo matches these specific paths ahead of the "/*"
 // SPA-fallback, so nothing here shadows the existing app.
@@ -214,4 +249,7 @@ func registerSSR(e *echo.Echo, s *server) {
 
 	e.GET("/ssr/configurations", s.getSSRConfigurations)
 	e.GET("/ssr/configurations/:context", s.getSSRConfigurations)
+
+	e.GET("/ssr/mutations", s.getSSRMutations)
+	e.GET("/ssr/mutations/:context", s.getSSRMutations)
 }

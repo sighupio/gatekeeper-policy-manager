@@ -1,0 +1,69 @@
+{{- /*
+Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+
+Mutations view. Renders the Gatekeeper mutator objects the JSON handler getMutations returns
+(Assign, AssignMetadata, ModifySet, AssignImage), each carrying its own kind.
+*/ -}}
+{{- define "content" -}}
+<div class="view">
+  <div class="view-head">
+    <h1>Mutations</h1>
+    <p class="muted">Gatekeeper mutator objects in the selected cluster.</p>
+  </div>
+
+  {{- if .Error }}
+  <div class="alert alert-error">{{ .Error }}</div>
+
+  {{- else if not .Mutations }}
+  <div class="empty">
+    <h2>No mutations</h2>
+    <p class="muted">There are no Gatekeeper mutator objects defined in this cluster.</p>
+  </div>
+
+  {{- else }}
+  <div class="layout-sidebar">
+    <aside class="sidebar">
+      <p class="sidebar-title">Mutations</p>
+      <nav class="sidebar-nav">
+        {{- range .Mutations }}
+        <a href="#{{ .metadata.name }}">{{ .metadata.name }}</a>
+        {{- end }}
+      </nav>
+    </aside>
+
+    <div class="stack">
+      {{- range .Mutations }}
+      <section class="card" id="{{ .metadata.name }}">
+        <div class="card-head">
+          <h2>{{ .metadata.name }}</h2>
+          {{- with .kind }}
+          <span class="tag"><span class="tag-key">kind</span> {{ . }}</span>
+          {{- end }}
+        </div>
+
+        {{- with .spec }}
+        <div class="field">
+          <p class="field-label">Spec</p>
+          <pre class="code"><code>{{ toYAML . }}</code></pre>
+        </div>
+        {{- else }}
+        <p class="muted no-spec">This mutation has no spec defined.</p>
+        {{- end }}
+
+        <details class="field">
+          <summary>Full YAML definition</summary>
+          <pre class="code"><code>{{ toYAML . }}</code></pre>
+        </details>
+
+        {{- with .metadata.creationTimestamp }}
+        <p class="card-foot muted">Created on {{ . }}</p>
+        {{- end }}
+      </section>
+      {{- end }}
+    </div>
+  </div>
+  {{- end }}
+</div>
+{{- end -}}
