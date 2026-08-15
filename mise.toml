@@ -13,7 +13,7 @@ kubectl = "1.36.1"
 kustomize = "5.6.0"
 helm = "3.12.0"
 bats = "1.1.0"
-"ubi:google/addlicense" = "v1.1.1"
+"github:google/addlicense" = "v1.1.1"
 # Checks the module graph against the Go vulnerability database.
 "go:golang.org/x/vuln/cmd/govulncheck" = "1.6.0"
 # For the frontend unit tests. node 24 is the current LTS line, matching the `node:lts-alpine`

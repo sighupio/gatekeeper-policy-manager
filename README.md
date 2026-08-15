@@ -5,7 +5,6 @@
 </h1>
 <!-- markdownlint-enable MD033 -->
 
-[![Build Status](https://ci.sighup.io/api/badges/sighupio/gatekeeper-policy-manager/status.svg)](https://ci.sighup.io/sighupio/gatekeeper-policy-manager)
 ![GPM Release](https://img.shields.io/github/v/tag/sighupio/gatekeeper-policy-manager?filter=v*&sort=semver&label=GPM&color=blue)
 ![Helm Chart Release](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fsighupio%2Fgatekeeper-policy-manager%2Fmain%2Fchart%2FChart.yaml&query=%24.version&label=Helm%20Chart&prefix=v&color=blue)
 ![License](https://img.shields.io/github/license/sighupio/gatekeeper-policy-manager)
@@ -38,7 +37,7 @@ GPM needs OPA Gatekeeper in your cluster. It also needs some constraint template
 To deploy Gatekeeper Policy Manager to your cluster, apply the [`kustomization`](kustomization.yaml) file with this command:
 
 ```shell
-kubectl apply -k .
+kubectl apply -k https://github.com/sighupio/gatekeeper-policy-manager
 ```
 
 By default, this creates a deployment and a service named `gatekeeper-policy-manager` in the `gatekeeper-system` namespace. To configure more, see the `kustomization.yaml` file.
