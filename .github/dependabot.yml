@@ -13,3 +13,11 @@ updates:
     directory: "/web-client" # Location of package manifests
     schedule:
       interval: "weekly"
+
+  # Playwright end-to-end tests. NOTE: the Playwright version here must match the
+  # mcr.microsoft.com/playwright image tag in .drone.yml, so a bump PR needs a manual
+  # follow-up to update those image tags in the same change.
+  - package-ecosystem: "npm"
+    directory: "/tests/e2e"
+    schedule:
+      interval: "weekly"
