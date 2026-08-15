@@ -10,9 +10,9 @@
 ![Helm Chart Release](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fsighupio%2Fgatekeeper-policy-manager%2Fmain%2Fchart%2FChart.yaml&query=%24.version&label=Helm%20Chart&prefix=v&color=blue)
 ![License](https://img.shields.io/github/license/sighupio/gatekeeper-policy-manager)
 
-**Gatekeeper Policy Manager** is a simple *read-only* web UI for viewing OPA Gatekeeper policies' status in a Kubernetes Cluster.
+**Gatekeeper Policy Manager** is a *read-only* web UI that shows the status of OPA Gatekeeper policies in a Kubernetes cluster.
 
-The target Kubernetes Cluster can be the same where GPM is running or some other [remote cluster(s) using a `kubeconfig` file](#multi-cluster-support). You can also run GPM [locally in a client machine](#running-locally) and connect to a remote cluster.
+The target Kubernetes cluster can be the same one where GPM runs, or [a remote cluster that GPM connects to with a `kubeconfig` file](#multi-cluster-support). You can also run GPM [locally on a client machine](#running-locally) and connect to a remote cluster.
 
 GPM lets you see in detail:
 
@@ -26,37 +26,37 @@ GPM lets you see in detail:
 
 ## Requirements
 
-You'll need OPA Gatekeeper running in your cluster and at least some constraint templates and constraints defined to take advantage of this tool.
+GPM needs OPA Gatekeeper in your cluster. It also needs some constraint templates and constraints. Without them, GPM has nothing to show.
 
 > [!TIP]
-> You can easily deploy Gatekeeper to your cluster using the (also open source) [SIGHUP Distribution Policy Module](https://github.com/sighupio/module-policy).
+> You can deploy Gatekeeper to your cluster with the [SIGHUP Distribution Policy Module](https://github.com/sighupio/module-policy) (also open source).
 
 ## Deploying GPM
 
 ### Deploy using Kustomize
 
-To deploy Gatekeeper Policy Manager to your cluster, apply the provided [`kustomization`](kustomization.yaml) file running the following command:
+To deploy Gatekeeper Policy Manager to your cluster, apply the [`kustomization`](kustomization.yaml) file with this command:
 
 ```shell
 kubectl apply -k .
 ```
 
-By default, this will create a deployment and a service both with the name `gatekeper-policy-manager` in the `gatekeeper-system` namespace. We invite you to take a look into the `kustomization.yaml` file to do further configuration.
+By default, this creates a deployment and a service named `gatekeeper-policy-manager` in the `gatekeeper-system` namespace. To configure more, see the `kustomization.yaml` file.
 
 > [!NOTE]
-> GPM can run as a POD in a Kubernetes cluster or locally with a `kubeconfig` file. It will try its best to autodetect the correct configuration.
+> GPM can run as a Pod in a Kubernetes cluster, or locally with a `kubeconfig` file. It autodetects the correct configuration.
 
-Once you've deployed the application, if you haven't set up an ingress, you can access the web UI using port-forward:
+If you did not configure an ingress, use port-forward to access the web UI:
 
 ```bash
 kubectl -n gatekeeper-system port-forward  svc/gatekeeper-policy-manager 8080:80
 ```
 
-Then access it with your browser by visiting [http://127.0.0.1:8080](http://127.0.0.1:8080).
+Then open [http://127.0.0.1:8080](http://127.0.0.1:8080) in your browser.
 
 ### Deploy using Helm
 
-It is also possible to deploy GPM using the [provided Helm Chart](./chart).
+You can also deploy GPM with the [Helm chart](./chart).
 
 First create a values file, for example `my-values.yaml`, with your custom values for the release. See the [chart's readme](./chart/README.md) and the [default values.yaml](./chart/values.yaml) for more information.
 
@@ -68,23 +68,23 @@ helm upgrade --install --namespace gatekeeper-system --set image.tag=v2.0.0-rc.0
 ```
 
 > [!IMPORTANT]
-> Don't forget to replace `my-values.yaml` with the path to your values file.
+> Replace `my-values.yaml` with the path to your values file.
 
 ## Running locally
 
-GPM can also be run locally using Docker (or any other container runtime) and a `kubeconfig`. Assuming that the `kubeconfig` file you want to use is located at `~/.kube/config` the command to run GPM locally would be:
+You can also run GPM locally with Docker (or another container runtime) and a `kubeconfig`. If the `kubeconfig` file is at `~/.kube/config`, run this command:
 
 ```bash
 docker run -v ~/.kube/config:/home/nonroot/.kube/config -p 8080:8080 quay.io/sighup/gatekeeper-policy-manager:v2.0.0-rc.0
 ```
 
-Then access it with your browser by visiting [http://127.0.0.1:8080](http://127.0.0.1:8080).
+Then open [http://127.0.0.1:8080](http://127.0.0.1:8080) in your browser.
 
-You can also run the app binary directly, see the [development section](#development) for further information.
+You can also run the app binary directly. See the [development section](#development) for more information.
 
 ## Configuration
 
-GPM is a stateless application, but it can be configured using environment variables. The possible configurations are:
+GPM is a stateless application. You can configure it with environment variables. The possible configurations are:
 
 | Env Var Name         | Description                                                                                                                                                                                                                       | Default              |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
@@ -103,7 +103,7 @@ GPM is unauthenticated by default. Set `GPM_AUTH_ENABLED` to `OIDC` to require a
 | Env Var Name                      | Description                                                                                                                                              | Default                |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
 | `GPM_AUTH_ENABLED`                | Set to `OIDC` to protect GPM with an OpenID Connect provider. Any other value leaves it open.                                                            | `Anonymous`            |
-| `GPM_SECRET_KEY`                  | Key used to sign and encrypt the session cookie. **Required when authentication is on**: GPM refuses to start if it is still the 1.x default, which is published in this repository and would let anyone forge a session. | *(none)*               |
+| `GPM_SECRET_KEY`                  | Key used to sign and encrypt the session cookie. **Required when authentication is on**: GPM refuses to start if it is still the 1.x default, which is published in this repository, so anyone can forge a session. | *(none)*               |
 | `GPM_PREFERRED_URL_SCHEME`        | Set to `https` when GPM is served over TLS, so the session cookie is marked `Secure`. A `GPM_OIDC_REDIRECT_DOMAIN` that starts with `https://` also marks it `Secure`. | `http`                 |
 | `GPM_SESSION_MAX_AGE`             | How long a session lasts, in seconds.                                                                                                                    | `28800` (8 hours)      |
 | `GPM_OIDC_REDIRECT_DOMAIN`        | The public address of GPM, for example `https://gpm.example.com`. The provider sends users back to `<domain>/oidc-auth`. Required.                       |                        |
@@ -113,7 +113,7 @@ GPM is unauthenticated by default. Set `GPM_AUTH_ENABLED` to `OIDC` to require a
 | `GPM_OIDC_AUTHORIZATION_ENDPOINT` | Authorization endpoint. Setting any endpoint below turns discovery off, so set them all together.                                                        |                        |
 | `GPM_OIDC_TOKEN_ENDPOINT`         | Token endpoint. See the note above.                                                                                                                      |                        |
 | `GPM_OIDC_JWKS_URI`               | JWKS URI. See the note above.                                                                                                                            |                        |
-| `GPM_OIDC_END_SESSION_ENDPOINT`   | End session endpoint. Discovered automatically when the provider advertises one. If GPM has one, logging out of GPM also logs you out of the provider.   |                        |
+| `GPM_OIDC_END_SESSION_ENDPOINT`   | End session endpoint. Discovered automatically when the provider advertises one. If GPM has one, a logout from GPM also ends your session at the provider.   |                        |
 | `GPM_OIDC_INTROSPECTION_ENDPOINT` | Accepted for compatibility with GPM 1.x. Not used.                                                                                                       |                        |
 | `GPM_OIDC_USERINFO_ENDPOINT`      | Accepted for compatibility with GPM 1.x. Not used.                                                                                                       |                        |
 
@@ -148,15 +148,15 @@ reachable for a user who is not logged in yet:
 | `/health` | the liveness and readiness probes run without credentials |
 | `/api/v1/auth` | the frontend asks whether there is anything to log into before showing a login |
 | `/login`, `/oidc-auth`, `/logout` | the login flow itself |
-| `/metrics` | Prometheus scrapes it; it holds request counters only, no policy data |
+| `/metrics` | Prometheus scrapes it. It holds request counters only, no policy data |
 | `/static/*`, `/favicon.ico`, `/manifest.json`, `/touch-icon.png` | assets the login and logout pages need |
 
 Everything else — every page and every other API endpoint, including the list of clusters — needs a
 valid session.
 
-Requests under `/api/` answer `401` when the session has expired, rather than redirecting, so that
-`fetch()` gets a readable error instead of an opaque cross-origin failure. Send users to `/login`
-to sign in again; it accepts `?next=` with a same-site path to say where they should land.
+Requests under `/api/` answer `401` when the session expires. They do not redirect. This gives
+`fetch()` a readable error instead of an opaque cross-origin failure. Send users to `/login` to
+sign in again. It accepts `?next=` with a same-site path that says where they land.
 
 ### Running behind a reverse proxy on a subpath
 
@@ -210,24 +210,25 @@ you named.
 
 ### Multi-cluster support
 
-GPM supports viewing information from more than one cluster. Multi-cluster support is achieved by using a `kubeconfig` with more than one context, where each context points to a different cluster. GPM will let you choose the context (cluster) from the UI.
+GPM can show information from more than one cluster. To use this, provide a `kubeconfig` with more than one context. Each context points to a different cluster. GPM lets you choose the context (cluster) from the UI.
 
-If you want to run GPM in a cluster but with multi-cluster support, do as follows:
+To run GPM in a cluster with multi-cluster support, do these steps:
 
-1. Mounting a `kubeconfig` file in GPM's pod(s) with the cluster access configuration.
-2. Setting the environment variable `KUBECONFIG` value with the path to the mounted `kubeconfig` file. Or you can simply mount it in `/home/nonroot/.kube/config` and GPM will detect it automatically.
+1. Mount a `kubeconfig` file with the cluster access configuration in the GPM pods.
+2. Set the `KUBECONFIG` environment variable to the path of the mounted `kubeconfig` file. Or mount it at `/home/nonroot/.kube/config`, and GPM detects it automatically.
 
-> ⚠️ Please remember that the user for the clusters should have the proper permissions. You can use the [`manifests/rabc.yaml`](manifests/rbac.yaml) file as reference.
+> [!IMPORTANT]
+> The user for the clusters must have the correct permissions. Use the [`manifests/rbac.yaml`](manifests/rbac.yaml) file as a reference.
 >
-> Also note that the cluster where GPM is running should be able to reach the other clusters, i.e. network connectivity.
+> The cluster where GPM runs must reach the other clusters. This needs network connectivity.
 
-When you run GPM locally, you are already using a `kubeconfig` file to connect to the clusters, you should see all your defined contexts and be able to switch between them easily from the UI.
+When you run GPM locally, you already use a `kubeconfig` file to connect to the clusters. You see all your contexts and can switch between them from the UI.
 
 #### AWS IAM Authentication
 
-If you want to use a kubeconfig with IAM Authentication, you'll need to customize GPM's container image because the IAM authentication uses external AWS binaries that are not included by default in the image.
+To use a kubeconfig with IAM authentication, you must customize the GPM container image. The IAM authentication uses external AWS binaries. The image does not include them by default.
 
-You can customize the container image with a `Dockerfile` like the following:
+You can customize the container image with a `Dockerfile` like this one:
 
 ```Dockerfile
 FROM curlimages/curl:7.81.0 as downloader
@@ -238,7 +239,7 @@ FROM quay.io/sighup/gatekeeper-policy-manager:v2.0.0-rc.0
 COPY --from=downloader --chown=root:root /tmp/aws-iam-authenticator /usr/local/bin/
 ```
 
-You may need to add also the `aws` CLI for debugging purposes, you can use the same approach as before.
+You can also add the `aws` CLI for debugging. Use the same approach as before.
 
 > [!NOTE]
 > Make sure that your `kubeconfig` has the `apiVersion` set as `client.authentication.k8s.io/v1beta1`
@@ -264,7 +265,7 @@ You may need to add also the `aws` CLI for debugging purposes, you can use the s
 
 GPM is written in Go using the Echo framework for the backend and React with Elastic UI and the Fury theme for the frontend.
 
-To develop GPM, the following commands should get you ready to start hacking:
+To develop GPM, run these commands:
 
 ```bash
 # Build Frontend and copy over to static folder
@@ -279,14 +280,14 @@ $ APP_ENV=development GPM_LOG_LEVEL=DEBUG go run main.go
 ```
 
 > [!TIP]
-> Access to a Kubernetes cluster with OPA Gatekeeper deployed is recommended to debug the application.
+> A Kubernetes cluster with OPA Gatekeeper deployed helps you debug the application.
 
 ## Contributing
 
-Please, let us know if you are using GPM and what features would you like to have by creating an issue here on GitHub 💪🏻
+Let us know if you use GPM and which features you want. Create an issue here on GitHub 💪🏻
 
-To contribute to GPM's development you can pick one of the open issues and work on it, it is better if you write on the issue letting us know first.
+To contribute, pick one of the open issues and work on it. It is better to tell us first on the issue.
 
-Once you are happy with your work, feel free to open a Pull Request.
+When you are happy with your work, open a Pull Request.
 
 > We try to stick to [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) when writing commit messages.
