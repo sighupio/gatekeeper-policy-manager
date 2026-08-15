@@ -10,7 +10,7 @@ row for the fuller detail. No sidebar. Emitting events is a Gatekeeper alpha fea
 <div class="view">
   <div class="view-head">
     <h1>Events <span class="tag tag-key">alpha</span></h1>
-    <p class="muted">Kubernetes events emitted by Gatekeeper in the selected cluster.
+    <p class="muted">The admission and audit events Gatekeeper emits as it evaluates policies.
       Emitting events is an
       <a href="https://open-policy-agent.github.io/gatekeeper/website/docs/customize-startup/#alpha-emit-admission-and-audit-events"
          target="_blank" rel="noopener">alpha feature</a>. Make sure it is enabled.</p>

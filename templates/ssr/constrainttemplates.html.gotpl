@@ -11,7 +11,7 @@ cross-links from the Events view (#<kind>) land on the right card.
 <div class="view">
   <div class="view-head">
     <h1>Constraint Templates</h1>
-    <p class="muted">Gatekeeper <code>ConstraintTemplate</code> objects in the selected cluster.</p>
+    <p class="muted">The reusable policy definitions that Constraints are built on. Each holds its rego source and parameter schema.</p>
   </div>
 
   {{- if .Error }}

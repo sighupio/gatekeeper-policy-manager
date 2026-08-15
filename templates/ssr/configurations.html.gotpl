@@ -9,7 +9,7 @@ Configurations view. Renders the Gatekeeper Config objects the JSON handler getC
 <div class="view">
   <div class="view-head">
     <h1>Configurations</h1>
-    <p class="muted">Gatekeeper <code>Config</code> objects in the selected cluster.</p>
+    <p class="muted">Gatekeeper's own <code>Config</code>: the resources it syncs into its cache and any namespaces it excludes.</p>
   </div>
 
   {{- if .Error }}

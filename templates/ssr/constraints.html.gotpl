@@ -14,7 +14,7 @@ land on the right card.
 <div class="view">
   <div class="view-head">
     <h1>Constraints</h1>
-    <p class="muted">Gatekeeper <code>Constraint</code> objects in the selected cluster, most violations first.</p>
+    <p class="muted">The policies active in this cluster and the resources that violate them, most violations first.</p>
   </div>
 
   {{- if .Error }}

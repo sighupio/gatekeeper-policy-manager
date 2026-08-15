@@ -10,7 +10,7 @@ Mutations view. Renders the Gatekeeper mutator objects the JSON handler getMutat
 <div class="view">
   <div class="view-head">
     <h1>Mutations</h1>
-    <p class="muted">Gatekeeper mutator objects in the selected cluster.</p>
+    <p class="muted">Policies that change resources as Kubernetes admits them, and the fields each one sets.</p>
   </div>
 
   {{- if .Error }}
