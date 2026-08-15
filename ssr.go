@@ -769,6 +769,12 @@ func registerSSR(e *echo.Echo, s *server) {
 	e.GET("/ssr/home", s.getSSRHome)
 	e.GET("/ssr/home/:context", s.getSSRHome)
 
+	// Bare /ssr is not a view; send it to the landing so the entry point is obvious while the SSR
+	// UI lives under /ssr. (At the cutover the views move to their real paths and this goes away.)
+	e.GET("/ssr", func(c echo.Context) error {
+		return c.Redirect(http.StatusFound, browserPath("/ssr/home"))
+	})
+
 	// Demo routes so the error and 404 pages are reachable and reviewable. The global
 	// echo.HTTPErrorHandler that drives these for real (404 -> notfound, 5xx -> error for HTML,
 	// JSON for /api/*) is a cutover concern; see docs/dev/drop-react-plan.md, Retirement.
