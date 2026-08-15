@@ -99,6 +99,12 @@ code { font-family: var(--mono); font-size: 0.9em; }
 
 .nav { display: flex; gap: 2px; flex: 1; overflow-x: auto; scrollbar-width: none; }
 .nav::-webkit-scrollbar { display: none; }
+/* Fade the right edge so a nav that overflows hints there is more to scroll to. The trailing area
+   is empty whenever everything fits, so the fade only shows once items are actually clipped. */
+.nav {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+}
 .nav-link {
   padding: 7px 12px;
   border-radius: var(--radius-sm);

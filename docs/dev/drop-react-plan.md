@@ -150,6 +150,26 @@ The house style is a fresh, minimal, custom design. It is not a clone of EUI or 
   the media query for the manual toggle;
 - responsive layout (the sidebar collapses, the brand text hides on small screens).
 
+## Syntax highlighting (planned, not yet done)
+
+The React app highlighted rego (`EuiCodeBlock language="rego"`) and JSON. The SSR code blocks are
+currently plain `<pre class="code">`, so **rego, YAML and JSON are not highlighted yet**. This is a
+cross-cutting enhancement — it touches every code block (Constraint Templates rego/libs, and the
+YAML in every view), so do it once, uniformly, rather than per view.
+
+Recommended approach, in order of fit with the server-rendered, future-strict-CSP design:
+
+1. **Server-side (Go, `chroma`)** — highlight at template time into HTML, via a `highlight`
+   template func wrapping `<pre class="code">`. No client JS, CSP-friendly, deterministic. YAML and
+   JSON have chroma lexers; **confirm whether chroma ships a rego lexer** — if not, rego falls back
+   to plain text (acceptable) or needs a small custom lexer. Theme via a CSS class map that reuses
+   the existing palette tokens, with a dark variant.
+2. **Client-side `Prism.js`** (vendored, like Alpine) — YAML and JSON are built in; rego needs a
+   community grammar. Adds a client script and a theme stylesheet, and would need a CSP nonce later.
+
+Lean toward (1) unless rego highlighting specifically must be pixel-faithful to the old EUI theme.
+Either way it is one self-contained pass over the shared code-block rendering.
+
 ## Retirement (at the end of the big-bang change)
 
 When every view is server-rendered, remove the React surface in one change:
