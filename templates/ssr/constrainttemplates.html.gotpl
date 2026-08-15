@@ -39,21 +39,23 @@ cross-links from the Events view (#<kind>) land on the right card.
       <section class="card" id="{{ .Kind }}">
         <div class="card-head">
           <h2>{{ .Kind }}</h2>
-          <span class="tag"><span class="tag-key">name</span> {{ .Name }}</span>
         </div>
 
         {{- with .Description }}
         <p class="muted">{{ . }}</p>
         {{- end }}
 
+        {{- if .Rego }}
+        <details class="field">
+          <summary class="field-label">Rego definition{{ with .Target }} · target {{ . }}{{ end }}</summary>
+          <pre class="code chroma"><code>{{ highlight .Rego "rego" }}</code></pre>
+        </details>
+        {{- else }}
         <div class="field">
           <p class="field-label">Rego{{ with .Target }} · target {{ . }}{{ end }}</p>
-          {{- if .Rego }}
-          <pre class="code chroma"><code>{{ highlight .Rego "rego" }}</code></pre>
-          {{- else }}
           <p class="muted no-spec">This template defines no Rego source.</p>
-          {{- end }}
         </div>
+        {{- end }}
 
         {{- range .Libs }}
         <details class="field">
@@ -72,7 +74,7 @@ cross-links from the Events view (#<kind>) land on the right card.
         <div class="field">
           <p class="field-label">Constraints using this template</p>
           {{- if .Constraints }}
-          <nav class="sidebar-nav">
+          <nav class="linklist">
             {{- range .Constraints }}
             <a href="{{ browserPath `/ssr/constraints` }}#{{ . }}">{{ . }}</a>
             {{- end }}

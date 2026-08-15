@@ -52,7 +52,7 @@ land on the right card.
         <div class="card-head">
           <h2>{{ .Name }}</h2>
           <span class="tag tag-mode tag-{{ .EnforcementMode }}">{{ .EnforcementMode }} mode</span>
-          <a class="card-head-link" href="{{ browserPath `/ssr/constrainttemplates` }}#{{ .Kind }}">template: {{ .Kind }}</a>
+          <a class="card-head-link" href="{{ browserPath `/ssr/constrainttemplates` }}#{{ .Kind }}"><span class="tag-key">template</span> {{ .Kind }}</a>
         </div>
 
         {{- /* Violations: unknown (not audited yet), none, or the searchable/sortable table. */}}
@@ -184,7 +184,7 @@ land on the right card.
   function violationsTable(dataId) {
     return {
       columns: [
-        { key: "enforcementAction", label: "Enforcement Action" },
+        { key: "enforcementAction", label: "Action" },
         { key: "kind", label: "Kind" },
         { key: "namespace", label: "Namespace" },
         { key: "name", label: "Name" },

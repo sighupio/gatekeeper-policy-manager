@@ -189,7 +189,7 @@ code { font-family: var(--mono); font-size: 0.9em; }
 .view-head h1 { margin: 0 0 4px; font-size: 22px; font-weight: 700; }
 .view-head p { margin: 0; }
 
-.layout-sidebar { display: grid; grid-template-columns: 260px 1fr; gap: 28px; align-items: start; }
+.layout-sidebar { display: grid; grid-template-columns: 320px 1fr; gap: 28px; align-items: start; }
 
 .sidebar { position: sticky; top: 76px; }
 .sidebar-title { margin: 0 0 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
@@ -202,6 +202,13 @@ code { font-family: var(--mono); font-size: 0.9em; }
 }
 .sidebar-nav a:hover { color: var(--text); background: var(--surface-2); text-decoration: none; }
 .sidebar-nav a:target { color: var(--accent); }
+
+/* Related-item link lists (e.g. "Constraints using this template"). Styled as obvious links -- the
+   accent color and a trailing arrow -- so they don't read as plain text like the sidebar nav. */
+.linklist { display: flex; flex-direction: column; gap: 2px; }
+.linklist a { color: var(--accent); width: fit-content; }
+.linklist a::after { content: " \2197"; color: var(--text-muted); font-size: 0.85em; }
+.linklist a:hover { text-decoration: underline; }
 
 .stack { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 

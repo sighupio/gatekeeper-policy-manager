@@ -68,7 +68,7 @@ func TestSSRNewViewsRenderWithoutError(t *testing.T) {
 	}
 	for _, want := range []string{
 		"must-have-owner", "K8sRequiredLabels", "deny mode", "violationsTable('viol-must-have-owner')",
-		"missing owner", "audit limit", "Download violations report", "Enforcement Action",
+		"missing owner", "audit limit", "Download violations report", "Filter violations",
 	} {
 		if !strings.Contains(buf.String(), want) {
 			t.Errorf("constraints output missing %q", want)
