@@ -17,6 +17,7 @@ kubectl = "1.36.1"
 kustomize = "5.6.0"
 helm = "3.12.0"
 bats = "1.1.0"
+shellcheck = "0.11.0"
 "github:google/addlicense" = "v1.1.1"
 # Checks the module graph against the Go vulnerability database.
 "go:golang.org/x/vuln/cmd/govulncheck" = "1.6.0"
@@ -29,8 +30,14 @@ yarn = "1.22.22"
 # byte-for-byte match with main that keeps the dependency sync a plain copy.
 "npm:prettier" = "3.9.6"
 
+[tasks."lint-shell"]
+description = "shellcheck the shell scripts"
+run = 'shellcheck $(find . -name "*.sh" -not -path "*/node_modules/*" -not -path "./web-client/*")'
+
 [tasks.lint]
-description = "run golangci-lint"
+description = "run golangci-lint (and shellcheck via the lint-shell dep)"
+# lint-shell runs first, in the same qa step, so a shell-script fault fails CI too.
+depends = ["lint-shell"]
 run = "golangci-lint run --config=.rules/.golangci.yml ./..."
 
 [tasks."lint-fix"]

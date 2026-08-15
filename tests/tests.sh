@@ -3,7 +3,9 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-# shellcheck disable=SC2154
+# bats false positives: SC2154 ($status/$output are set by the bats runner), SC2329 (helper
+# functions are invoked indirectly by @test blocks, not called in the source).
+# shellcheck disable=SC2154,SC2329
 
 load ./helper
 
