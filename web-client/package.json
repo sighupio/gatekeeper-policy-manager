@@ -14,7 +14,7 @@
     "@emotion/react": "^11.14.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^12.1.5",
-    "@testing-library/user-event": "^14.6.1",
+    "@testing-library/user-event": "^14.6.4",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.1.1",
     "@types/react": "^17.0.20",
