@@ -13,7 +13,7 @@ volumes:
 
 steps:
   - name: check
-    image: quay.io/sighup/mise:v2026.6.14
+    image: quay.io/sighup/mise:v2026.8.6
     pull: always
     environment:
       MISE_DATA_DIR: /mise-data
@@ -69,7 +69,7 @@ steps:
   #     - clone
 
   - name: lint-go
-    image: quay.io/sighup/mise:v2026.6.14
+    image: quay.io/sighup/mise:v2026.8.6
     pull: always
     depends_on:
       - clone
@@ -86,7 +86,7 @@ steps:
       - mise run lint
 
   - name: vulncheck
-    image: quay.io/sighup/mise:v2026.6.14
+    image: quay.io/sighup/mise:v2026.8.6
     pull: always
     depends_on:
       - clone
@@ -103,7 +103,7 @@ steps:
       - mise run vulncheck
 
   - name: format-check
-    image: quay.io/sighup/mise:v2026.6.14
+    image: quay.io/sighup/mise:v2026.8.6
     pull: always
     depends_on:
       - clone
@@ -120,7 +120,7 @@ steps:
       - mise run format:check
 
   - name: unit-tests-go
-    image: quay.io/sighup/mise:v2026.6.14
+    image: quay.io/sighup/mise:v2026.8.6
     pull: always
     depends_on:
       - clone
@@ -137,7 +137,7 @@ steps:
       - mise run test:unit:go
 
   - name: unit-tests-js
-    image: quay.io/sighup/mise:v2026.6.14
+    image: quay.io/sighup/mise:v2026.8.6
     pull: always
     depends_on:
       - clone
@@ -154,7 +154,7 @@ steps:
       - mise run test:unit:js
 
   - name: render
-    image: quay.io/sighup/mise:v2026.6.14
+    image: quay.io/sighup/mise:v2026.8.6
     pull: always
     depends_on:
       - clone
@@ -250,7 +250,7 @@ trigger:
 
 steps:
   - name: kind
-    image: quay.io/sighup/mise:v2026.6.14
+    image: quay.io/sighup/mise:v2026.8.6
     pull: always
     environment:
       MISE_DATA_DIR: /mise-data
@@ -276,7 +276,7 @@ steps:
       - kind get kubeconfig --name $${CLUSTER_NAME} > kubeconfig.yml
 
   - name: tests
-    image: quay.io/sighup/mise:v2026.6.14
+    image: quay.io/sighup/mise:v2026.8.6
     pull: always
     network_mode: host
     environment:
@@ -294,7 +294,7 @@ steps:
       - mise run e2e
 
   - name: gpm-port-forward
-    image: quay.io/sighup/mise:v2026.6.14
+    image: quay.io/sighup/mise:v2026.8.6
     pull: always
     network_mode: host
     detach: true
@@ -357,7 +357,7 @@ steps:
         - failure
 
   - name: kind-destroy
-    image: quay.io/sighup/mise:v2026.6.14
+    image: quay.io/sighup/mise:v2026.8.6
     pull: always
     environment:
       MISE_DATA_DIR: /mise-data
