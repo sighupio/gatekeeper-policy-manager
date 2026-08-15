@@ -1,8 +1,12 @@
 [settings]
 experimental = true
+# Go's version is not pinned here. mise reads it from go.mod's `toolchain` directive, the single
+# source of truth, as an idiomatic version file. Enabled for `go` only, on purpose. The Dockerfile
+# still names the version explicitly (trusted base image); the check-go-version task guards the two
+# against drift.
+idiomatic_version_file_enable_tools = ["go"]
 
 [tools]
-go = "1.26.5"
 golangci-lint = "2.12.2"
 # Keep in sync with KIND_VERSION / CLUSTER_VERSION in .drone.yml.
 kind = "0.32.0"
@@ -67,8 +71,26 @@ run = 'prettier --write "web-client/src/**/*.{ts,tsx,scss}" "tests/e2e/**/*.{ts,
 description = "check the frontend formatting without changing anything"
 run = 'prettier --check "web-client/src/**/*.{ts,tsx,scss}" "tests/e2e/**/*.{ts,js}"'
 
+[tasks."check-go-version"]
+description = "fail if the Dockerfile's Go version drifts from go.mod's toolchain"
+# go.mod's `toolchain` is the single source (mise reads it too). The Dockerfile must name the
+# version explicitly for its base image, so this guards the two against silent drift.
+run = """
+gomod=$(sed -n 's/^toolchain go//p' go.mod)
+docker=$(sed -n 's/^FROM.*golang:\\([^ ]*\\).*/\\1/p' Dockerfile | head -1)
+if [ "$gomod" != "$docker" ]; then
+  echo "Go version mismatch: go.mod toolchain=$gomod, Dockerfile=$docker" >&2
+  echo "Update the Dockerfile's golang: tag to match go.mod, or vice versa." >&2
+  exit 1
+fi
+echo "Go version aligned across go.mod and Dockerfile: $gomod"
+"""
+
 [tasks.vulncheck]
 description = "check Go dependencies against the vulnerability database"
+# check-go-version first: a passing vulncheck only certifies the artifact if the image builds the
+# same Go the scan used.
+depends = ["check-go-version"]
 # Same node_modules filter as the tests: npm packages vendor Go sources.
 run = 'govulncheck $(go list ./... | grep -v /node_modules/)'
 
