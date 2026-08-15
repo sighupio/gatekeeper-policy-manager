@@ -52,7 +52,7 @@ const minSecretKeyLength = 16
 func secretKeyError(key string) string {
 	switch {
 	case key == insecureDefaultSecretKey:
-		return "GPM_SECRET_KEY is still the published GPM 1.x default, so anyone could forge a session cookie."
+		return "GPM_SECRET_KEY is still the published GPM 1.x default, so anyone can forge a session cookie."
 	case len(key) < minSecretKeyLength:
 		return fmt.Sprintf("GPM_SECRET_KEY is shorter than %d characters, too short to protect the session cookie.", minSecretKeyLength)
 	}

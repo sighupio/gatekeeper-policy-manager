@@ -29,8 +29,8 @@ func contextErrorAnswer(c echo.Context, err error) error {
 	name := c.Param("context")
 	slog.Error("resolving the Kubernetes context failed", "context", name, "error", err)
 	return c.JSON(http.StatusInternalServerError, ErrorAnswer{
-		ErrorMessage: fmt.Sprintf("Got an error while trying to switch to context %s", name),
-		Action:       "Please check the context definition in the Kubeconfig file.",
+		ErrorMessage: fmt.Sprintf("GPM could not switch to context %s.", name),
+		Action:       "Make sure that the kubeconfig file defines this context correctly.",
 		Description:  err.Error(),
 	})
 }
@@ -56,7 +56,7 @@ func kubeAPIErrorAnswer(message string, action string, err error) ErrorAnswer {
 	)
 	if errors.As(err, &verificationErr) || errors.As(err, &authorityErr) ||
 		errors.As(err, &hostnameErr) || errors.As(err, &invalidCertErr) {
-		message = "TLS certificate verification failed while connecting to the Kubernetes API."
+		message = "GPM could not verify the Kubernetes API server's TLS certificate."
 		action = "Set GPM_SKIP_TLS_VERIFY=true if the cluster CA is missing the AKI/SKI extensions, as happens on EKS. Use with caution."
 	}
 	return ErrorAnswer{ErrorMessage: message, Action: action, Description: err.Error()}
@@ -130,8 +130,8 @@ func (s *server) getConfigs(c echo.Context) error {
 	if err != nil {
 		slog.Debug("getting config resources failed", "error", err)
 		return c.JSON(http.StatusInternalServerError, kubeAPIErrorAnswer(
-			"An error ocurred while getting config objects from Kubernetes API.",
-			"Check that the Kubeconfig file is correct and that the Kubernetes API is accessible.",
+			"GPM could not get the configuration objects from the Kubernetes API.",
+			"Make sure that the kubeconfig file is correct and the Kubernetes API is reachable.",
 			err))
 	}
 	return c.JSON(http.StatusOK, configResources.Items)
@@ -176,8 +176,8 @@ func (s *server) getConstraintTemplates(c echo.Context) error {
 	if err != nil {
 		slog.Error("getting Constraint Templates resources failed", "error", err)
 		return c.JSON(http.StatusInternalServerError, kubeAPIErrorAnswer(
-			"An error ocurred while getting Constraint Templates objects from Kubernetes API",
-			"Is Gatekeeper properly installed in the cluster?",
+			"GPM could not get the Constraint Template objects from the Kubernetes API.",
+			"Make sure that Gatekeeper is installed in the cluster.",
 			err))
 	}
 	// map all the constraints available for each constraint template
@@ -212,8 +212,8 @@ func (s *server) getConstraints(c echo.Context) error {
 	if err != nil {
 		slog.Error("listing constraints kinds from Kubernetes API server failed", "error", err)
 		return c.JSON(http.StatusInternalServerError, kubeAPIErrorAnswer(
-			"An error ocurred while trying to list the Constraints",
-			"Is Gatekeeper properly installed in the target Kubernetes cluster?",
+			"GPM could not list the Constraints.",
+			"Make sure that Gatekeeper is installed in the target Kubernetes cluster.",
 			err))
 	}
 
@@ -225,8 +225,8 @@ func (s *server) getConstraints(c echo.Context) error {
 			if err != nil {
 				slog.Error("getting Constraint resources failed", "error", err)
 				return c.JSON(http.StatusInternalServerError, kubeAPIErrorAnswer(
-					"An error ocurred while getting constraint objects from Kubernetes API",
-					"Is Gatekeeper properly deployed in the target cluster?",
+					"GPM could not get the constraint objects from the Kubernetes API.",
+					"Make sure that Gatekeeper is deployed in the target cluster.",
 					err))
 			}
 			for _, i := range constraints.Items {
@@ -354,8 +354,8 @@ func (s *server) getEvents(c echo.Context) error {
 	if err != nil {
 		slog.Error("got error while getting namespace events", "namespace", namespace, "source", eventsSource, "error", err)
 		return c.JSON(http.StatusInternalServerError, kubeAPIErrorAnswer(
-			"An error ocurred while getting events from Kubernetes API.",
-			"Check that the Kubconfig file is correct and the Kubernetes API accessible.",
+			"GPM could not get the events from the Kubernetes API.",
+			"Make sure that the kubeconfig file is correct and the Kubernetes API is reachable.",
 			err))
 	}
 

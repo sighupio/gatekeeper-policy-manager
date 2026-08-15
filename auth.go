@@ -386,9 +386,9 @@ func (a *authenticator) middleware() echo.MiddlewareFunc {
 				// request the frontend makes.
 				a.clearLegacyRootCookie(c)
 				return c.JSON(http.StatusUnauthorized, ErrorAnswer{
-					ErrorMessage: "Your session has expired or you are not logged in.",
-					Action:       "Sign in again to carry on.",
-					Description:  "No valid OIDC session was found for this request.",
+					ErrorMessage: "Your session expired, or you are not logged in.",
+					Action:       "Sign in again to continue.",
+					Description:  "GPM found no valid OIDC session for this request.",
 					LoginURL:     browserPath("/login"),
 				})
 			}
@@ -464,8 +464,8 @@ func (a *authenticator) callback(c echo.Context) error {
 	if sess == nil {
 		slog.Error("the session store is not available while completing the login", "error", err)
 		return c.JSON(http.StatusInternalServerError, ErrorAnswer{
-			ErrorMessage: "Could not read the session while completing the login.",
-			Action:       "Try logging in again.",
+			ErrorMessage: "GPM could not read the session during login.",
+			Action:       "Log in again.",
 			Description:  err.Error(),
 		})
 	}
@@ -479,8 +479,8 @@ func (a *authenticator) callback(c echo.Context) error {
 				"error", err)
 			a.setRetryMarker(c, -1)
 			return c.JSON(http.StatusUnauthorized, ErrorAnswer{
-				ErrorMessage: "Could not read the session while completing the login.",
-				Action:       "Check that your browser accepts cookies from this site, then log in again.",
+				ErrorMessage: "GPM could not read the session during login.",
+				Action:       "Make sure that your browser accepts cookies from this site, then log in again.",
 				Description:  err.Error(),
 				LoginURL:     browserPath("/login"),
 			})
@@ -500,7 +500,7 @@ func (a *authenticator) callback(c echo.Context) error {
 			"description", c.QueryParam("error_description"))
 		return c.JSON(http.StatusUnauthorized, ErrorAnswer{
 			ErrorMessage: fmt.Sprintf("OIDC error: %s", errParam),
-			Action:       "Something is wrong with your OIDC session. Try to log out and log in again.",
+			Action:       "Something is wrong with your OIDC session. Log out, then log in again.",
 			Description:  c.QueryParam("error_description"),
 		})
 	}
@@ -510,8 +510,8 @@ func (a *authenticator) callback(c echo.Context) error {
 	if want == "" || c.QueryParam("state") != want {
 		slog.Warn("the OIDC state did not match, rejecting the callback")
 		return c.JSON(http.StatusUnauthorized, ErrorAnswer{
-			ErrorMessage: "The login could not be verified.",
-			Action:       "Try logging in again from the start.",
+			ErrorMessage: "GPM could not verify the login.",
+			Action:       "Log in again from the start.",
 			Description:  "The OIDC state parameter did not match the one stored in the session.",
 		})
 	}
@@ -524,8 +524,8 @@ func (a *authenticator) callback(c echo.Context) error {
 		// error already carries the provider's response body, which is plenty for an operator.
 		slog.Error("exchanging the OIDC authorization code failed", "error", err)
 		return c.JSON(http.StatusUnauthorized, ErrorAnswer{
-			ErrorMessage: "Could not complete the login with the identity provider.",
-			Action:       "Try logging in again. If it keeps failing, check GPM's OIDC client configuration and the server logs.",
+			ErrorMessage: "GPM could not complete the login with the identity provider.",
+			Action:       "Log in again. If it still fails, look at GPM's OIDC client configuration and the server logs.",
 			Description:  "The identity provider rejected the authorization code.",
 		})
 	}
@@ -534,7 +534,7 @@ func (a *authenticator) callback(c echo.Context) error {
 	if !ok {
 		return c.JSON(http.StatusUnauthorized, ErrorAnswer{
 			ErrorMessage: "The identity provider did not return an ID token.",
-			Action:       "Check that GPM's client is allowed to use the openid scope.",
+			Action:       "Make sure that GPM's client can use the openid scope.",
 			Description:  "No id_token was present in the token response.",
 		})
 	}
@@ -543,8 +543,8 @@ func (a *authenticator) callback(c echo.Context) error {
 	if err != nil {
 		slog.Error("verifying the OIDC ID token failed", "error", err)
 		return c.JSON(http.StatusUnauthorized, ErrorAnswer{
-			ErrorMessage: "The ID token from the identity provider could not be verified.",
-			Action:       "Check that GPM's issuer and client ID match the provider's configuration.",
+			ErrorMessage: "GPM could not verify the ID token from the identity provider.",
+			Action:       "Make sure that GPM's issuer and client ID match the provider's configuration.",
 			Description:  err.Error(),
 		})
 	}
@@ -553,8 +553,8 @@ func (a *authenticator) callback(c echo.Context) error {
 	if idToken.Nonce != wantNonce {
 		slog.Warn("the OIDC nonce did not match, rejecting the callback")
 		return c.JSON(http.StatusUnauthorized, ErrorAnswer{
-			ErrorMessage: "The login could not be verified.",
-			Action:       "Try logging in again from the start.",
+			ErrorMessage: "GPM could not verify the login.",
+			Action:       "Log in again from the start.",
 			Description:  "The OIDC nonce did not match the one stored in the session.",
 		})
 	}
