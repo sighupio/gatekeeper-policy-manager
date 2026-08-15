@@ -179,6 +179,18 @@ When every view is server-rendered, remove the React surface in one change:
    `COPY --from=frontend /web-client/build/ ./static-content/` line. The image no longer needs Node.
 3. In `static.go`, remove `serveIndex` and `serveSPAShell`, and in `main.go` remove the `/*`
    catch-all. Keep only the real view routes and the embedded static assets.
+   - **Wire the global error handler here.** The SSR error and 404 pages already exist
+     (`templates/ssr/{error,notfound}.html.gotpl`, rendered by `renderSSRError` / `renderSSRNotFound`
+     in `ssr.go`; reachable now at the demo routes `/ssr/error` and `/ssr/notfound`). Install an
+     `echo.HTTPErrorHandler` that, for an HTML request, renders `notfound` on 404 and `error` on 5xx,
+     and returns JSON for `/api/*`. It is deferred until this step because today the `/*` SPA
+     fallback intercepts unmatched routes, so a global handler would have to handle the SPA and the
+     API together.
+   - **Point the `/logout` local fallback at SSR.** `authenticator.logout` (in `auth.go`) currently
+     ends the local-logout path with `serveSPAShell`, which renders the React logout confirmation.
+     When `serveSPAShell` is removed, redirect to `/ssr/home` instead (or render a small SSR
+     logout-confirmation page). The provider end-session path already redirects sensibly and needs
+     no change.
 4. Move the existing violations **report** template into the embedded set (the SSR renderer), then
    remove the `COPY templates ./templates` line and the disk-based `ParseGlob` in `static.go`. Until
    this step, keep the `templates` copy in the Dockerfile, because the report still loads from disk.

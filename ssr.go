@@ -35,11 +35,14 @@ var ssrStaticFS embed.FS
 // template file that fills the "content" block of layout.html.gotpl. Add a view by adding a file
 // here and a handler below; the layout, nav and asset wiring are shared.
 var ssrPages = map[string]string{
+	"home":                "templates/ssr/home.html.gotpl",
 	"configurations":      "templates/ssr/configurations.html.gotpl",
 	"mutations":           "templates/ssr/mutations.html.gotpl",
 	"constrainttemplates": "templates/ssr/constrainttemplates.html.gotpl",
 	"constraints":         "templates/ssr/constraints.html.gotpl",
 	"events":              "templates/ssr/events.html.gotpl",
+	"error":               "templates/ssr/error.html.gotpl",
+	"notfound":            "templates/ssr/notfound.html.gotpl",
 }
 
 type ssrRenderer struct {
@@ -68,12 +71,17 @@ func newSSRRenderer() *ssrRenderer {
 }
 
 func (r *ssrRenderer) render(c echo.Context, page string, data any) error {
+	return r.renderStatus(c, http.StatusOK, page, data)
+}
+
+// renderStatus is render with an explicit status code, for the error and 404 pages.
+func (r *ssrRenderer) renderStatus(c echo.Context, status int, page string, data any) error {
 	t, ok := r.pages[page]
 	if !ok {
 		return echo.NewHTTPError(http.StatusInternalServerError, "unknown SSR page: "+page)
 	}
 	c.Response().Header().Set(echo.HeaderContentType, echo.MIMETextHTMLCharsetUTF8)
-	c.Response().WriteHeader(http.StatusOK)
+	c.Response().WriteHeader(status)
 	return t.ExecuteTemplate(c.Response().Writer, "layout", data)
 }
 
@@ -660,6 +668,42 @@ func (s *server) getSSREvents(c echo.Context) error {
 	return s.ssr.render(c, "events", data)
 }
 
+// --- Home / Error / NotFound -----------------------------------------------------------------
+
+// getSSRHome renders the landing page. It carries no data of its own: the cards link into the five
+// views, and ssrLayoutData already builds those links context-aware in .Layout.Nav, so the template
+// reuses them.
+func (s *server) getSSRHome(c echo.Context) error {
+	layout := s.ssrLayoutData(c, "home", "/ssr/home", "Home")
+	return s.ssr.render(c, "home", map[string]any{"Layout": layout})
+}
+
+// ssrErrorView is the flat shape the error page renders. It mirrors the fields the React Error page
+// shows (message, action, description, and an optional login link when a session expired).
+type ssrErrorView struct {
+	Message     string
+	Action      string
+	Description string
+	LoginURL    string // set only when signing in fixes the error; renders a "Log in" button
+	BackURL     string // where "Go back" points; defaults to home
+}
+
+// renderSSRError renders the shared error page with the given status. login sensibly defaults BackURL
+// to home when the caller leaves it empty.
+func (s *server) renderSSRError(c echo.Context, status int, e ssrErrorView) error {
+	if e.BackURL == "" {
+		e.BackURL = browserPath("/ssr/home")
+	}
+	layout := s.ssrLayoutData(c, "", "/ssr/home", "Error")
+	return s.ssr.renderStatus(c, status, "error", map[string]any{"Layout": layout, "Err": e})
+}
+
+// renderSSRNotFound renders the shared 404 page.
+func (s *server) renderSSRNotFound(c echo.Context) error {
+	layout := s.ssrLayoutData(c, "", "/ssr/home", "Not found")
+	return s.ssr.renderStatus(c, http.StatusNotFound, "notfound", map[string]any{"Layout": layout})
+}
+
 // registerSSR wires the server-rendered POC: embedded static assets and the ported views. Called
 // from main after the server is built. Echo matches these specific paths ahead of the "/*"
 // SPA-fallback, so nothing here shadows the existing app.
@@ -686,4 +730,20 @@ func registerSSR(e *echo.Echo, s *server) {
 
 	e.GET("/ssr/events", s.getSSREvents)
 	e.GET("/ssr/events/:context", s.getSSREvents)
+
+	e.GET("/ssr/home", s.getSSRHome)
+	e.GET("/ssr/home/:context", s.getSSRHome)
+
+	// Demo routes so the error and 404 pages are reachable and reviewable. The global
+	// echo.HTTPErrorHandler that drives these for real (404 -> notfound, 5xx -> error for HTML,
+	// JSON for /api/*) is a cutover concern; see docs/dev/drop-react-plan.md, Retirement.
+	e.GET("/ssr/error", func(c echo.Context) error {
+		return s.renderSSRError(c, http.StatusInternalServerError, ssrErrorView{
+			Message:     "Something went wrong",
+			Action:      "Try again, and if the problem continues check the GPM logs.",
+			Description: "This is a demo of the server-rendered error page.",
+			LoginURL:    browserPath("/login"),
+		})
+	})
+	e.GET("/ssr/notfound", s.renderSSRNotFound)
 }

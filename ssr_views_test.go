@@ -86,6 +86,44 @@ func TestSSRNewViewsRenderWithoutError(t *testing.T) {
 			t.Errorf("events output missing %q", want)
 		}
 	}
+
+	// Home reuses .Layout.Nav for its cards, so give the layout one nav entry to exercise that path.
+	homeLayout := minimalLayout()
+	homeLayout.Nav = []navLink{{Name: "Constraints", Href: "/ssr/constraints"}}
+	homeData := map[string]any{"Layout": homeLayout}
+	buf.Reset()
+	if err := r.pages["home"].ExecuteTemplate(&buf, "layout", homeData); err != nil {
+		t.Fatalf("home render failed: %v", err)
+	}
+	for _, want := range []string{"Welcome", "Constraints", "/ssr/constraints"} {
+		if !strings.Contains(buf.String(), want) {
+			t.Errorf("home output missing %q", want)
+		}
+	}
+
+	errData := map[string]any{"Layout": minimalLayout(), "Err": ssrErrorView{
+		Message: "Something went wrong", Action: "Try again", Description: "boom",
+		LoginURL: "/login", BackURL: "/ssr/home",
+	}}
+	buf.Reset()
+	if err := r.pages["error"].ExecuteTemplate(&buf, "layout", errData); err != nil {
+		t.Fatalf("error render failed: %v", err)
+	}
+	for _, want := range []string{"Error", "Something went wrong", "Try again", "boom", "Log in", "Go back"} {
+		if !strings.Contains(buf.String(), want) {
+			t.Errorf("error output missing %q", want)
+		}
+	}
+
+	buf.Reset()
+	if err := r.pages["notfound"].ExecuteTemplate(&buf, "layout", map[string]any{"Layout": minimalLayout()}); err != nil {
+		t.Fatalf("notfound render failed: %v", err)
+	}
+	for _, want := range []string{"404", "Page not found", "Go to home"} {
+		if !strings.Contains(buf.String(), want) {
+			t.Errorf("notfound output missing %q", want)
+		}
+	}
 }
 
 func minimalLayout() ssrLayout {

@@ -448,6 +448,48 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 .vpage-btn:hover:not(:disabled) { border-color: var(--accent); }
 .vpage-btn:disabled { opacity: 0.5; cursor: default; }
 
+/* --- Home landing -------------------------------------------------------- */
+
+.home-hero { text-align: center; max-width: 620px; margin: 24px auto 36px; }
+.home-logo { height: 80px; width: auto; margin-bottom: 12px; }
+.home-hero h1 { margin: 0 0 8px; font-size: 26px; font-weight: 700; }
+.home-hero p { margin: 0; font-size: 15px; }
+
+.home-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.home-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  font-weight: 600;
+}
+.home-card:hover { border-color: var(--accent); text-decoration: none; }
+.home-card-arrow { color: var(--accent); font-size: 18px; }
+
+/* --- Centered pages (error, 404) ---------------------------------------- */
+
+.centered { display: grid; place-items: center; min-height: 60vh; text-align: center; }
+.centered-box { max-width: 560px; }
+.centered-box h1 { margin: 0 0 8px; font-size: 26px; font-weight: 700; }
+.centered-box h2 { margin: 0 0 8px; font-size: 18px; font-weight: 600; }
+.centered-box .alert { text-align: left; margin: 16px 0; }
+.centered-actions { display: flex; justify-content: center; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+.error-mark { color: var(--danger); margin-right: 6px; }
+.notfound-code { font-size: 56px; letter-spacing: 0.05em; }
+
+.btn-ghost {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { border-color: var(--accent); filter: none; }
+
 /* --- Footer -------------------------------------------------------------- */
 
 .footer {

@@ -1,0 +1,29 @@
+{{- /*
+Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+
+Home landing. A short welcome plus a card per view. The cards reuse .Layout.Nav, which
+ssrLayoutData already builds context-aware, so the links keep the selected context.
+*/ -}}
+{{- define "content" -}}
+<div class="view home">
+  <div class="home-hero">
+    <img class="home-logo" src="{{ .Layout.AssetBase }}/logo.svg" alt="" height="80">
+    <h1>Welcome</h1>
+    <p class="muted">
+      Gatekeeper Policy Manager is a simple web tool to see the policies deployed in your
+      cluster and their status.
+    </p>
+  </div>
+
+  <div class="home-cards">
+    {{- range .Layout.Nav }}
+    <a class="home-card" href="{{ .Href }}">
+      <span class="home-card-name">{{ .Name }}</span>
+      <span class="home-card-arrow" aria-hidden="true">&rarr;</span>
+    </a>
+    {{- end }}
+  </div>
+</div>
+{{- end -}}
