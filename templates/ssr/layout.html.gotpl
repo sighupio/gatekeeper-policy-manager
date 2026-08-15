@@ -13,6 +13,7 @@ nav, context switcher and footer data (see ssrLayoutData in ssr.go).
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ .Layout.Title }} · Gatekeeper Policy Manager</title>
+  <link rel="icon" href="{{ .Layout.AssetBase }}/logo.svg">
   <link rel="stylesheet" href="{{ .Layout.AssetBase }}/app.css">
   {{- /* Apply the saved theme before first paint so there is no light/dark flash.
          Under the future strict CSP this moves to a nonce or an external file. */}}
@@ -30,7 +31,7 @@ nav, context switcher and footer data (see ssrLayoutData in ssr.go).
                         || (!document.documentElement.getAttribute('data-theme')
                             && window.matchMedia('(prefers-color-scheme: dark)').matches) }">
     <a class="brand" href="{{ browserPath `/ssr/configurations` }}">
-      <span class="brand-mark">GPM</span>
+      <img class="brand-logo" src="{{ .Layout.AssetBase }}/logo.svg" alt="" height="30">
       <span class="brand-text">Gatekeeper Policy Manager</span>
     </a>
 

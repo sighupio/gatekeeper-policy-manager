@@ -94,18 +94,7 @@ code { font-family: var(--mono); font-size: 0.9em; }
 
 .brand { display: flex; align-items: center; gap: 10px; color: var(--text); font-weight: 600; }
 .brand:hover { text-decoration: none; }
-.brand-mark {
-  display: inline-grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: var(--accent-contrast);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
+.brand-logo { height: 30px; width: auto; display: block; }
 .brand-text { white-space: nowrap; }
 
 .nav { display: flex; gap: 2px; flex: 1; overflow-x: auto; scrollbar-width: none; }
@@ -137,6 +126,9 @@ code { font-family: var(--mono); font-size: 0.9em; }
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M3 4.5L6 8l3-3.5z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 8px center;
+  /* The SVG has only a viewBox, so without an explicit size it renders oversized and overlaps the
+     text. Pin it small; the 28px right padding then clears it. */
+  background-size: 12px 12px;
 }
 .ctx-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
