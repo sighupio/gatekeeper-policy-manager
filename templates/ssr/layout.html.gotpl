@@ -15,6 +15,7 @@ nav, context switcher and footer data (see ssrLayoutData in ssr.go).
   <title>{{ .Layout.Title }} · Gatekeeper Policy Manager</title>
   <link rel="icon" href="{{ .Layout.AssetBase }}/logo.svg">
   <link rel="stylesheet" href="{{ .Layout.AssetBase }}/app.css">
+  <link rel="stylesheet" href="{{ .Layout.AssetBase }}/chroma.css">
   {{- /* Apply the saved theme before first paint so there is no light/dark flash.
          Under the future strict CSP this moves to a nonce or an external file. */}}
   <script>

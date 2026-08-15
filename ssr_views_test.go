@@ -6,6 +6,8 @@ package main
 
 import (
 	"bytes"
+	"html"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -30,10 +32,15 @@ func TestSSRNewViewsRenderWithoutError(t *testing.T) {
 	if err := r.pages["constrainttemplates"].ExecuteTemplate(&buf, "layout", ctData); err != nil {
 		t.Fatalf("constrainttemplates render failed: %v", err)
 	}
-	for _, want := range []string{"K8sRequiredLabels", "package x", "must-have-owner", "Parameters schema"} {
+	for _, want := range []string{"K8sRequiredLabels", "must-have-owner", "Parameters schema"} {
 		if !strings.Contains(buf.String(), want) {
 			t.Errorf("constrainttemplates output missing %q", want)
 		}
+	}
+	// The Rego is syntax-highlighted server-side, so "package x" is split across <span> tokens.
+	// Strip the tags and assert the source is contiguous again, keeping the check meaningful.
+	if stripped := stripHTMLTags(buf.String()); !strings.Contains(stripped, "package x") {
+		t.Errorf("constrainttemplates output missing highlighted Rego %q", "package x")
 	}
 
 	cs := ssrConstraint{
@@ -128,6 +135,14 @@ func TestSSRNewViewsRenderWithoutError(t *testing.T) {
 
 func minimalLayout() ssrLayout {
 	return ssrLayout{Title: "t", Version: appVersion, AssetBase: "/ssr/static"}
+}
+
+// stripHTMLTags removes tags and unescapes entities so an assertion can match source text that
+// syntax highlighting split across <span> tokens.
+var htmlTagRE = regexp.MustCompile(`<[^>]*>`)
+
+func stripHTMLTags(s string) string {
+	return html.UnescapeString(htmlTagRE.ReplaceAllString(s, ""))
 }
 
 func TestExtractRegoFallsBackToCode(t *testing.T) {

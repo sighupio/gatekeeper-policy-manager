@@ -46,7 +46,7 @@ Mutations view. Renders the Gatekeeper mutator objects the JSON handler getMutat
         {{- with .spec }}
         <div class="field">
           <p class="field-label">Spec</p>
-          <pre class="code"><code>{{ toYAML . }}</code></pre>
+          <pre class="code chroma"><code>{{ highlight (toYAML .) "yaml" }}</code></pre>
         </div>
         {{- else }}
         <p class="muted no-spec">This mutation has no spec defined.</p>
@@ -54,7 +54,7 @@ Mutations view. Renders the Gatekeeper mutator objects the JSON handler getMutat
 
         <details class="field">
           <summary>Full YAML definition</summary>
-          <pre class="code"><code>{{ toYAML . }}</code></pre>
+          <pre class="code chroma"><code>{{ highlight (toYAML .) "yaml" }}</code></pre>
         </details>
 
         {{- with .metadata.creationTimestamp }}

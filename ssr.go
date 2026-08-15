@@ -8,6 +8,7 @@
 package main
 
 import (
+	"bytes"
 	"embed"
 	"encoding/json"
 	"html/template"
@@ -18,6 +19,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/alecthomas/chroma/v2"
+	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
+	"github.com/alecthomas/chroma/v2/lexers"
+	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/labstack/echo/v4"
 	"github.com/spf13/viper"
 	"golang.org/x/exp/slog"
@@ -58,6 +63,7 @@ func newSSRRenderer() *ssrRenderer {
 		"browserPath": browserPath,
 		"toYAML":      toYAML,
 		"toJSON":      toJSON,
+		"highlight":   highlight,
 	}
 	layout := template.Must(
 		template.New("layout").Funcs(funcs).ParseFS(ssrTemplateFS, "templates/ssr/layout.html.gotpl"),
@@ -96,6 +102,35 @@ func toYAML(v any) string {
 		return "could not render YAML: " + err.Error()
 	}
 	return string(out)
+}
+
+// chromaFormatter emits highlighted tokens as <span class="…"> in chroma's classes mode and does
+// NOT wrap them in its own <pre>, so the output slots inside the existing <pre class="code chroma">.
+// The classes are styled by static/ssr/chroma.css.
+var chromaFormatter = chromahtml.New(chromahtml.WithClasses(true), chromahtml.PreventSurroundingPre(true))
+
+// highlight renders code with server-side syntax highlighting. lang picks the chroma lexer (e.g.
+// "yaml", "json", "rego"); an unknown language falls back to the plain lexer so the code still
+// renders, just unhighlighted. Returning template.HTML is safe: chroma HTML-escapes the source
+// (<, >, & become entities) before wrapping tokens in spans, so no source can inject markup.
+func highlight(code, lang string) template.HTML {
+	lexer := lexers.Get(lang)
+	if lexer == nil {
+		lexer = lexers.Fallback
+	}
+	lexer = chroma.Coalesce(lexer)
+
+	iterator, err := lexer.Tokenise(nil, code)
+	if err != nil {
+		return template.HTML(template.HTMLEscapeString(code))
+	}
+	var buf bytes.Buffer
+	// styles.Fallback is required by the formatter API but unused in classes mode (colors come from
+	// the stylesheet, not inline styles).
+	if err := chromaFormatter.Format(&buf, styles.Fallback, iterator); err != nil {
+		return template.HTML(template.HTMLEscapeString(code))
+	}
+	return template.HTML(buf.String())
 }
 
 // toJSON marshals a value for a <script type="application/json"> data island. encoding/json escapes
