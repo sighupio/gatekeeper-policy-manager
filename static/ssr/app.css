@@ -18,6 +18,10 @@
   --accent-contrast: #ffffff;
   --danger: #c0362c;
   --danger-bg: #fdecea;
+  --success: #1f8b4c;
+  --success-bg: #e7f6ec;
+  --warn: #8a5a00;
+  --warn-bg: #fdf3e2;
   --radius: 10px;
   --radius-sm: 6px;
   --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
@@ -37,6 +41,10 @@
     --accent-contrast: #0f1218;
     --danger: #ff6b5e;
     --danger-bg: #2a1715;
+    --success: #4ccb7e;
+    --success-bg: #142a1d;
+    --warn: #e0b155;
+    --warn-bg: #2a2415;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   }
 }
@@ -52,6 +60,10 @@
   --accent-contrast: #0f1218;
   --danger: #ff6b5e;
   --danger-bg: #2a1715;
+  --success: #4ccb7e;
+  --success-bg: #142a1d;
+  --warn: #e0b155;
+  --warn-bg: #2a2415;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
@@ -259,6 +271,8 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 
 .alert { padding: 14px 16px; border-radius: var(--radius); border: 1px solid; }
 .alert-error { color: var(--danger); background: var(--danger-bg); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+.alert-warn { color: var(--warn); background: var(--warn-bg); border-color: color-mix(in srgb, var(--warn) 45%, transparent); margin-top: 14px; }
+.alert-warn code { color: inherit; }
 
 .empty {
   text-align: center;
@@ -333,6 +347,106 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; }
 .kv dt { color: var(--text-muted); font-weight: 600; }
 .kv dd { margin: 0; word-break: break-word; }
+
+/* --- Constraints view ---------------------------------------------------- */
+
+/* Badges: violation counts in the sidebar and the Violations field label. */
+.badge {
+  display: inline-block;
+  min-width: 20px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.6;
+  border-radius: 999px;
+  padding: 0 7px;
+  border: 1px solid transparent;
+}
+.badge-danger { color: var(--danger); background: var(--danger-bg); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+.badge-success { color: var(--success); background: var(--success-bg); border-color: color-mix(in srgb, var(--success) 40%, transparent); }
+.badge-neutral { color: var(--text-muted); background: var(--surface-2); border-color: var(--border); }
+
+/* Sidebar entries carry a badge + name + mode on one row, unlike the plain nav. */
+.cnav a { display: flex; align-items: center; gap: 8px; }
+.cnav .side-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cnav .side-mode { font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-muted); }
+
+.btn-block { display: block; text-align: center; margin-top: 16px; }
+
+.card-head-link { margin-left: auto; font-size: 12px; }
+
+/* Enforcement-mode tag, colour-coded like the React badge. */
+.tag-mode { font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.tag-deny { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+.tag-warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+.tag-dryrun { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+
+.status-ok { margin: 4px 0 0; color: var(--success); font-weight: 600; }
+.status-bad { margin: 14px 0 0; color: var(--danger); font-weight: 600; }
+
+.pods { display: flex; flex-wrap: wrap; gap: 6px; }
+.pod-tag.pod-on { color: var(--success); border-color: color-mix(in srgb, var(--success) 40%, transparent); }
+.pod-tag.pod-off { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+
+/* --- Violations table (Alpine) ------------------------------------------- */
+
+.vtable-wrap { margin-top: 6px; }
+
+.vtable-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+.vsearch {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  min-width: 220px;
+  flex: 1;
+}
+.vsearch:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.vshowing { white-space: nowrap; font-size: 12px; }
+
+.vtable { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 13px; }
+.vtable th, .vtable td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.vtable thead th {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.vtable thead th:hover { color: var(--text); }
+.vtable thead th:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.sort-ind { color: var(--accent); font-size: 10px; margin-left: 2px; }
+.vtable td.vmsg { white-space: pre-wrap; word-break: break-word; min-width: 240px; }
+.vtable tbody tr:last-child td { border-bottom: none; }
+
+.vpager { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.vpage-size { font-size: 12px; color: var(--text-muted); }
+.vpage-size select {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px 6px;
+  margin-left: 6px;
+}
+.vpage-btns { display: flex; align-items: center; gap: 10px; }
+.vpage-btn {
+  font: inherit;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.vpage-btn:hover:not(:disabled) { border-color: var(--accent); }
+.vpage-btn:disabled { opacity: 0.5; cursor: default; }
 
 /* --- Footer -------------------------------------------------------------- */
 

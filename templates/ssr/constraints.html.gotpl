@@ -1,0 +1,256 @@
+{{- /*
+Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+
+Constraints view. One card per Constraint (getConstraints' data path, sorted most-violations-first).
+The per-constraint violations table is a client-side Alpine component: it reads a <script> data
+island of that constraint's violations and gives it incremental search, all-column sort and
+pagination. Every card gets its own independent table instance via violationsTable(...). The card
+anchor is the Constraint name, so the cross-links from Constraint Templates and Events (#<name>)
+land on the right card.
+*/ -}}
+{{- define "content" -}}
+<div class="view">
+  <div class="view-head">
+    <h1>Constraints</h1>
+    <p class="muted">Gatekeeper <code>Constraint</code> objects in the selected cluster, most violations first.</p>
+  </div>
+
+  {{- if .Error }}
+  <div class="alert alert-error">{{ .Error }}</div>
+
+  {{- else if not .Constraints }}
+  <div class="empty">
+    <h2>No constraints</h2>
+    <p class="muted">There are no Gatekeeper <code>Constraint</code> objects defined in this cluster.</p>
+  </div>
+
+  {{- else }}
+  <div class="layout-sidebar">
+    <aside class="sidebar">
+      <p class="sidebar-title">Constraints</p>
+      <nav class="sidebar-nav cnav">
+        {{- range .Constraints }}
+        <a href="#{{ .Name }}" title="{{ .Name }}">
+          {{- if .ViolationsKnown }}
+          <span class="badge {{ if gt .TotalViolations 0 }}badge-danger{{ else }}badge-success{{ end }}">{{ .TotalViolations }}</span>
+          {{- else }}
+          <span class="badge badge-neutral" title="Not audited yet">?</span>
+          {{- end }}
+          <span class="side-name">{{ .Name }}</span>
+          <span class="side-mode">{{ .EnforcementMode }}</span>
+        </a>
+        {{- end }}
+      </nav>
+      <a class="btn btn-block" href="{{ .ReportURL }}" download>Download violations report</a>
+    </aside>
+
+    <div class="stack">
+      {{- range .Constraints }}
+      <section class="card" id="{{ .Name }}">
+        <div class="card-head">
+          <h2>{{ .Name }}</h2>
+          <span class="tag tag-mode tag-{{ .EnforcementMode }}">{{ .EnforcementMode }} mode</span>
+          <a class="card-head-link" href="{{ browserPath `/ssr/constrainttemplates` }}#{{ .Kind }}">template: {{ .Kind }}</a>
+        </div>
+
+        {{- /* Violations: unknown (not audited yet), none, or the searchable/sortable table. */}}
+        {{- if not .ViolationsKnown }}
+        <div class="alert alert-warn">Violations for this Constraint are unknown. Gatekeeper has probably not audited it yet. Try refreshing the page.</div>
+
+        {{- else if eq .TotalViolations 0 }}
+        <p class="status-ok">No violations for this Constraint.</p>
+
+        {{- else }}
+        <div class="field">
+          <p class="field-label">Violations <span class="badge badge-danger">{{ .TotalViolations }}</span></p>
+
+          <div class="vtable-wrap" x-data="violationsTable('viol-{{ .Name }}')">
+            <script type="application/json" id="viol-{{ .Name }}">{{ toJSON .Violations }}</script>
+
+            <div class="vtable-controls">
+              <input class="vsearch" type="text" placeholder="Filter violations..."
+                     x-model="q" x-on:input="page = 0" aria-label="Filter violations">
+              <span class="muted vshowing" x-text="`showing ${from}–${to} of ${total}`"></span>
+            </div>
+
+            <div class="table-scroll">
+              <table class="vtable">
+                <thead>
+                  <tr>
+                    <template x-for="col in columns" x-bind:key="col.key">
+                      <th x-on:click="sort(col.key)" role="button" tabindex="0"
+                          x-on:keydown.enter="sort(col.key)"
+                          x-bind:aria-sort="sortKey === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'">
+                        <span x-text="col.label"></span>
+                        <span class="sort-ind" x-text="sortKey === col.key ? (sortDir === 'asc' ? '▲' : '▼') : ''"></span>
+                      </th>
+                    </template>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="(row, i) in paged" x-bind:key="i">
+                    <tr>
+                      <td x-text="row.enforcementAction"></td>
+                      <td x-text="row.kind"></td>
+                      <td x-text="row.namespace"></td>
+                      <td x-text="row.name"></td>
+                      <td class="vmsg" x-text="row.message"></td>
+                    </tr>
+                  </template>
+                  <tr x-show="total === 0">
+                    <td colspan="5" class="muted">No violation matches the filter.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="vpager">
+              <label class="vpage-size">Rows
+                <select x-model.number="pageSize" x-on:change="page = 0">
+                  <option>10</option>
+                  <option>25</option>
+                  <option>50</option>
+                </select>
+              </label>
+              <div class="vpage-btns">
+                <button type="button" class="vpage-btn" x-on:click="page = Math.max(0, page - 1)"
+                        x-bind:disabled="page <= 0">Prev</button>
+                <span class="muted" x-text="`page ${page + 1} / ${pageCount}`"></span>
+                <button type="button" class="vpage-btn" x-on:click="page = Math.min(pageCount - 1, page + 1)"
+                        x-bind:disabled="page >= pageCount - 1">Next</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {{- if .AuditLimited }}
+        <div class="alert alert-warn">Not all violations are shown. Gatekeeper's audit limit caps the reported violations for this Constraint at {{ .ReturnedCount }}. See the <code>--constraint-violations-limit</code> audit flag.</div>
+        {{- end }}
+        {{- end }}
+
+        {{- /* Spec: match criteria and parameters, as YAML. */}}
+        {{- if not .HasSpec }}
+        <p class="status-bad">This Constraint has no spec defined.</p>
+
+        {{- else }}
+        {{- with .Match }}
+        <div class="field">
+          <p class="field-label">Match criteria</p>
+          <pre class="code"><code>{{ toYAML . }}</code></pre>
+        </div>
+        {{- end }}
+
+        {{- with .Parameters }}
+        <div class="field">
+          <p class="field-label">Parameters</p>
+          <pre class="code"><code>{{ toYAML . }}</code></pre>
+        </div>
+        {{- end }}
+        {{- end }}
+
+        {{- with .Pods }}
+        <div class="field">
+          <p class="field-label">Status by pod</p>
+          <div class="pods">
+            {{- range . }}
+            <span class="tag pod-tag {{ if .Enforced }}pod-on{{ else }}pod-off{{ end }}"
+                  title="Constraint is {{ if not .Enforced }}NOT {{ end }}being enforced by this pod">
+              {{ if .Enforced }}✓{{ else }}✕{{ end }} {{ .ID }}<span class="muted"> · gen {{ .ObservedGeneration }}</span>
+            </span>
+            {{- end }}
+          </div>
+        </div>
+        {{- end }}
+
+        <p class="card-foot muted">
+          {{- with .AuditTimestamp }}Audited on {{ . }}{{ end }}
+          {{- if and .AuditTimestamp .Created }} · {{ end }}
+          {{- with .Created }}Created on {{ . }}{{ end }}
+        </p>
+      </section>
+      {{- end }}
+    </div>
+  </div>
+  {{- end }}
+</div>
+
+{{- /* One reusable Alpine component, instantiated per constraint via x-data="violationsTable(id)".
+       It reads the constraint's violations from its <script> data island, then filters, sorts and
+       paginates them entirely client-side. This inline script runs during parse, so the global
+       function exists before the deferred Alpine bundle initializes the components. */}}
+<script>
+  function violationsTable(dataId) {
+    return {
+      columns: [
+        { key: "enforcementAction", label: "Enforcement Action" },
+        { key: "kind", label: "Kind" },
+        { key: "namespace", label: "Namespace" },
+        { key: "name", label: "Name" },
+        { key: "message", label: "Message" },
+      ],
+      rows: [],
+      q: "",
+      sortKey: "",
+      sortDir: "asc",
+      page: 0,
+      pageSize: 10,
+      init() {
+        try {
+          this.rows = JSON.parse(document.getElementById(dataId).textContent) || [];
+        } catch (e) {
+          this.rows = [];
+        }
+      },
+      // ponytail: re-filters/re-sorts on every read; fine at Gatekeeper's audit limit (~20 rows).
+      // If someone raises --constraint-violations-limit into the thousands, memoize on q/sort.
+      get filtered() {
+        let out = this.rows;
+        const q = this.q.trim().toLowerCase();
+        if (q) {
+          out = out.filter((r) =>
+            this.columns.some((c) => String(r[c.key] ?? "").toLowerCase().includes(q)),
+          );
+        }
+        if (this.sortKey) {
+          const dir = this.sortDir === "asc" ? 1 : -1;
+          out = [...out].sort((a, b) =>
+            dir *
+            String(a[this.sortKey] ?? "").localeCompare(String(b[this.sortKey] ?? ""), undefined, {
+              numeric: true,
+              sensitivity: "base",
+            }),
+          );
+        }
+        return out;
+      },
+      get total() {
+        return this.filtered.length;
+      },
+      get pageCount() {
+        return Math.max(1, Math.ceil(this.total / this.pageSize));
+      },
+      get paged() {
+        const start = Math.min(this.page, this.pageCount - 1) * this.pageSize;
+        return this.filtered.slice(start, start + this.pageSize);
+      },
+      get from() {
+        return this.total === 0 ? 0 : Math.min(this.page, this.pageCount - 1) * this.pageSize + 1;
+      },
+      get to() {
+        return Math.min(this.total, (Math.min(this.page, this.pageCount - 1) + 1) * this.pageSize);
+      },
+      sort(key) {
+        if (this.sortKey === key) {
+          this.sortDir = this.sortDir === "asc" ? "desc" : "asc";
+        } else {
+          this.sortKey = key;
+          this.sortDir = "asc";
+        }
+        this.page = 0;
+      },
+    };
+  }
+</script>
+{{- end -}}

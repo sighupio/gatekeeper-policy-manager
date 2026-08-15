@@ -9,6 +9,7 @@ package main
 
 import (
 	"embed"
+	"encoding/json"
 	"html/template"
 	"io/fs"
 	"net/http"
@@ -37,6 +38,7 @@ var ssrPages = map[string]string{
 	"configurations":      "templates/ssr/configurations.html.gotpl",
 	"mutations":           "templates/ssr/mutations.html.gotpl",
 	"constrainttemplates": "templates/ssr/constrainttemplates.html.gotpl",
+	"constraints":         "templates/ssr/constraints.html.gotpl",
 	"events":              "templates/ssr/events.html.gotpl",
 }
 
@@ -52,6 +54,7 @@ func newSSRRenderer() *ssrRenderer {
 		// browserPath puts the reverse-proxy base path back on links; see basepath.go.
 		"browserPath": browserPath,
 		"toYAML":      toYAML,
+		"toJSON":      toJSON,
 	}
 	layout := template.Must(
 		template.New("layout").Funcs(funcs).ParseFS(ssrTemplateFS, "templates/ssr/layout.html.gotpl"),
@@ -87,6 +90,17 @@ func toYAML(v any) string {
 	return string(out)
 }
 
+// toJSON marshals a value for a <script type="application/json"> data island. encoding/json escapes
+// <, > and & by default, so a "</script>" inside a violation message cannot break out of the tag;
+// template.JS then lets html/template emit the result verbatim instead of re-escaping it.
+func toJSON(v any) template.JS {
+	out, err := json.Marshal(v)
+	if err != nil {
+		return template.JS("[]")
+	}
+	return template.JS(out)
+}
+
 // --- layout view models ---------------------------------------------------------------------
 
 type navLink struct {
@@ -112,9 +126,8 @@ type ssrLayout struct {
 	LogoutURL   string
 }
 
-// The top-nav destinations. Constraints still points at the React SPA until it is ported; every
-// other view is server-rendered. Home has no nav entry -- the logo links back to it. As each view
-// is ported its ssr flag flips and its path moves under /ssr.
+// The top-nav destinations. Every view is server-rendered now. Home has no nav entry -- the logo
+// links back to it. As each view is ported its ssr flag flips and its path moves under /ssr.
 var ssrNavRoutes = []struct {
 	Key  string
 	Name string
@@ -122,7 +135,7 @@ var ssrNavRoutes = []struct {
 	SSR  bool
 }{
 	{"constrainttemplates", "Constraint Templates", "/ssr/constrainttemplates", true},
-	{"constraints", "Constraints", "/constraints", false},
+	{"constraints", "Constraints", "/ssr/constraints", true},
 	{"mutations", "Mutations", "/ssr/mutations", true},
 	{"events", "Events", "/ssr/events", true},
 	{"configurations", "Configurations", "/ssr/configurations", true},
@@ -345,6 +358,185 @@ func (s *server) getSSRConstraintTemplates(c echo.Context) error {
 	return s.ssr.render(c, "constrainttemplates", data)
 }
 
+// --- Constraints view -------------------------------------------------------------------------
+
+// ssrConstraintViolation is one row of the per-constraint violations table. The JSON tags matter:
+// this shape is serialized into the page's data island and read back by the Alpine table.
+type ssrConstraintViolation struct {
+	EnforcementAction string `json:"enforcementAction"`
+	Kind              string `json:"kind"`
+	Namespace         string `json:"namespace"`
+	Name              string `json:"name"`
+	Message           string `json:"message"`
+}
+
+// ssrConstraintPod mirrors one status.byPod entry: which audit pod reported, at what generation,
+// and whether it is enforcing the constraint.
+type ssrConstraintPod struct {
+	ID                 string
+	ObservedGeneration string
+	Enforced           bool
+}
+
+// ssrConstraint is the flat shape the template renders per constraint.
+type ssrConstraint struct {
+	Name              string
+	Kind              string
+	Created           string
+	HasSpec           bool
+	EnforcementAction string
+	EnforcementMode   string // deny | warn | dryrun, mirroring the React enforcement icon mapping
+	Match             map[string]any
+	Parameters        map[string]any
+
+	ViolationsKnown bool  // status.totalViolations present; absent means Gatekeeper has not audited yet
+	TotalViolations int64 // status.totalViolations
+	ReturnedCount   int   // len(Violations); the audit limit can make this smaller than TotalViolations
+	AuditLimited    bool  // TotalViolations > ReturnedCount
+	Violations      []ssrConstraintViolation
+
+	AuditTimestamp string
+	Pods           []ssrConstraintPod
+
+	Raw map[string]any
+}
+
+// enforcementMode collapses spec.enforcementAction to the three modes the UI shows, matching the
+// React getEnforcementActionRenderData default (anything but dryrun/warn is "deny").
+func enforcementMode(action string) string {
+	switch action {
+	case "dryrun":
+		return "dryrun"
+	case "warn":
+		return "warn"
+	default:
+		return "deny"
+	}
+}
+
+func ssrConstraintModel(o map[string]any) ssrConstraint {
+	m := ssrConstraint{Raw: o}
+	m.Name, _, _ = unstructured.NestedString(o, "metadata", "name")
+	m.Kind, _, _ = unstructured.NestedString(o, "kind")
+	m.Created, _, _ = unstructured.NestedString(o, "metadata", "creationTimestamp")
+
+	_, m.HasSpec, _ = unstructured.NestedMap(o, "spec")
+	m.EnforcementAction, _, _ = unstructured.NestedString(o, "spec", "enforcementAction")
+	m.EnforcementMode = enforcementMode(m.EnforcementAction)
+	if match, found, _ := unstructured.NestedMap(o, "spec", "match"); found {
+		m.Match = match
+	}
+	if params, found, _ := unstructured.NestedMap(o, "spec", "parameters"); found {
+		m.Parameters = params
+	}
+
+	if tv, found, _ := unstructured.NestedInt64(o, "status", "totalViolations"); found {
+		m.ViolationsKnown = true
+		m.TotalViolations = tv
+	}
+	m.AuditTimestamp, _, _ = unstructured.NestedString(o, "status", "auditTimestamp")
+
+	if vs, found, _ := unstructured.NestedSlice(o, "status", "violations"); found {
+		for _, v := range vs {
+			vm, ok := v.(map[string]any)
+			if !ok {
+				continue
+			}
+			viol := ssrConstraintViolation{}
+			viol.EnforcementAction, _, _ = unstructured.NestedString(vm, "enforcementAction")
+			viol.Kind, _, _ = unstructured.NestedString(vm, "kind")
+			viol.Namespace, _, _ = unstructured.NestedString(vm, "namespace")
+			viol.Name, _, _ = unstructured.NestedString(vm, "name")
+			viol.Message, _, _ = unstructured.NestedString(vm, "message")
+			m.Violations = append(m.Violations, viol)
+		}
+	}
+	m.ReturnedCount = len(m.Violations)
+	m.AuditLimited = m.ViolationsKnown && m.TotalViolations > int64(m.ReturnedCount)
+
+	if pods, found, _ := unstructured.NestedSlice(o, "status", "byPod"); found {
+		for _, p := range pods {
+			pm, ok := p.(map[string]any)
+			if !ok {
+				continue
+			}
+			pod := ssrConstraintPod{}
+			pod.ID, _, _ = unstructured.NestedString(pm, "id")
+			pod.Enforced, _, _ = unstructured.NestedBool(pm, "enforced")
+			if g, found, _ := unstructured.NestedInt64(pm, "observedGeneration"); found {
+				pod.ObservedGeneration = strconv.FormatInt(g, 10)
+			}
+			m.Pods = append(m.Pods, pod)
+		}
+	}
+	return m
+}
+
+// getSSRConstraints renders the Constraints view. It walks the same data path as the JSON handler
+// getConstraints: discover the constraint Kinds under constraints.gatekeeper.sh/v1beta1, list each,
+// then sortConstraints (most violations first, then by name). The report link in the sidebar points
+// at the existing HTML report the JSON handler serves with ?report=html.
+func (s *server) getSSRConstraints(c echo.Context) error {
+	layout := s.ssrLayoutData(c, "constraints", "/ssr/constraints", "Constraints")
+
+	data := map[string]any{"Layout": layout}
+
+	clients, err := s.clientsFor(c)
+	if err != nil {
+		slog.Error("SSR constraints: resolving context failed", "error", err)
+		data["Error"] = "GPM could not switch to the requested Kubernetes context. Make sure the kubeconfig defines it correctly."
+		return s.ssr.render(c, "constraints", data)
+	}
+
+	ctx := c.Request().Context()
+
+	// Constraint Kinds are created dynamically by Gatekeeper per template, so discover them first.
+	availableConstraints, err := clients.discovery.ServerResourcesForGroupVersion("constraints.gatekeeper.sh/v1beta1")
+	if err != nil {
+		slog.Error("SSR constraints: listing constraint kinds failed", "error", err)
+		data["Error"] = "GPM could not list the Constraints. Make sure Gatekeeper is installed in the cluster."
+		return s.ssr.render(c, "constraints", data)
+	}
+
+	var raw []map[string]interface{}
+	for _, constraintKind := range availableConstraints.APIResources {
+		// Subresources (like <kind>/status) have no categories; skip them, as getConstraints does.
+		if constraintKind.Categories == nil {
+			continue
+		}
+		constraints, err := getCustomResources(ctx, *clients.dynamic, "constraints.gatekeeper.sh", "v1beta1", constraintKind.SingularName)
+		if err != nil {
+			slog.Error("SSR constraints: getting constraint resources failed", "kind", constraintKind.SingularName, "error", err)
+			data["Error"] = "GPM could not get the constraint objects from the Kubernetes API. Make sure Gatekeeper is deployed in the cluster."
+			return s.ssr.render(c, "constraints", data)
+		}
+		for i := range constraints.Items {
+			raw = append(raw, constraints.Items[i].Object)
+		}
+	}
+
+	sortConstraints(raw)
+
+	models := make([]ssrConstraint, 0, len(raw))
+	for _, o := range raw {
+		models = append(models, ssrConstraintModel(o))
+	}
+	data["Constraints"] = models
+
+	// The HTML report the JSON handler serves. It names the context in the path, so the report is
+	// unambiguous on a multi-context kubeconfig; fall back to the kubeconfig's current context.
+	selected := c.Param("context")
+	if selected == "" {
+		_, selected = s.k8s.contexts()
+	}
+	if selected != "" {
+		data["ReportURL"] = browserPath("/api/v1/constraints/" + url.PathEscape(selected) + "?report=html")
+	} else {
+		data["ReportURL"] = browserPath("/api/v1/constraints?report=html")
+	}
+	return s.ssr.render(c, "constraints", data)
+}
+
 // --- Events view ------------------------------------------------------------------------------
 
 // ssrEvent is the flat shape the events table renders. Gatekeeper carries most of the detail in
@@ -488,6 +680,9 @@ func registerSSR(e *echo.Echo, s *server) {
 
 	e.GET("/ssr/constrainttemplates", s.getSSRConstraintTemplates)
 	e.GET("/ssr/constrainttemplates/:context", s.getSSRConstraintTemplates)
+
+	e.GET("/ssr/constraints", s.getSSRConstraints)
+	e.GET("/ssr/constraints/:context", s.getSSRConstraints)
 
 	e.GET("/ssr/events", s.getSSREvents)
 	e.GET("/ssr/events/:context", s.getSSREvents)

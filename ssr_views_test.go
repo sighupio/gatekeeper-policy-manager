@@ -36,6 +36,38 @@ func TestSSRNewViewsRenderWithoutError(t *testing.T) {
 		}
 	}
 
+	cs := ssrConstraint{
+		Name: "must-have-owner", Kind: "K8sRequiredLabels", Created: "2026-01-01T00:00:00Z",
+		HasSpec: true, EnforcementAction: "deny", EnforcementMode: "deny",
+		Match:      map[string]any{"kinds": []any{map[string]any{"kinds": []any{"Pod"}}}},
+		Parameters: map[string]any{"labels": []any{"owner"}},
+		ViolationsKnown: true, TotalViolations: 3, ReturnedCount: 2, AuditLimited: true,
+		Violations: []ssrConstraintViolation{
+			{EnforcementAction: "deny", Kind: "Pod", Namespace: "default", Name: "nginx", Message: "missing owner"},
+			{EnforcementAction: "deny", Kind: "Pod", Namespace: "kube-system", Name: "coredns", Message: "missing owner"},
+		},
+		AuditTimestamp: "2026-01-02T00:00:00Z",
+		Pods:           []ssrConstraintPod{{ID: "audit-0", ObservedGeneration: "1", Enforced: true}},
+		Raw:            map[string]any{"kind": "K8sRequiredLabels"},
+	}
+	csData := map[string]any{
+		"Layout": minimalLayout(), "Constraints": []ssrConstraint{cs},
+		"ReportURL": "/api/v1/constraints/kind?report=html",
+	}
+
+	buf.Reset()
+	if err := r.pages["constraints"].ExecuteTemplate(&buf, "layout", csData); err != nil {
+		t.Fatalf("constraints render failed: %v", err)
+	}
+	for _, want := range []string{
+		"must-have-owner", "K8sRequiredLabels", "deny mode", "violationsTable('viol-must-have-owner')",
+		"missing owner", "audit limit", "Download violations report", "Enforcement Action",
+	} {
+		if !strings.Contains(buf.String(), want) {
+			t.Errorf("constraints output missing %q", want)
+		}
+	}
+
 	ev := ssrEvent{
 		Name: "e1", Reason: "FailedAdmission", Message: "denied", Count: "3",
 		Action: "deny", ConstraintKind: "K8sRequiredLabels", ConstraintName: "must-have-owner",

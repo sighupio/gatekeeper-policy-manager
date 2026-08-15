@@ -191,6 +191,20 @@ When every view is server-rendered, remove the React surface in one change:
 8. Decide the future of `/api/v1/*`. The SSR views read the Kubernetes data directly, so the JSON
    API is not needed by the UI. Keep it only if an external consumer needs it, and document that.
 
+## Before merge: reviews (required)
+
+Once every view is ported, the CSP is set, and the React surface is retired, do NOT merge to
+`main` without both of these:
+
+1. **Security review.** New attack surface to scrutinize: the `<script type="application/json">`
+   data islands (the `toJSON` HTML-escaping is what keeps a hostile violation message from breaking
+   out — verify it holds for every islanded field), the Alpine expressions (no untrusted data in
+   `x-` attributes), the removal of the SPA fallback and any path-handling change, and the strict
+   CSP once added. Run it scoped to the whole `feat/drop-react` diff.
+2. **Ponytail review.** The SSR path added templates, CSS, an Alpine table, and Go models. Check
+   for duplication across the view templates, dead CSS, over-built handlers, and anything the
+   stdlib or a native element already covers.
+
 ## Remaining decisions for the user
 
 - **Default landing route.** Today `/` is Home. Keep Home, or redirect `/` to Constraints (the most
