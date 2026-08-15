@@ -249,6 +249,22 @@ code { font-family: var(--mono); font-size: 0.9em; }
   tab-size: 2;
 }
 
+/* chroma's github (light) and github-dark styles emit different token sets: a few "plain" name and
+   punctuation tokens (.na/.nx/.bp/.p) are colored near-black in the light style but left at the
+   style default in dark, so chroma.css never re-colors them for dark and they render near-black on
+   the dark code surface. chroma.css loads after this file, so the fix must be scoped to the dark
+   theme (higher specificity than chroma's unscoped light rule) to win. Light is left untouched. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .chroma .na,
+  :root:not([data-theme="light"]) .chroma .nx,
+  :root:not([data-theme="light"]) .chroma .bp,
+  :root:not([data-theme="light"]) .chroma .p { color: var(--text); }
+}
+:root[data-theme="dark"] .chroma .na,
+:root[data-theme="dark"] .chroma .nx,
+:root[data-theme="dark"] .chroma .bp,
+:root[data-theme="dark"] .chroma .p { color: var(--text); }
+
 details.field > summary {
   cursor: pointer;
   padding: 8px 12px;
