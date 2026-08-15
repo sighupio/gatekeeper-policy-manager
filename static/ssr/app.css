@@ -138,7 +138,7 @@ code { font-family: var(--mono); font-size: 0.9em; }
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 6px 28px 6px 10px;
-  max-width: 220px;
+  max-width: 320px;
   cursor: pointer;
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M3 4.5L6 8l3-3.5z'/%3E%3C/svg%3E");
@@ -189,7 +189,7 @@ code { font-family: var(--mono); font-size: 0.9em; }
 .view-head h1 { margin: 0 0 4px; font-size: 22px; font-weight: 700; }
 .view-head p { margin: 0; }
 
-.layout-sidebar { display: grid; grid-template-columns: 220px 1fr; gap: 28px; align-items: start; }
+.layout-sidebar { display: grid; grid-template-columns: 260px 1fr; gap: 28px; align-items: start; }
 
 .sidebar { position: sticky; top: 76px; }
 .sidebar-title { margin: 0 0 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
@@ -383,13 +383,23 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 .badge-neutral { color: var(--text-muted); background: var(--surface-2); border-color: var(--border); }
 
 /* Sidebar entries carry a badge + name + mode on one row, unlike the plain nav. */
-.cnav a { display: flex; align-items: center; gap: 8px; }
-.cnav .side-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cnav a { display: flex; align-items: flex-start; gap: 8px; }
+.cnav .side-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .cnav .side-mode { font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-muted); }
 
 .btn-block { display: block; text-align: center; margin-top: 16px; }
 
-.card-head-link { margin-left: auto; font-size: 12px; }
+.card-head-link {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+.card-head-link:hover { color: var(--accent); border-color: var(--accent); text-decoration: none; }
 
 /* Enforcement-mode tag, colour-coded like the React badge. */
 .tag-mode { font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }

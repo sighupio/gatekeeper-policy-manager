@@ -63,8 +63,8 @@ land on the right card.
         <p class="status-ok">No violations for this Constraint.</p>
 
         {{- else }}
-        <div class="field">
-          <p class="field-label">Violations <span class="badge badge-danger">{{ .TotalViolations }}</span></p>
+        <details class="field">
+          <summary class="field-label">Violations <span class="badge badge-danger">{{ .TotalViolations }}</span></summary>
 
           <div class="vtable-wrap" x-data="violationsTable('viol-{{ .Name }}')">
             <script type="application/json" id="viol-{{ .Name }}">{{ toJSON .Violations }}</script>
@@ -123,11 +123,11 @@ land on the right card.
               </div>
             </div>
           </div>
-        </div>
 
-        {{- if .AuditLimited }}
-        <div class="alert alert-warn">Not all violations are shown. Gatekeeper's audit limit caps the reported violations for this Constraint at {{ .ReturnedCount }}. See the <code>--constraint-violations-limit</code> audit flag.</div>
-        {{- end }}
+          {{- if .AuditLimited }}
+          <div class="alert alert-warn">Not all violations are shown. Gatekeeper's audit limit caps the reported violations for this Constraint at {{ .ReturnedCount }}. See the <code>--constraint-violations-limit</code> audit flag.</div>
+          {{- end }}
+        </details>
         {{- end }}
 
         {{- /* Spec: match criteria and parameters, as YAML. */}}
