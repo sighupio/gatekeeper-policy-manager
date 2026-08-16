@@ -3,6 +3,6 @@
   "private": true,
   "description": "Pins the versions of the browser assets vendored under static/ssr (Alpine.js) so Dependabot can track them. Nothing is built or installed from here; run 'mise run vendor-alpine' to refresh the vendored file after a bump.",
   "dependencies": {
-    "alpinejs": "3.14.9"
+    "alpinejs": "3.16.1"
   }
 }
