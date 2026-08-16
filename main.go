@@ -136,10 +136,34 @@ func main() {
 	p.RequestCounterHostLabelMappingFunc = func(echo.Context) string { return "" }
 	p.Use(e)
 
-	// Response security headers: X-Content-Type-Options nosniff, X-Frame-Options SAMEORIGIN, the
-	// legacy XSS header. echo's defaults; deliberately no CSP (a strict one breaks the built React
-	// app) and no HSTS (that is the operator's TLS decision, not GPM's to force).
-	e.Use(middleware.Secure())
+	// Response security headers. echo's defaults (X-Content-Type-Options nosniff, X-Frame-Options
+	// SAMEORIGIN, the legacy XSS header) plus a Content Security Policy. No HSTS: that is the
+	// operator's TLS decision, not GPM's to force.
+	//
+	// The policy keeps every script and stylesheet same-origin and blocks framing and plugins. Two
+	// deliberate relaxations, both documented for the security review:
+	//   - script-src 'unsafe-eval': Alpine.js evaluates its x- expressions with the Function
+	//     constructor. Removing it needs Alpine's CSP build and rewriting every inline expression as
+	//     a registered component method.
+	//   - style-src 'unsafe-inline': the standalone printable violations report is self-contained
+	//     with an inline <style>. No style value anywhere derives from user or cluster data (all
+	//     data is HTML-escaped text content), so inline style is not an injection vector here.
+	// img-src allows data: for the small SVG icons the stylesheet inlines as data URIs.
+	e.Use(middleware.SecureWithConfig(middleware.SecureConfig{
+		XSSProtection:      "1; mode=block",
+		ContentTypeNosniff: "nosniff",
+		XFrameOptions:      "SAMEORIGIN",
+		ContentSecurityPolicy: "default-src 'self'; " +
+			"script-src 'self' 'unsafe-eval'; " +
+			"style-src 'self' 'unsafe-inline'; " +
+			"img-src 'self' data:; " +
+			"font-src 'self'; " +
+			"connect-src 'self'; " +
+			"base-uri 'self'; " +
+			"form-action 'self'; " +
+			"frame-ancestors 'self'; " +
+			"object-src 'none'",
+	}))
 
 	// Setup logging
 	e.Use(middleware.Recover())
