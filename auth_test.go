@@ -46,7 +46,6 @@ func TestAuthEnabled(t *testing.T) {
 func TestIsPublicPath(t *testing.T) {
 	public := []string{
 		"/health", "/health/",
-		"/api/v1/auth", "/api/v1/auth/",
 		"/oidc-auth",
 		"/logout", "/login",
 		"/metrics",
@@ -132,7 +131,7 @@ func TestMiddlewareLetsPublicPathsThrough(t *testing.T) {
 		return nil
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth", nil)
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	rec := httptest.NewRecorder()
 	if err := h(echo.New().NewContext(req, rec)); err != nil {
 		t.Fatalf("middleware returned an error: %v", err)

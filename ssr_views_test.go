@@ -60,7 +60,7 @@ func TestSSRNewViewsRenderWithoutError(t *testing.T) {
 	}
 	csData := map[string]any{
 		"Layout": minimalLayout(), "Constraints": []ssrConstraint{cs},
-		"ReportURL": "/api/v1/constraints/kind?report=html",
+		"ReportURL": "/constraints/kind?report=html",
 	}
 
 	buf.Reset()

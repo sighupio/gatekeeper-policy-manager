@@ -587,22 +587,38 @@ func (s *server) getSSRConstraints(c echo.Context) error {
 
 	sortConstraints(raw)
 
+	// The printable HTML report shares this data path. When ?report is present, render it instead
+	// of the interactive view. The context in the path (or the kubeconfig default) names the
+	// cluster the report describes, so it is unambiguous on a multi-context kubeconfig.
+	if c.QueryParam("report") != "" {
+		selected := c.Param("context")
+		if selected == "" {
+			_, selected = s.k8s.contexts()
+		}
+		return c.Render(http.StatusOK, "report", map[string]any{
+			"constraints":   raw,
+			"apiServerHost": clients.rest.Host,
+			"context":       selected,
+			"timestamp":     time.Now().Format(time.ANSIC),
+		})
+	}
+
 	models := make([]ssrConstraint, 0, len(raw))
 	for _, o := range raw {
 		models = append(models, ssrConstraintModel(o))
 	}
 	data["Constraints"] = models
 
-	// The HTML report the JSON handler serves. It names the context in the path, so the report is
-	// unambiguous on a multi-context kubeconfig; fall back to the kubeconfig's current context.
+	// The printable report is this same view with ?report set. It names the context in the path, so
+	// the report is unambiguous on a multi-context kubeconfig; fall back to the current context.
 	selected := c.Param("context")
 	if selected == "" {
 		_, selected = s.k8s.contexts()
 	}
 	if selected != "" {
-		data["ReportURL"] = browserPath("/api/v1/constraints/" + url.PathEscape(selected) + "?report=html")
+		data["ReportURL"] = browserPath("/constraints/" + url.PathEscape(selected) + "?report=html")
 	} else {
-		data["ReportURL"] = browserPath("/api/v1/constraints?report=html")
+		data["ReportURL"] = browserPath("/constraints?report=html")
 	}
 	return s.ssr.render(c, "constraints", data)
 }

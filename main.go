@@ -259,25 +259,6 @@ func main() {
 
 	e.GET("/health", getHealth)
 
-	e.GET("/api/v1/auth", getAuth)
-
-	e.GET("/api/v1/contexts", s.getContexts)
-
-	e.GET("/api/v1/configs", s.getConfigs)
-	e.GET("/api/v1/configs/:context", s.getConfigs)
-
-	e.GET("/api/v1/constrainttemplates", s.getConstraintTemplates)
-	e.GET("/api/v1/constrainttemplates/:context", s.getConstraintTemplates)
-
-	e.GET("/api/v1/constraints", s.getConstraints)
-	e.GET("/api/v1/constraints/:context", s.getConstraints)
-
-	e.GET("/api/v1/mutations", s.getMutations)
-	e.GET("/api/v1/mutations/:context", s.getMutations)
-
-	e.GET("/api/v1/events", s.getEvents)
-	e.GET("/api/v1/events/:context", s.getEvents)
-
 	address := viper.GetString("listen_address")
 
 	// echo's default server sets no timeouts, so a slow or idle client can hold a connection open

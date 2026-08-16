@@ -342,8 +342,6 @@ func isAllowlistedPath(p string) bool {
 	switch {
 	case p == "/health", p == "/health/":
 		return true
-	case p == "/api/v1/auth", p == "/api/v1/auth/":
-		return true
 	case p == callbackPath, p == "/logout", p == "/login":
 		return true
 	// Prometheus scrapes this with no session. It carries request counters only, no policy data,

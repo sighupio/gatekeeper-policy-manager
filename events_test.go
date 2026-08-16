@@ -75,17 +75,20 @@ users:
 	if err != nil {
 		t.Fatalf("building the registry failed: %v", err)
 	}
-	return &server{k8s: registry}
+	return &server{k8s: registry, ssr: newSSRRenderer()}
 }
 
+// Drives the events view handler. The namespace resolution under test lives in getSSREvents (it is
+// what the JSON getEvents used to hold); the assertions check which namespace the handler asked the
+// Kubernetes API for, not the rendered page.
 func callGetEvents(t *testing.T, s *server, query string) {
 	t.Helper()
 
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/events"+query, nil)
+	req := httptest.NewRequest(http.MethodGet, "/events"+query, nil)
 	rec := httptest.NewRecorder()
 
-	if err := s.getEvents(e.NewContext(req, rec)); err != nil {
+	if err := s.getSSREvents(e.NewContext(req, rec)); err != nil {
 		t.Fatalf("the handler returned an error: %v", err)
 	}
 	if rec.Code != http.StatusOK {

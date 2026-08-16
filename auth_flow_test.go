@@ -205,7 +205,6 @@ func newAuthTestServerOnSubpath(t *testing.T, p *fakeProvider, base string, extr
 	e.GET("/login", auth.login)
 	e.GET("/logout", auth.logout)
 	e.GET("/constraints", func(c echo.Context) error { return c.String(http.StatusOK, "protected") })
-	e.GET("/api/v1/auth", getAuth)
 	return e, auth
 }
 
@@ -544,24 +543,6 @@ func loginForTest(t *testing.T, e *echo.Echo, p *fakeProvider) []*http.Cookie {
 		t.Fatalf("login did not complete: status %d (%s)", rec.Code, rec.Body.String())
 	}
 	return rec.Result().Cookies()
-}
-
-// /api/v1/auth has to answer without a session, because the frontend calls it to find out whether
-// there is anything to log into.
-func TestAuthEndpointStaysReachableWithoutASession(t *testing.T) {
-	p := newFakeProvider(t)
-	e, _ := newAuthTestServer(t, p)
-
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth", nil)
-	rec := httptest.NewRecorder()
-	e.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
-	}
-	if !strings.Contains(rec.Body.String(), `"auth_enabled":true`) {
-		t.Errorf("body = %q, want auth_enabled true", rec.Body.String())
-	}
 }
 
 // PKCE protects the authorization code when the client is public, which GPM allows because
