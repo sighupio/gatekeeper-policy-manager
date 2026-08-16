@@ -350,11 +350,6 @@ func isAllowlistedPath(p string) bool {
 		return true
 	case strings.HasPrefix(p, "/static/"):
 		return true
-	// The top-level assets a fresh page load and the logout page pull in. Without them, an
-	// unauthenticated logout page redirects each to the provider and logs console errors.
-	case p == "/favicon.ico", p == "/manifest.json", p == "/touch-icon.png",
-		p == "/logo192.png", p == "/logo512.png", p == "/asset-manifest.json", p == "/robots.txt":
-		return true
 	}
 	return false
 }

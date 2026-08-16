@@ -7,9 +7,13 @@ package main
 import (
 	"bytes"
 	"html"
+	"net/http"
+	"net/http/httptest"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/labstack/echo/v4"
 )
 
 // Guards the new SSR views: newSSRRenderer parses every registered page (it panics on a parse
@@ -136,6 +140,40 @@ func TestSSRNewViewsRenderWithoutError(t *testing.T) {
 
 func minimalLayout() ssrLayout {
 	return ssrLayout{Title: "t", Version: appVersion, AssetBase: "/static"}
+}
+
+// The pages served without a session -- the signed-out page and the error/404 pages -- must not
+// render the context switcher, or an anonymous visitor could read the operator's context names off
+// a multi-context kubeconfig. A normal view (Home) still shows it, which proves the registry here
+// does have contexts and the suppression is what hides them.
+func TestPublicPagesHideTheContextSwitcher(t *testing.T) {
+	useTestKubeconfig(t, twoClusterKubeconfig)
+	registry, err := newClientRegistry()
+	if err != nil {
+		t.Fatalf("building the registry failed: %v", err)
+	}
+	s := &server{k8s: registry, ssr: newSSRRenderer()}
+
+	render := func(fn func(echo.Context) error) string {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		if err := fn(echo.New().NewContext(req, rec)); err != nil {
+			t.Fatalf("render failed: %v", err)
+		}
+		return rec.Body.String()
+	}
+
+	if home := render(s.getSSRHome); !strings.Contains(home, "ctx-select") {
+		t.Fatal("Home should render the context switcher when the kubeconfig has contexts")
+	}
+	for name, fn := range map[string]func(echo.Context) error{
+		"signed-out": s.renderSSRLoggedOut,
+		"not-found":  s.renderSSRNotFound,
+	} {
+		if out := render(fn); strings.Contains(out, "ctx-select") {
+			t.Errorf("the %s page rendered the context switcher; it must not expose context names", name)
+		}
+	}
 }
 
 // stripHTMLTags removes tags and unescapes entities so an assertion can match source text that

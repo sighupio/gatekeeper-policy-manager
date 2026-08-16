@@ -50,8 +50,6 @@ func TestIsPublicPath(t *testing.T) {
 		"/logout", "/login",
 		"/metrics",
 		"/static/js/main.abc123.js", "/static/css/main.abc123.css",
-		"/favicon.ico", "/manifest.json", "/touch-icon.png",
-		"/logo192.png", "/logo512.png", "/asset-manifest.json", "/robots.txt",
 	}
 	for _, p := range public {
 		if !isPublicPath(p) {
@@ -68,6 +66,8 @@ func TestIsPublicPath(t *testing.T) {
 		"/api/v2/contexts/",
 		// Must not be reachable just because it starts with a public prefix.
 		"/static", "/healthz", "/api/v1/authorized",
+		// The old Create React App asset paths are no longer served, so no longer public.
+		"/favicon.ico", "/manifest.json", "/robots.txt",
 		// Neither the raw nor the cleaned form may sneak past the allowlist.
 		"/static/../api/v1/constraints",
 		"/static/../../api/v1/constraints",

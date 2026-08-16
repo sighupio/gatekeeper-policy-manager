@@ -587,14 +587,16 @@ func (s *server) getSSRConstraints(c echo.Context) error {
 
 	sortConstraints(raw)
 
+	// The context named in the path, or the kubeconfig default. It names the cluster the report
+	// describes and disambiguates the report URL, both on a multi-context kubeconfig.
+	selected := c.Param("context")
+	if selected == "" {
+		_, selected = s.k8s.contexts()
+	}
+
 	// The printable HTML report shares this data path. When ?report is present, render it instead
-	// of the interactive view. The context in the path (or the kubeconfig default) names the
-	// cluster the report describes, so it is unambiguous on a multi-context kubeconfig.
+	// of the interactive view.
 	if c.QueryParam("report") != "" {
-		selected := c.Param("context")
-		if selected == "" {
-			_, selected = s.k8s.contexts()
-		}
 		return c.Render(http.StatusOK, "report", map[string]any{
 			"constraints":   raw,
 			"apiServerHost": clients.rest.Host,
@@ -609,12 +611,7 @@ func (s *server) getSSRConstraints(c echo.Context) error {
 	}
 	data["Constraints"] = models
 
-	// The printable report is this same view with ?report set. It names the context in the path, so
-	// the report is unambiguous on a multi-context kubeconfig; fall back to the current context.
-	selected := c.Param("context")
-	if selected == "" {
-		_, selected = s.k8s.contexts()
-	}
+	// The printable report is this same view with ?report set.
 	if selected != "" {
 		data["ReportURL"] = browserPath("/constraints/" + url.PathEscape(selected) + "?report=html")
 	} else {
@@ -766,19 +763,30 @@ type ssrErrorView struct {
 	BackURL     string // where "Go back" points; defaults to home
 }
 
+// publicLayout builds the layout for a page that is served without a session: the signed-out page
+// and the error and 404 pages. It drops the context switcher, so an anonymous visitor to one of
+// these public paths cannot read the operator's context names off a multi-context kubeconfig. The
+// React app served a data-free shell on these paths; this keeps that property.
+func (s *server) publicLayout(c echo.Context, title string) ssrLayout {
+	l := s.ssrLayoutData(c, "", "/home", title)
+	l.Contexts = nil
+	l.HasContexts = false
+	return l
+}
+
 // renderSSRError renders the shared error page with the given status. login sensibly defaults BackURL
 // to home when the caller leaves it empty.
 func (s *server) renderSSRError(c echo.Context, status int, e ssrErrorView) error {
 	if e.BackURL == "" {
 		e.BackURL = browserPath("/")
 	}
-	layout := s.ssrLayoutData(c, "", "/home", "Error")
+	layout := s.publicLayout(c, "Error")
 	return s.ssr.renderStatus(c, status, "error", map[string]any{"Layout": layout, "Err": e})
 }
 
 // renderSSRNotFound renders the shared 404 page.
 func (s *server) renderSSRNotFound(c echo.Context) error {
-	layout := s.ssrLayoutData(c, "", "/home", "Not found")
+	layout := s.publicLayout(c, "Not found")
 	return s.ssr.renderStatus(c, http.StatusNotFound, "notfound", map[string]any{"Layout": layout})
 }
 
@@ -819,7 +827,7 @@ func registerSSR(e *echo.Echo, s *server) {
 // renderSSRLoggedOut renders the "you are signed out" page. It is what the local logout path lands
 // on (see auth.go): a public page, so it does not bounce a just-logged-out user back to the IdP.
 func (s *server) renderSSRLoggedOut(c echo.Context) error {
-	layout := s.ssrLayoutData(c, "", "/home", "Signed out")
+	layout := s.publicLayout(c, "Signed out")
 	return s.ssr.renderStatus(c, http.StatusOK, "loggedout",
 		map[string]any{"Layout": layout, "LoginURL": browserPath("/login")})
 }
