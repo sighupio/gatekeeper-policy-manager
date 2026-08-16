@@ -49,8 +49,11 @@ JSON API is removed. What has landed:
 ### Remaining before merge
 
 1. **Update the README screenshots.** They still show the old React UI.
-2. **Update the Playwright e2e baselines** in `tests/e2e` for the server-rendered UI (routes and
-   selectors changed).
+2. **Regenerate the Playwright e2e baselines.** The specs are updated for the server-rendered UI
+   (EUI selectors and content waits dropped, the events test reads `.event-row`, volatile content
+   tagged `class="dynamic"` for the snapshot mask) and the old-UI baseline PNGs are deleted. What
+   remains is regenerating the baselines against the new UI in the CI (linux) environment with
+   `yarn gen:snapshot`, then committing them — they cannot be generated off a macOS dev machine.
 3. **Security and ponytail reviews** (see below), scoped to the whole `feat/drop-react` diff.
 
 ## POC files
