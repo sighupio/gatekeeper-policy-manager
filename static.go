@@ -6,11 +6,15 @@
 package main
 
 import (
+	"embed"
 	"html/template"
 	"io"
 
 	"github.com/labstack/echo/v4"
 )
+
+//go:embed templates/constraints-report.html.gotpl
+var reportTemplateFS embed.FS
 
 type Template struct {
 	templates *template.Template
@@ -18,10 +22,11 @@ type Template struct {
 
 // Builds the renderer for the HTML report. html/template, never text/template: the report
 // interpolates cluster-controlled data (constraint and resource names, namespaces, violation
-// messages), and only html/template escapes it per HTML context. Kept here, not inline in main, so
-// tests render exactly as production does.
+// messages), and only html/template escapes it per HTML context. The template is embedded, so the
+// renderer does not depend on the working directory.
 func newRenderer() *Template {
-	return &Template{templates: template.Must(template.ParseGlob("templates/*.html.gotpl"))}
+	return &Template{templates: template.Must(
+		template.ParseFS(reportTemplateFS, "templates/constraints-report.html.gotpl"))}
 }
 
 func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
