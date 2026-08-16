@@ -22,10 +22,7 @@ nav, context switcher and footer data (see ssrLayoutData in ssr.go).
   <script defer src="{{ .Layout.AssetBase }}/alpine.min.js"></script>
 </head>
 <body>
-  <header class="topbar"
-          x-data="{ dark: document.documentElement.getAttribute('data-theme') === 'dark'
-                        || (!document.documentElement.getAttribute('data-theme')
-                            && window.matchMedia('(prefers-color-scheme: dark)').matches) }">
+  <header class="topbar">
     <a class="brand" href="{{ browserPath `/` }}" title="Home">
       <img class="brand-logo" src="{{ .Layout.AssetBase }}/logo.svg" alt="" height="30">
       <span class="brand-text">Gatekeeper Policy Manager</span>
@@ -51,11 +48,9 @@ nav, context switcher and footer data (see ssrLayoutData in ssr.go).
       </label>
       {{- end }}
 
-      <button type="button" class="icon-btn" title="Toggle light/dark"
-              x-on:click="dark = !dark;
-                          document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-                          localStorage.setItem('gpm-theme', dark ? 'dark' : 'light')">
-        <span x-text="dark ? '☀' : '☾'">☾</span>
+      <button type="button" class="icon-btn" title="Theme"
+              x-data="themeToggle()" x-on:click="cycle()" x-bind:title="title">
+        <span x-text="icon">☾</span>
       </button>
 
       {{- if .Layout.AuthEnabled }}

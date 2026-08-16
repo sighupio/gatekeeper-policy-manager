@@ -149,7 +149,7 @@ code { font-family: var(--mono); font-size: 0.9em; }
   background-position: right 8px center;
   /* The SVG has only a viewBox, so without an explicit size it renders oversized and overlaps the
      text. Pin the size; the 28px right padding then clears it. */
-  background-size: 14px 14px;
+  background-size: 16px 16px;
 }
 .ctx-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
