@@ -186,6 +186,29 @@ trigger:
       - refs/tags/gatekeeper-policy-manager-*
 
 steps:
+  # On Dependabot branches, refresh the vendored Alpine to the version package.json now pins, before
+  # the image is built. This runs in the same shared workspace as the build step below, so the image
+  # (and the e2e that runs it) tests the bumped Alpine instead of the committed one. Skipped on every
+  # other branch, where the committed file already matches (check-alpine-version guards that).
+  - name: vendor-alpine
+    image: quay.io/sighup/mise:v2026.8.6
+    pull: always
+    environment:
+      MISE_DATA_DIR: /mise-data
+      MISE_GITHUB_TOKEN:
+        from_secret: github_token
+    volumes:
+      - name: mise-cache
+        path: /mise-data
+    commands:
+      - "(flock -w 1800 9 || exit 1; mise install) 9>/mise-data/.mise-install.lock"
+      - eval "$(mise activate bash --shims)"
+      - mise run vendor-alpine
+    when:
+      ref:
+        include:
+          - refs/heads/dependabot/**
+
   - name: build
     image: docker:dind
     pull: always
@@ -206,6 +229,9 @@ steps:
       - "docker buildx build --load --platform linux/amd64 -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG} $${BUILD_CONTEXT}"
 
 volumes:
+  - name: mise-cache
+    host:
+      path: /root/mise_data_dir
   - name: dockerconfig
     host:
       path: /root/.docker/config.json
