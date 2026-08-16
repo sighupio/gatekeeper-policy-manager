@@ -443,7 +443,7 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 .card-head-badge { margin-left: auto; text-transform: uppercase; letter-spacing: 0.03em; }
 
 /* Sidebar entries carry a badge + name + mode on one row, unlike the plain nav. */
-.cnav a { display: flex; align-items: flex-start; gap: 8px; }
+.cnav a { display: flex; align-items: center; gap: 8px; }
 /* break-word (not anywhere) so the name's full width still counts toward the sidebar's fit-content
    track: the column grows to fit the longest name (up to its cap) instead of wrapping early. */
 .cnav .side-name { flex: 1; min-width: 0; overflow-wrap: break-word; }
