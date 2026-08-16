@@ -180,7 +180,7 @@ code { font-family: var(--mono); font-size: 0.9em; }
 .page {
   flex: 1;
   width: 100%;
-  max-width: 1120px;
+  max-width: 1360px;
   margin: 0 auto;
   padding: 28px 20px 48px;
 }
@@ -189,7 +189,9 @@ code { font-family: var(--mono); font-size: 0.9em; }
 .view-head h1 { margin: 0 0 4px; font-size: 22px; font-weight: 700; }
 .view-head p { margin: 0; }
 
-.layout-sidebar { display: grid; grid-template-columns: 320px 1fr; gap: 28px; align-items: start; }
+/* The sidebar column sizes to its content (the longest entry) but never past 460px, so short lists
+   give their width back to the cards and long constraint names stop wrapping when there is room. */
+.layout-sidebar { display: grid; grid-template-columns: fit-content(460px) 1fr; gap: 28px; align-items: start; }
 
 .sidebar { position: sticky; top: 76px; }
 .sidebar-title { margin: 0 0 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
@@ -285,6 +287,7 @@ code { font-family: var(--mono); font-size: 0.9em; }
 
 details.field > summary {
   cursor: pointer;
+  margin: 0; /* summary is a .field-label, whose 6px bottom margin would open a gap above the code */
   padding: 8px 12px;
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -294,10 +297,20 @@ details.field > summary {
   user-select: none;
 }
 details.field > summary::-webkit-details-marker { display: none; }
-details.field > summary::before { content: "▸ "; color: var(--text-muted); }
-details.field[open] > summary::before { content: "▾ "; }
+details.field > summary::before {
+  content: "▶";
+  display: inline-block;
+  width: 1.3em;
+  font-size: 0.75em;
+  color: var(--text-muted);
+}
+details.field[open] > summary::before { content: "▼"; }
 details.field[open] > summary { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+/* Joined to the summary above: no top border, only the bottom corners rounded. width:fit-content
+   keeps a one-line block (e.g. "excludeIstio: false") from stretching the full card width; wide
+   code still fills the row and scrolls, capped by the parent. */
 details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
+.code { width: fit-content; max-width: 100%; }
 
 .card-foot { margin: 16px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.02em; }
 
@@ -405,10 +418,13 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 
 /* Sidebar entries carry a badge + name + mode on one row, unlike the plain nav. */
 .cnav a { display: flex; align-items: flex-start; gap: 8px; }
-.cnav .side-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+/* break-word (not anywhere) so the name's full width still counts toward the sidebar's fit-content
+   track: the column grows to fit the longest name (up to its cap) instead of wrapping early. */
+.cnav .side-name { flex: 1; min-width: 0; overflow-wrap: break-word; }
 .cnav .side-mode { font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-muted); }
 
-.btn-block { display: block; text-align: center; margin-top: 16px; }
+.btn-block { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; }
+.btn-icon { flex-shrink: 0; }
 
 .card-head-link {
   margin-left: auto;

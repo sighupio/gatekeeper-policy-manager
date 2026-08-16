@@ -53,7 +53,7 @@ Mutations view. Renders the Gatekeeper mutator objects the JSON handler getMutat
         {{- end }}
 
         <details class="field">
-          <summary>Full YAML definition</summary>
+          <summary class="field-label">Full YAML definition</summary>
           <div class="code">{{ highlight (toYAML .) "yaml" }}</div>
         </details>
 

@@ -64,16 +64,15 @@ cross-links from the Events view (#<kind>) land on the right card.
 
         {{- range .Libs }}
         <details class="field">
-          <summary>Libs definition</summary>
+          <summary class="field-label">Libs definition</summary>
           <div class="code">{{ highlight . "rego" }}</div>
         </details>
         {{- end }}
 
         {{- with .Schema }}
-        {{- $y := toYAML . }}
-        <details class="field"{{ if le (lines $y) 12 }} open{{ end }}>
+        <details class="field">
           <summary class="field-label">Parameters schema</summary>
-          <div class="code">{{ highlight $y "yaml" }}</div>
+          <div class="code">{{ highlight (toYAML .) "yaml" }}</div>
         </details>
         {{- end }}
 
@@ -91,7 +90,7 @@ cross-links from the Events view (#<kind>) land on the right card.
         </div>
 
         <details class="field">
-          <summary>Full YAML definition</summary>
+          <summary class="field-label">Full YAML definition</summary>
           <div class="code">{{ highlight (toYAML .Raw) "yaml" }}</div>
         </details>
 
