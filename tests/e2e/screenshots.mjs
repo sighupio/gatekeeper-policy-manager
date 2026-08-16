@@ -4,8 +4,9 @@
 
 // Captures the README screenshots from a running GPM. Point it at a GPM that already has some
 // Gatekeeper objects to show (the e2e cluster is ideal) via GPM_BASE_URL, then run it with
-// `mise run gen:screenshots`. The "-02" shots open the first card so the rego and the violations
-// table are visible.
+// `mise run gen:screenshots`. The shots are viewport-sized (1440x900), not full-page, so the
+// README's thumbnail grid stays uniform. The "expand" shots open the first card or event row so
+// the rego, the violations table, or an event's detail is visible.
 
 import { chromium } from "playwright";
 import { mkdir } from "node:fs/promises";
@@ -16,12 +17,12 @@ const outDir = "../../screenshots";
 const shots = [
   { file: "home.png", path: "/" },
   { file: "constraint-templates-01.png", path: "/constrainttemplates" },
-  { file: "constraint-templates-02.png", path: "/constrainttemplates", expandFirstCard: true },
+  { file: "constraint-templates-02.png", path: "/constrainttemplates", expand: ".card" },
   { file: "constraints-01.png", path: "/constraints" },
-  { file: "constraints-02.png", path: "/constraints", expandFirstCard: true },
+  { file: "constraints-02.png", path: "/constraints", expand: ".card" },
   { file: "violations-report.png", path: "/constraints?report=html" },
   { file: "mutations.png", path: "/mutations" },
-  { file: "events.png", path: "/events" },
+  { file: "events.png", path: "/events", expand: ".event-row" },
   { file: "configurations.png", path: "/configurations" },
 ];
 
@@ -31,12 +32,16 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 
 for (const s of shots) {
   await page.goto(base + s.path, { waitUntil: "networkidle" });
-  if (s.expandFirstCard) {
-    // Open every <details> in the first card so its rego / violations table shows.
-    await page.locator(".card").first().locator("details").evaluateAll((els) => els.forEach((d) => (d.open = true)));
+  if (s.expand) {
+    // Open the first matching element's <details> (the element itself if it is one), so its rego /
+    // violations table / event detail shows.
+    await page.locator(s.expand).first().evaluate((el) => {
+      const ds = el.tagName === "DETAILS" ? [el] : el.querySelectorAll("details");
+      ds.forEach((d) => (d.open = true));
+    });
     await page.waitForTimeout(200);
   }
-  await page.screenshot({ path: `${outDir}/${s.file}`, fullPage: true });
+  await page.screenshot({ path: `${outDir}/${s.file}` });
   console.log("captured", s.file);
 }
 
