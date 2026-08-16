@@ -33,9 +33,10 @@ description = "shellcheck the shell scripts"
 run = 'shellcheck $(find . -name "*.sh" -not -path "*/node_modules/*")'
 
 [tasks.lint]
-description = "run golangci-lint (and shellcheck via the lint-shell dep)"
-# lint-shell runs first, in the same qa step, so a shell-script fault fails CI too.
-depends = ["lint-shell"]
+description = "run golangci-lint (plus the shell and Alpine-version checks via deps)"
+# The deps run first in the same qa step, so a shell-script fault or a stale vendored Alpine fails
+# CI too.
+depends = ["lint-shell", "check-alpine-version"]
 run = "golangci-lint run --config=.rules/.golangci.yml ./..."
 
 [tasks."lint-fix"]
@@ -122,6 +123,43 @@ run = [
   "kustomize build . > gpm.yaml",
   "helm template --set config.secretKey=e2e chart > rendered_chart.yaml",
 ]
+
+[tasks."vendor-alpine"]
+description = "re-download the vendored Alpine.js (version from package.json) into static/ssr/alpine.min.js"
+# The version is pinned in package.json so Dependabot can bump it; this fetches that version. cdnjs,
+# jsdelivr and unpkg all serve the same npm dist/cdn.min.js, so the bytes match whichever mirror.
+run = """
+version=$(node -p "require('./package.json').dependencies.alpinejs.replace(/[^0-9.]/g,'')")
+url="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/${version}/cdn.min.js"
+curl -fsSL "$url" -o static/ssr/alpine.min.js
+bytes=$(wc -c < static/ssr/alpine.min.js)
+[ "$bytes" -gt 20000 ] || { echo "downloaded file is only ${bytes} bytes; aborting" >&2; exit 1; }
+grep -q "\\"${version}\\"" static/ssr/alpine.min.js || { echo "downloaded build does not report version ${version}" >&2; exit 1; }
+echo "vendored Alpine ${version} (${bytes} bytes) from ${url}"
+"""
+
+[tasks."check-alpine-version"]
+description = "fail if static/ssr/alpine.min.js drifts from the Alpine version pinned in package.json"
+# Guards the vendored file against the manifest, so a Dependabot bump that forgets to re-run
+# vendor-alpine fails CI (same idea as check-go-version for the Dockerfile).
+run = """
+# On a Dependabot branch the vendored file legitimately lags the manifest: Dependabot only edits
+# package.json, and the build pipeline re-vendors Alpine so the e2e run tests the bumped version.
+# Skip the drift check there; it still guards main, where the refreshed file must land.
+case "${DRONE_SOURCE_BRANCH:-${DRONE_BRANCH:-}}" in
+  dependabot/*)
+    echo "Dependabot branch: CI re-vendors Alpine and e2e-tests it; skipping the drift check"
+    exit 0
+    ;;
+esac
+want=$(node -p "require('./package.json').dependencies.alpinejs.replace(/[^0-9.]/g,'')")
+have=$(grep -oE 'version:"[0-9.]+"' static/ssr/alpine.min.js | head -1 | tr -dc '0-9.')
+if [ "$want" != "$have" ]; then
+  echo "alpine.min.js reports ${have} but package.json pins ${want}; run 'mise run vendor-alpine'" >&2
+  exit 1
+fi
+echo "Alpine aligned across package.json and alpine.min.js: ${want}"
+"""
 
 [tasks."gen:screenshots"]
 description = "capture the README screenshots from a running GPM (set GPM_BASE_URL, default http://localhost:8080)"
