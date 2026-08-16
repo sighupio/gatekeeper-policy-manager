@@ -56,7 +56,7 @@ land on the right card.
         <div class="card-head">
           <h2>{{ .Name }}</h2>
           <span class="tag tag-mode tag-{{ .EnforcementMode }}">{{ .EnforcementMode }} mode</span>
-          <a class="card-head-link" href="{{ browserPath `/ssr/constrainttemplates` }}#{{ .Kind }}"><span class="tag-key">template</span> {{ .Kind }}</a>
+          <a class="card-head-link" href="{{ browserPath `/constrainttemplates` }}#{{ .Kind }}"><span class="tag-key">template</span> {{ .Kind }}</a>
         </div>
 
         {{- /* Violations: unknown (not audited yet), none, or the searchable/sortable table. */}}

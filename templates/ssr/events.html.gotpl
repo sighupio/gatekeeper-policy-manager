@@ -46,12 +46,12 @@ row for the fuller detail. No sidebar. Emitting events is a Gatekeeper alpha fea
           <span>{{ with .ObjKind }}{{ . }}{{ end }}{{ if and .ObjKind .ObjName }}/{{ end }}{{ .ObjName }}</span>
           <span>
             {{- if .ConstraintKind }}
-            <a href="{{ browserPath `/ssr/constrainttemplates` }}#{{ .ConstraintKind }}">{{ .ConstraintKind }}</a>
+            <a href="{{ browserPath `/constrainttemplates` }}#{{ .ConstraintKind }}">{{ .ConstraintKind }}</a>
             {{- else }}—{{ end }}
           </span>
           <span>
             {{- if .ConstraintName }}
-            <a href="{{ browserPath `/ssr/constraints` }}#{{ .ConstraintName }}">{{ .ConstraintName }}</a>
+            <a href="{{ browserPath `/constraints` }}#{{ .ConstraintName }}">{{ .ConstraintName }}</a>
             {{- else }}—{{ end }}
           </span>
           <span class="ev-msg">{{ .Message }}</span>

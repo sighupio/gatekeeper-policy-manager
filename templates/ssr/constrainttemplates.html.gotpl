@@ -86,7 +86,7 @@ cross-links from the Events view (#<kind>) land on the right card.
           {{- if .Constraints }}
           <nav class="linklist">
             {{- range .Constraints }}
-            <a href="{{ browserPath `/ssr/constraints` }}#{{ . }}">{{ . }}</a>
+            <a href="{{ browserPath `/constraints` }}#{{ . }}">{{ . }}</a>
             {{- end }}
           </nav>
           {{- else }}
