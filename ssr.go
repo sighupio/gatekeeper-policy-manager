@@ -107,7 +107,7 @@ func toYAML(v any) string {
 // chromaFormatter emits highlighted tokens as <span class="…"> in chroma's classes mode and does
 // NOT wrap them in its own <pre>, so the output slots inside the existing <pre class="code chroma">.
 // The classes are styled by static/ssr/chroma.css.
-var chromaFormatter = chromahtml.New(chromahtml.WithClasses(true), chromahtml.PreventSurroundingPre(true))
+var chromaFormatter = chromahtml.New(chromahtml.WithClasses(true), chromahtml.WithLineNumbers(true))
 
 // highlight renders code with server-side syntax highlighting. lang picks the chroma lexer (e.g.
 // "yaml", "json", "rego"); an unknown language falls back to the plain lexer so the code still

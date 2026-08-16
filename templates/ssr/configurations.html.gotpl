@@ -45,7 +45,7 @@ Configurations view. Renders the Gatekeeper Config objects the JSON handler getC
         {{- with .spec }}
         <div class="field">
           <p class="field-label">Spec</p>
-          <pre class="code chroma"><code>{{ highlight (toYAML .) "yaml" }}</code></pre>
+          <div class="code">{{ highlight (toYAML .) "yaml" }}</div>
         </div>
         {{- else }}
         <p class="muted no-spec">This configuration has no spec defined.</p>
@@ -53,7 +53,7 @@ Configurations view. Renders the Gatekeeper Config objects the JSON handler getC
 
         <details class="field">
           <summary>Full YAML definition</summary>
-          <pre class="code chroma"><code>{{ highlight (toYAML .) "yaml" }}</code></pre>
+          <div class="code">{{ highlight (toYAML .) "yaml" }}</div>
         </details>
 
         {{- with .metadata.creationTimestamp }}

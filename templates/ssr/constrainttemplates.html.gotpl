@@ -48,7 +48,7 @@ cross-links from the Events view (#<kind>) land on the right card.
         {{- if .Rego }}
         <details class="field">
           <summary class="field-label">Rego definition{{ with .Target }} · target {{ . }}{{ end }}</summary>
-          <pre class="code chroma"><code>{{ highlight .Rego "rego" }}</code></pre>
+          <div class="code">{{ highlight .Rego "rego" }}</div>
         </details>
         {{- else }}
         <div class="field">
@@ -60,14 +60,14 @@ cross-links from the Events view (#<kind>) land on the right card.
         {{- range .Libs }}
         <details class="field">
           <summary>Libs definition</summary>
-          <pre class="code chroma"><code>{{ highlight . "rego" }}</code></pre>
+          <div class="code">{{ highlight . "rego" }}</div>
         </details>
         {{- end }}
 
         {{- with .Schema }}
         <div class="field">
           <p class="field-label">Parameters schema</p>
-          <pre class="code chroma"><code>{{ highlight (toYAML .) "yaml" }}</code></pre>
+          <div class="code">{{ highlight (toYAML .) "yaml" }}</div>
         </div>
         {{- end }}
 
@@ -86,7 +86,7 @@ cross-links from the Events view (#<kind>) land on the right card.
 
         <details class="field">
           <summary>Full YAML definition</summary>
-          <pre class="code chroma"><code>{{ highlight (toYAML .Raw) "yaml" }}</code></pre>
+          <div class="code">{{ highlight (toYAML .Raw) "yaml" }}</div>
         </details>
 
         {{- with .Created }}

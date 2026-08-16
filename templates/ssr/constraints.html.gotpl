@@ -138,14 +138,14 @@ land on the right card.
         {{- with .Match }}
         <div class="field">
           <p class="field-label">Match criteria</p>
-          <pre class="code chroma"><code>{{ highlight (toYAML .) "yaml" }}</code></pre>
+          <div class="code">{{ highlight (toYAML .) "yaml" }}</div>
         </div>
         {{- end }}
 
         {{- with .Parameters }}
         <div class="field">
           <p class="field-label">Parameters</p>
-          <pre class="code chroma"><code>{{ highlight (toYAML .) "yaml" }}</code></pre>
+          <div class="code">{{ highlight (toYAML .) "yaml" }}</div>
         </div>
         {{- end }}
         {{- end }}

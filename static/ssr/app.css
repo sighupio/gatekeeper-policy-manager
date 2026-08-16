@@ -242,6 +242,12 @@ code { font-family: var(--mono); font-size: 0.9em; }
 
 .no-spec { margin: 14px 0 0; }
 
+/* .code is the box; chroma emits its own <pre class="chroma"> inside it (with WithLineNumbers, each
+   line is <span class="line"><span class="ln">N</span><span class="cl">…</span></span>). The box owns
+   padding/background/border/scroll; the inner pre resets its UA margin/background/padding and carries
+   the mono font (a rule on .code cannot reach the pre because the UA's `pre{font-family:monospace}`
+   beats an inherited value). .chroma's own background from chroma.css is overridden here by higher
+   specificity so the box surface shows through. */
 .code {
   margin: 0;
   padding: 14px 16px;
@@ -249,12 +255,17 @@ code { font-family: var(--mono); font-size: 0.9em; }
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   overflow-x: auto;
+  tab-size: 2;
+}
+.code .chroma {
+  margin: 0;
+  padding: 0;
+  background: transparent;
   font-family: var(--mono);
   font-size: 12.5px;
   line-height: 1.55;
-  white-space: pre;
-  tab-size: 2;
 }
+.code .chroma .ln { color: var(--text-muted); }
 
 /* chroma's github (light) and github-dark styles emit different token sets: a few "plain" name and
    punctuation tokens (.na/.nx/.bp/.p) are colored near-black in the light style but left at the
