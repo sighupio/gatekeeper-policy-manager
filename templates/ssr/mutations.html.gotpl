@@ -58,7 +58,7 @@ Mutations view. Renders the Gatekeeper mutator objects the JSON handler getMutat
         </details>
 
         {{- with .metadata.creationTimestamp }}
-        <p class="card-foot muted">Created on {{ . }}</p>
+        <p class="card-foot muted dynamic">Created on {{ . }}</p>
         {{- end }}
       </section>
       {{- end }}

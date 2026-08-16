@@ -57,7 +57,7 @@ Configurations view. Renders the Gatekeeper Config objects the JSON handler getC
         </details>
 
         {{- with .metadata.creationTimestamp }}
-        <p class="card-foot muted">Created on {{ . }}</p>
+        <p class="card-foot muted dynamic">Created on {{ . }}</p>
         {{- end }}
       </section>
       {{- end }}

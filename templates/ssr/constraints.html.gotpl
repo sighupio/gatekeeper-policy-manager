@@ -157,7 +157,7 @@ land on the right card.
         {{- with .Pods }}
         <div class="field">
           <p class="field-label">Status by pod</p>
-          <div class="pods">
+          <div class="pods dynamic">
             {{- range . }}
             <span class="tag pod-tag {{ if .Enforced }}pod-on{{ else }}pod-off{{ end }}"
                   title="Constraint is {{ if not .Enforced }}NOT {{ end }}being enforced by this pod">
@@ -168,7 +168,7 @@ land on the right card.
         </div>
         {{- end }}
 
-        <p class="card-foot muted">
+        <p class="card-foot muted dynamic">
           {{- with .AuditTimestamp }}Audited on {{ . }}{{ end }}
           {{- if and .AuditTimestamp .Created }} · {{ end }}
           {{- with .Created }}Created on {{ . }}{{ end }}
