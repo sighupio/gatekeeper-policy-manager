@@ -305,16 +305,17 @@ func (s *server) getSSRMutations(c echo.Context) error {
 // first Rego entry under code[]) and the related-constraints join are awkward in a gotpl, so the
 // handler resolves them here.
 type ssrConstraintTemplate struct {
-	Name        string
-	Kind        string
-	Created     string
-	Description string
-	Target      string
-	Rego        string
-	Libs        []string
-	Schema      map[string]any // openAPIV3Schema.properties; nil when the template takes no parameters
-	Constraints []string       // names of the Constraints that use this template
-	Raw         map[string]any // the whole object, for the "Full YAML" details
+	Name          string
+	Kind          string
+	Created       string
+	Description   string
+	Target        string
+	Rego          string
+	Libs          []string
+	Schema        map[string]any // openAPIV3Schema.properties; nil when the template takes no parameters
+	Constraints   []string       // names of the Constraints that use this template
+	StatusCreated bool           // status.created: Gatekeeper compiled the template into a CRD
+	Raw           map[string]any // the whole object, for the "Full YAML" details
 }
 
 // extractRego returns a target's inline rego, falling back to the first Rego engine entry under
@@ -345,6 +346,7 @@ func ssrConstraintTemplateModel(ct map[string]any, related []unstructured.Unstru
 	m.Name, _, _ = unstructured.NestedString(ct, "metadata", "name")
 	m.Kind, _, _ = unstructured.NestedString(ct, "spec", "crd", "spec", "names", "kind")
 	m.Created, _, _ = unstructured.NestedString(ct, "metadata", "creationTimestamp")
+	m.StatusCreated, _, _ = unstructured.NestedBool(ct, "status", "created")
 	m.Description, _, _ = unstructured.NestedString(ct, "metadata", "annotations", "description")
 
 	// React only ever reads the first target.

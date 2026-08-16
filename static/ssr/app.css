@@ -399,6 +399,9 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 .badge-danger { color: var(--danger); background: var(--danger-bg); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
 .badge-success { color: var(--success); background: var(--success-bg); border-color: color-mix(in srgb, var(--success) 40%, transparent); }
 .badge-neutral { color: var(--text-muted); background: var(--surface-2); border-color: var(--border); }
+.badge-warn { color: var(--warn); background: var(--warn-bg); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
+/* The Constraint Template status pill sits at the right end of the card head. */
+.card-head-badge { margin-left: auto; text-transform: uppercase; letter-spacing: 0.03em; }
 
 /* Sidebar entries carry a badge + name + mode on one row, unlike the plain nav. */
 .cnav a { display: flex; align-items: flex-start; gap: 8px; }

@@ -21,10 +21,11 @@ func TestSSRNewViewsRenderWithoutError(t *testing.T) {
 	ct := ssrConstraintTemplate{
 		Name: "k8srequiredlabels", Kind: "K8sRequiredLabels", Created: "2026-01-01T00:00:00Z",
 		Description: "Requires labels", Target: "admission.k8s.gatekeeper.sh",
-		Rego:        "package x", Libs: []string{"lib1"},
-		Schema:      map[string]any{"labels": map[string]any{"type": "array"}},
-		Constraints: []string{"must-have-owner"},
-		Raw:         map[string]any{"kind": "ConstraintTemplate"},
+		Rego: "package x", Libs: []string{"lib1"},
+		Schema:        map[string]any{"labels": map[string]any{"type": "array"}},
+		Constraints:   []string{"must-have-owner"},
+		StatusCreated: true,
+		Raw:           map[string]any{"kind": "ConstraintTemplate"},
 	}
 	ctData := map[string]any{"Layout": minimalLayout(), "Templates": []ssrConstraintTemplate{ct}}
 
@@ -32,7 +33,7 @@ func TestSSRNewViewsRenderWithoutError(t *testing.T) {
 	if err := r.pages["constrainttemplates"].ExecuteTemplate(&buf, "layout", ctData); err != nil {
 		t.Fatalf("constrainttemplates render failed: %v", err)
 	}
-	for _, want := range []string{"K8sRequiredLabels", "must-have-owner", "Parameters schema"} {
+	for _, want := range []string{"K8sRequiredLabels", "must-have-owner", "Parameters schema", "created"} {
 		if !strings.Contains(buf.String(), want) {
 			t.Errorf("constrainttemplates output missing %q", want)
 		}
@@ -46,8 +47,8 @@ func TestSSRNewViewsRenderWithoutError(t *testing.T) {
 	cs := ssrConstraint{
 		Name: "must-have-owner", Kind: "K8sRequiredLabels", Created: "2026-01-01T00:00:00Z",
 		HasSpec: true, EnforcementAction: "deny", EnforcementMode: "deny",
-		Match:      map[string]any{"kinds": []any{map[string]any{"kinds": []any{"Pod"}}}},
-		Parameters: map[string]any{"labels": []any{"owner"}},
+		Match:           map[string]any{"kinds": []any{map[string]any{"kinds": []any{"Pod"}}}},
+		Parameters:      map[string]any{"labels": []any{"owner"}},
 		ViolationsKnown: true, TotalViolations: 3, ReturnedCount: 2, AuditLimited: true,
 		Violations: []ssrConstraintViolation{
 			{EnforcementAction: "deny", Kind: "Pod", Namespace: "default", Name: "nginx", Message: "missing owner"},

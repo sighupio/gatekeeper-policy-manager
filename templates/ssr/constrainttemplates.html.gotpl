@@ -39,6 +39,11 @@ cross-links from the Events view (#<kind>) land on the right card.
       <section class="card" id="{{ .Kind }}">
         <div class="card-head">
           <h2>{{ .Kind }}</h2>
+          {{- if .StatusCreated }}
+          <span class="badge badge-success card-head-badge" title="Gatekeeper compiled this template into a CRD">created</span>
+          {{- else }}
+          <span class="badge badge-warn card-head-badge" title="Gatekeeper has not reported this template as created">unknown state</span>
+          {{- end }}
         </div>
 
         {{- with .Description }}
