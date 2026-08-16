@@ -83,8 +83,10 @@ func bindSettings() {
 	viper.SetDefault("log_level", "INFO")
 	_ = viper.BindEnv("listen_address")
 	viper.SetDefault("listen_address", ":8080")
+	// Comma-separated event source components to show. Gatekeeper tags admission (webhook) events
+	// with gatekeeper-webhook and audit events with gatekeeper-audit; show both by default.
 	_ = viper.BindEnv("events_source")
-	viper.SetDefault("events_source", "gatekeeper-webhook")
+	viper.SetDefault("events_source", "gatekeeper-webhook,gatekeeper-audit")
 	// Which namespace to read events from. Empty means every namespace, which needs a cluster-wide
 	// read on events; naming one lets the deployment get by with a Role in that namespace.
 	_ = viper.BindEnv("events_namespace")

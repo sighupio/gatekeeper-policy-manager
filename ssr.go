@@ -721,16 +721,24 @@ func (s *server) getEvents(c echo.Context) error {
 		return s.ssr.render(c, "events", data)
 	}
 
-	eventsSource := viper.GetString("events_source")
-	// GPM_EVENTS_NAMESPACE wins over the query parameter, exactly as getEvents does.
+	// GPM_EVENTS_SOURCE is a comma-separated list of event source components. Gatekeeper tags
+	// admission events with gatekeeper-webhook and audit events with gatekeeper-audit; the default
+	// shows both.
+	var sources []string
+	for _, src := range strings.Split(viper.GetString("events_source"), ",") {
+		if src = strings.TrimSpace(src); src != "" {
+			sources = append(sources, src)
+		}
+	}
+	// GPM_EVENTS_NAMESPACE wins over the query parameter.
 	namespace := viper.GetString("events_namespace")
 	if namespace == "" {
 		namespace = c.QueryParam("namespace")
 	}
 
-	events, err := getKubernetesEvents(c.Request().Context(), *clients.dynamic, namespace, eventsSource)
+	events, err := getKubernetesEvents(c.Request().Context(), *clients.dynamic, namespace, sources)
 	if err != nil {
-		slog.Error("SSR events: getting events failed", "namespace", namespace, "source", eventsSource, "error", err)
+		slog.Error("SSR events: getting events failed", "namespace", namespace, "sources", sources, "error", err)
 		data["Error"] = "GPM could not get the events from the Kubernetes API. Make sure the API is reachable."
 		return s.ssr.render(c, "events", data)
 	}

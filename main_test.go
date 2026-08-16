@@ -55,7 +55,7 @@ func TestUseTestSettingsGivesTheStartupDefaults(t *testing.T) {
 		"auth_enabled":         "Anonymous",
 		"log_level":            "INFO",
 		"listen_address":       ":8080",
-		"events_source":        "gatekeeper-webhook",
+		"events_source":        "gatekeeper-webhook,gatekeeper-audit",
 		"secret_key":           insecureDefaultSecretKey,
 		"preferred_url_scheme": "http",
 		"session_max_age":      defaultSessionMaxAge,
