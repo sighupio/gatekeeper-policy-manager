@@ -257,9 +257,9 @@ func (s *server) ssrLayoutData(c echo.Context, active, switchBase, title string)
 
 // --- handlers -------------------------------------------------------------------------------
 
-// getSSRConfigurations renders the Configurations view. It reads the very same Gatekeeper Config
+// getConfigurations renders the Configurations view. It reads the very same Gatekeeper Config
 // objects as the JSON handler getConfigs, then hands them to the template instead of to c.JSON.
-func (s *server) getSSRConfigurations(c echo.Context) error {
+func (s *server) getConfigurations(c echo.Context) error {
 	layout := s.ssrLayoutData(c, "configurations", "/configurations", "Configurations")
 
 	data := map[string]any{"Layout": layout}
@@ -287,10 +287,10 @@ func (s *server) getSSRConfigurations(c echo.Context) error {
 	return s.ssr.render(c, "configurations", data)
 }
 
-// getSSRMutations renders the Mutations view. It reads the very same Gatekeeper mutator objects as
+// getMutations renders the Mutations view. It reads the very same Gatekeeper mutator objects as
 // the JSON handler getMutations (assign, assignmetadata, modifyset, assignimage under
 // mutations.gatekeeper.sh/v1), then hands them to the template instead of to c.JSON.
-func (s *server) getSSRMutations(c echo.Context) error {
+func (s *server) getMutations(c echo.Context) error {
 	layout := s.ssrLayoutData(c, "mutations", "/mutations", "Mutations")
 
 	data := map[string]any{"Layout": layout}
@@ -390,9 +390,9 @@ func ssrConstraintTemplateModel(ct map[string]any, related []unstructured.Unstru
 	return m
 }
 
-// getSSRConstraintTemplates renders the Constraint Templates view. It reads the same objects as the
+// getConstraintTemplates renders the Constraint Templates view. It reads the same objects as the
 // JSON handler getConstraintTemplates: the templates, plus the Constraints that use each one.
-func (s *server) getSSRConstraintTemplates(c echo.Context) error {
+func (s *server) getConstraintTemplates(c echo.Context) error {
 	layout := s.ssrLayoutData(c, "constrainttemplates", "/constrainttemplates", "Constraint Templates")
 
 	data := map[string]any{"Layout": layout}
@@ -542,11 +542,11 @@ func ssrConstraintModel(o map[string]any) ssrConstraint {
 	return m
 }
 
-// getSSRConstraints renders the Constraints view. It walks the same data path as the JSON handler
+// getConstraints renders the Constraints view. It walks the same data path as the JSON handler
 // getConstraints: discover the constraint Kinds under constraints.gatekeeper.sh/v1beta1, list each,
 // then sortConstraints (most violations first, then by name). The report link in the sidebar points
 // at the existing HTML report the JSON handler serves with ?report=html.
-func (s *server) getSSRConstraints(c echo.Context) error {
+func (s *server) getConstraints(c echo.Context) error {
 	layout := s.ssrLayoutData(c, "constraints", "/constraints", "Constraints")
 
 	data := map[string]any{"Layout": layout}
@@ -706,10 +706,10 @@ func ssrEventModel(e map[string]any) ssrEvent {
 	return m
 }
 
-// getSSREvents renders the Events view. It reads the same events as the JSON handler getEvents:
+// getEvents renders the Events view. It reads the same events as the JSON handler getEvents:
 // core v1 Events filtered to the configured source (GPM_EVENTS_SOURCE), in the configured or
 // requested namespace. Like getEvents, this is an alpha feature; see its note in handlers.go.
-func (s *server) getSSREvents(c echo.Context) error {
+func (s *server) getEvents(c echo.Context) error {
 	layout := s.ssrLayoutData(c, "events", "/events", "Events")
 
 	data := map[string]any{"Layout": layout}
@@ -745,10 +745,10 @@ func (s *server) getSSREvents(c echo.Context) error {
 
 // --- Home / Error / NotFound -----------------------------------------------------------------
 
-// getSSRHome renders the landing page. It carries no data of its own: the cards link into the five
+// getHome renders the landing page. It carries no data of its own: the cards link into the five
 // views, and ssrLayoutData already builds those links context-aware in .Layout.Nav, so the template
 // reuses them.
-func (s *server) getSSRHome(c echo.Context) error {
+func (s *server) getHome(c echo.Context) error {
 	layout := s.ssrLayoutData(c, "home", "/home", "Home")
 	return s.ssr.render(c, "home", map[string]any{"Layout": layout})
 }
@@ -804,24 +804,24 @@ func registerSSR(e *echo.Echo, s *server) {
 
 	// Home is the landing page. "/home" and "/home/:context" also resolve to it so the context
 	// switcher has a target that keeps the selected context.
-	e.GET("/", s.getSSRHome)
-	e.GET("/home", s.getSSRHome)
-	e.GET("/home/:context", s.getSSRHome)
+	e.GET("/", s.getHome)
+	e.GET("/home", s.getHome)
+	e.GET("/home/:context", s.getHome)
 
-	e.GET("/configurations", s.getSSRConfigurations)
-	e.GET("/configurations/:context", s.getSSRConfigurations)
+	e.GET("/configurations", s.getConfigurations)
+	e.GET("/configurations/:context", s.getConfigurations)
 
-	e.GET("/mutations", s.getSSRMutations)
-	e.GET("/mutations/:context", s.getSSRMutations)
+	e.GET("/mutations", s.getMutations)
+	e.GET("/mutations/:context", s.getMutations)
 
-	e.GET("/constrainttemplates", s.getSSRConstraintTemplates)
-	e.GET("/constrainttemplates/:context", s.getSSRConstraintTemplates)
+	e.GET("/constrainttemplates", s.getConstraintTemplates)
+	e.GET("/constrainttemplates/:context", s.getConstraintTemplates)
 
-	e.GET("/constraints", s.getSSRConstraints)
-	e.GET("/constraints/:context", s.getSSRConstraints)
+	e.GET("/constraints", s.getConstraints)
+	e.GET("/constraints/:context", s.getConstraints)
 
-	e.GET("/events", s.getSSREvents)
-	e.GET("/events/:context", s.getSSREvents)
+	e.GET("/events", s.getEvents)
+	e.GET("/events/:context", s.getEvents)
 }
 
 // renderSSRLoggedOut renders the "you are signed out" page. It is what the local logout path lands

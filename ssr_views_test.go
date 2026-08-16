@@ -163,7 +163,7 @@ func TestPublicPagesHideTheContextSwitcher(t *testing.T) {
 		return rec.Body.String()
 	}
 
-	if home := render(s.getSSRHome); !strings.Contains(home, "ctx-select") {
+	if home := render(s.getHome); !strings.Contains(home, "ctx-select") {
 		t.Fatal("Home should render the context switcher when the kubeconfig has contexts")
 	}
 	for name, fn := range map[string]func(echo.Context) error{
