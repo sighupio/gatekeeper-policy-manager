@@ -15,8 +15,10 @@ import (
 	"io/fs"
 	"net/http"
 	"net/url"
+	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/alecthomas/chroma/v2"
@@ -64,6 +66,7 @@ func newSSRRenderer() *ssrRenderer {
 		"toYAML":      toYAML,
 		"toJSON":      toJSON,
 		"highlight":   highlight,
+		"linkify":     linkify,
 	}
 	layout := template.Must(
 		template.New("layout").Funcs(funcs).ParseFS(ssrTemplateFS, "templates/ssr/layout.html.gotpl"),
@@ -131,6 +134,29 @@ func highlight(code, lang string) template.HTML {
 		return template.HTML(template.HTMLEscapeString(code))
 	}
 	return template.HTML(buf.String())
+}
+
+// urlRE matches bare http(s) URLs in plain text so linkify can turn them into anchors.
+var urlRE = regexp.MustCompile(`https?://[^\s<>"]+`)
+
+// linkify HTML-escapes a description and renders any http(s) URL in it as a link, as the React view
+// did. It escapes every segment (text and href) itself, so returning template.HTML is safe: no part
+// of the input reaches the page unescaped. Trailing sentence punctuation is kept out of the link.
+func linkify(s string) template.HTML {
+	var b strings.Builder
+	last := 0
+	for _, m := range urlRE.FindAllStringIndex(s, -1) {
+		b.WriteString(template.HTMLEscapeString(s[last:m[0]]))
+		u := s[m[0]:m[1]]
+		trimmed := strings.TrimRight(u, ".,;:!?)]}'\"")
+		tail := u[len(trimmed):]
+		esc := template.HTMLEscapeString(trimmed)
+		b.WriteString(`<a href="` + esc + `" target="_blank" rel="noopener noreferrer">` + esc + `</a>`)
+		b.WriteString(template.HTMLEscapeString(tail))
+		last = m[1]
+	}
+	b.WriteString(template.HTMLEscapeString(s[last:]))
+	return template.HTML(b.String())
 }
 
 // toJSON marshals a value for a <script type="application/json"> data island. encoding/json escapes

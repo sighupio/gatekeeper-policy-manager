@@ -471,6 +471,7 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 .tag-dryrun { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
 
 .status-ok { margin: 4px 0 0; color: var(--success); font-weight: 600; }
+.status-ok::before { content: "✓"; margin-right: 6px; font-weight: 700; }
 .status-bad { margin: 14px 0 0; color: var(--danger); font-weight: 600; }
 
 .pods { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -489,9 +490,13 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 6px 10px;
+  padding: 6px 10px 6px 32px;
   min-width: 220px;
   flex: 1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M21 21l-4.2-4.2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 9px center;
+  background-size: 15px;
 }
 .vsearch:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .vshowing { white-space: nowrap; font-size: 12px; }

@@ -47,7 +47,7 @@ cross-links from the Events view (#<kind>) land on the right card.
         </div>
 
         {{- with .Description }}
-        <p class="muted">{{ . }}</p>
+        <p class="muted">{{ linkify . }}</p>
         {{- end }}
 
         {{- if .Rego }}
