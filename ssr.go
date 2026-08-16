@@ -17,7 +17,6 @@ import (
 	"net/url"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/alecthomas/chroma/v2"
@@ -65,8 +64,6 @@ func newSSRRenderer() *ssrRenderer {
 		"toYAML":      toYAML,
 		"toJSON":      toJSON,
 		"highlight":   highlight,
-		// lines counts the lines in a rendered block, so a view can collapse a long one by default.
-		"lines": func(s string) int { return strings.Count(strings.TrimRight(s, "\n"), "\n") + 1 },
 	}
 	layout := template.Must(
 		template.New("layout").Funcs(funcs).ParseFS(ssrTemplateFS, "templates/ssr/layout.html.gotpl"),

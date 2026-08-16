@@ -306,19 +306,42 @@ details.field > summary::before {
 }
 details.field[open] > summary::before { content: "▼"; }
 details.field[open] > summary { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
-/* Joined to the summary above: no top border, only the bottom corners rounded. width:fit-content
-   keeps a one-line block (e.g. "excludeIstio: false") from stretching the full card width; wide
-   code still fills the row and scrolls, capped by the parent. */
+/* Joined to the summary above: no top border, only the bottom corners rounded. Full width so the
+   block lines up with its header; wide code overflows into a horizontal scroll. */
 details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
-.code { width: fit-content; max-width: 100%; }
 
 .card-foot { margin: 16px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.02em; }
 
 /* --- States -------------------------------------------------------------- */
 
-.alert { padding: 14px 16px; border-radius: var(--radius); border: 1px solid; }
-.alert-error { color: var(--danger); background: var(--danger-bg); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
-.alert-warn { color: var(--warn); background: var(--warn-bg); border-color: color-mix(in srgb, var(--warn) 45%, transparent); margin-top: 14px; }
+/* Alerts carry a leading icon (a masked SVG tinted with the alert's own text color, so it stays
+   theme-correct). It is absolutely placed and the text is inset, so wrapped lines keep a clean
+   hanging indent instead of flowing under the icon. */
+.alert { position: relative; padding: 14px 16px 14px 44px; border-radius: var(--radius); border: 1px solid; }
+.alert::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  top: 14px;
+  width: 18px;
+  height: 18px;
+  background-color: currentColor;
+  -webkit-mask: var(--alert-icon) center / contain no-repeat;
+  mask: var(--alert-icon) center / contain no-repeat;
+}
+.alert-error {
+  color: var(--danger);
+  background: var(--danger-bg);
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+  --alert-icon: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20fill-rule='evenodd'%20d='M12%202a10%2010%200%20100%2020%2010%2010%200%20000-20Zm-1%205h2v6h-2V7Zm0%208h2v2h-2v-2Z'/%3E%3C/svg%3E");
+}
+.alert-warn {
+  color: var(--warn);
+  background: var(--warn-bg);
+  border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+  margin-top: 14px;
+  --alert-icon: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20fill-rule='evenodd'%20d='M12%202%201.5%2021h21L12%202Zm-1%206h2v6h-2V8Zm0%208h2v2h-2v-2Z'/%3E%3C/svg%3E");
+}
 .alert-warn code { color: inherit; }
 
 .empty {

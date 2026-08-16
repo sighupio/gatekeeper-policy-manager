@@ -140,18 +140,16 @@ land on the right card.
 
         {{- else }}
         {{- with .Match }}
-        {{- $y := toYAML . }}
-        <details class="field"{{ if le (lines $y) 12 }} open{{ end }}>
+        <details class="field">
           <summary class="field-label">Match criteria</summary>
-          <div class="code">{{ highlight $y "yaml" }}</div>
+          <div class="code">{{ highlight (toYAML .) "yaml" }}</div>
         </details>
         {{- end }}
 
         {{- with .Parameters }}
-        {{- $y := toYAML . }}
-        <details class="field"{{ if le (lines $y) 12 }} open{{ end }}>
+        <details class="field">
           <summary class="field-label">Parameters</summary>
-          <div class="code">{{ highlight $y "yaml" }}</div>
+          <div class="code">{{ highlight (toYAML .) "yaml" }}</div>
         </details>
         {{- end }}
         {{- end }}
