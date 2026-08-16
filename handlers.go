@@ -9,6 +9,7 @@ package main
 import (
 	"context"
 	"net/http"
+	"slices"
 	"sort"
 
 	"github.com/labstack/echo/v4"
@@ -75,15 +76,10 @@ func getKubernetesEvents(ctx context.Context, clientset dynamic.DynamicClient, n
 		return nil, err
 	}
 
-	want := make(map[string]bool, len(sources))
-	for _, s := range sources {
-		want[s] = true
-	}
-
 	var filteredList []unstructured.Unstructured
 	for i := range events.Items {
 		source, found, err := unstructured.NestedString(events.Items[i].Object, "source", "component")
-		if found && err == nil && want[source] {
+		if found && err == nil && slices.Contains(sources, source) {
 			filteredList = append(filteredList, events.Items[i])
 		} else if err != nil {
 			slog.Debug("error getting event source", "event", events.Items[i].GetName(), "error", err)
