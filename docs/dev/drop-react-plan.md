@@ -16,16 +16,37 @@ the Dependabot churn and the separate frontend build stage.
 
 ## Status
 
-A proof of concept (POC) is in the tree. It is **additive**: it adds routes under `/ssr`, and it
-does not change or remove `web-client/`, the existing routes, or the existing handlers. The POC has:
+The cutover is done. Every view is server-rendered at its real path, the React SPA is gone, and the
+JSON API is removed. What has landed:
 
-- an app shell (top nav, context switcher, footer) as a base layout template;
-- one view rendered end to end on the server: **Configurations**;
-- a fresh, minimal stylesheet (a custom house style, not a clone of EUI or Fury);
-- Alpine.js vendored as a local static asset (no CDN).
+- all six content views (Constraint Templates, Constraints, Mutations, Events, Configurations) plus
+  Home and the error/404/signed-out pages, server-rendered;
+- a fresh, minimal house style (not a clone of EUI or Fury), light and dark;
+- Alpine.js vendored as a local static asset (no CDN), for the context switcher, the theme toggle
+  and the searchable/sortable/paginated violations table;
+- server-side syntax highlighting with `chroma`;
+- the views at their real paths (`/`, `/constraints`, …, each with an optional `/:context`), assets
+  at `/static`, and a global error handler that renders the SSR 404 and error pages;
+- the `/api/v1` JSON API removed; the violations report served from `/constraints?report=html`;
+- `web-client/` and the Docker frontend build deleted; the report template embedded.
 
-Open the POC at `/ssr/configurations` (or `/ssr/configurations/:context`). See the repository
-`README.md` for how to build and run GPM.
+### Decisions (resolved)
+
+- **Default landing route:** `/` serves Home.
+- **Static asset prefix:** `/static`.
+- **`/api/v1/*`:** removed (v2.0.0 is the major release to drop it in).
+- **Constraints table:** full parity (search, all-column sort, pagination).
+
+### Remaining before merge
+
+1. **Strict Content Security Policy.** Externalize the one inline theme `<script>` (or give it a
+   nonce) and set the CSP in `main.go`. Note: Alpine evaluates its `x-` expressions with `Function`,
+   so a strict policy needs `script-src 'unsafe-eval'` unless the templates move to Alpine's CSP
+   build. Verify against a live cluster (the CSP is an HTTP header, not testable from a static file).
+2. **Update the README screenshots.** They still show the old React UI.
+3. **Update the Playwright e2e baselines** in `tests/e2e` for the server-rendered UI (routes and
+   selectors changed).
+4. **Security and ponytail reviews** (see below), scoped to the whole `feat/drop-react` diff.
 
 ## POC files
 
@@ -217,18 +238,10 @@ Once every view is ported, the CSP is set, and the React surface is retired, do 
    for duplication across the view templates, dead CSS, over-built handlers, and anything the
    stdlib or a native element already covers.
 
-## Remaining decisions for the user
+## Open follow-ups (not blocking)
 
-- **Default landing route.** Today `/` is Home. Keep Home, or redirect `/` to Constraints (the most
-  used view)?
-- **Static asset prefix.** The POC serves assets under `/ssr/static`. Choose the final prefix (for
-  example `/static` or `/assets`) before the big-bang change.
-- **Keep `/api/v1/*`?** Decide whether any external consumer depends on the JSON API. If not, remove
-  it with the SPA and drop a large amount of code.
-- **Constraints table scope.** Confirm full parity (search, all-column sort, pagination). The
-  evaluation offers a smaller scope if parity is not required. Full parity is the current
-  assumption.
-- **Alpine.js version and update path.** The POC pins v3.14.9. Decide how the vendored file is
-  updated (a `mise` task that re-downloads a pinned version, or a checked-in file bumped by hand).
-- **Report template.** Fold the violations report into the SSR layout, or keep it as a standalone
-  printable page? It is a different use (a printable report), so a standalone page may be correct.
+- **Alpine.js update path.** The vendored file pins v3.14.9. Decide how it is bumped: a `mise` task
+  that re-downloads a pinned version, or a checked-in file updated by hand.
+- **Vestigial allowlist entries.** `isAllowlistedPath` still lists the old Create React App asset
+  paths (`/manifest.json`, `/logo192.png`, `/asset-manifest.json`, …). They are harmless but dead;
+  trim them to `/static/*` and `/favicon.ico` when convenient.
