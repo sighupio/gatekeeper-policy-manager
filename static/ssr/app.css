@@ -148,8 +148,8 @@ code { font-family: var(--mono); font-size: 0.9em; }
   background-repeat: no-repeat;
   background-position: right 8px center;
   /* The SVG has only a viewBox, so without an explicit size it renders oversized and overlaps the
-     text. Pin it small; the 28px right padding then clears it. */
-  background-size: 12px 12px;
+     text. Pin the size; the 28px right padding then clears it. */
+  background-size: 14px 14px;
 }
 .ctx-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
@@ -400,8 +400,8 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
   user-select: none;
 }
 .event-row > summary::-webkit-details-marker { display: none; }
-.event-row > summary::before { content: "▸"; color: var(--text-muted); }
-.event-row[open] > summary::before { content: "▾"; }
+.event-row > summary::before { content: "▶"; font-size: 0.75em; color: var(--text-muted); }
+.event-row[open] > summary::before { content: "▼"; }
 .event-row > summary:hover { background: var(--surface-2); }
 .event-row > summary > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
