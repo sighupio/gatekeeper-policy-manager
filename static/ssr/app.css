@@ -22,6 +22,7 @@
   --success-bg: #e7f6ec;
   --warn: #8a5a00;
   --warn-bg: #fdf3e2;
+  --code-bg: #f6f8fa;
   --radius: 10px;
   --radius-sm: 6px;
   --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
@@ -45,6 +46,7 @@
     --success-bg: #142a1d;
     --warn: #e0b155;
     --warn-bg: #2a2415;
+    --code-bg: #0d1117;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   }
 }
@@ -64,6 +66,7 @@
   --success-bg: #142a1d;
   --warn: #e0b155;
   --warn-bg: #2a2415;
+  --code-bg: #0d1117;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
@@ -185,7 +188,7 @@ code { font-family: var(--mono); font-size: 0.9em; }
   padding: 28px 20px 48px;
 }
 
-.view-head { margin-bottom: 24px; }
+.view-head { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
 .view-head h1 { margin: 0 0 4px; font-size: 22px; font-weight: 700; }
 .view-head p { margin: 0; }
 
@@ -252,8 +255,8 @@ code { font-family: var(--mono); font-size: 0.9em; }
    specificity so the box surface shows through. */
 .code {
   margin: 0;
-  padding: 14px 16px;
-  background: var(--surface-2);
+  padding: 8px 10px;
+  background: var(--code-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   overflow-x: auto;
@@ -473,6 +476,7 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 .pods { display: flex; flex-wrap: wrap; gap: 6px; }
 .pod-tag.pod-on { color: var(--success); border-color: color-mix(in srgb, var(--success) 40%, transparent); }
 .pod-tag.pod-off { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+.pod-tag .muted { text-transform: uppercase; letter-spacing: 0.02em; }
 
 /* --- Violations table (Alpine) ------------------------------------------- */
 
