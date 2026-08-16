@@ -39,10 +39,14 @@ JSON API is removed. What has landed:
 
 ### Remaining before merge
 
-1. **Strict Content Security Policy.** Externalize the one inline theme `<script>` (or give it a
-   nonce) and set the CSP in `main.go`. Note: Alpine evaluates its `x-` expressions with `Function`,
-   so a strict policy needs `script-src 'unsafe-eval'` unless the templates move to Alpine's CSP
-   build. Verify against a live cluster (the CSP is an HTTP header, not testable from a static file).
+1. **Content Security Policy — implemented, needs live verification.** The inline scripts are
+   externalized (`theme.js`, `violations-table.js`) and the CSP is set in `main.go`. It keeps
+   `script-src`/`style-src` same-origin with two documented relaxations: `script-src 'unsafe-eval'`
+   (Alpine evaluates `x-` expressions with `Function`; removing it needs Alpine's CSP build) and
+   `style-src 'unsafe-inline'` (the self-contained printable report). Still to do: load every view
+   against a live cluster with the console open and confirm there are no CSP violations, since the
+   header is not testable from a static file. If anything breaks, flip to `CSPReportOnly` while it
+   is sorted out.
 2. **Update the README screenshots.** They still show the old React UI.
 3. **Update the Playwright e2e baselines** in `tests/e2e` for the server-rendered UI (routes and
    selectors changed).
