@@ -123,6 +123,17 @@ run = [
   "helm template --set config.secretKey=e2e chart > rendered_chart.yaml",
 ]
 
+[tasks."gen:screenshots"]
+description = "capture the README screenshots from a running GPM (set GPM_BASE_URL, default http://localhost:8080)"
+dir = "tests/e2e"
+# Point GPM_BASE_URL at a GPM that has some Gatekeeper objects to show (the e2e cluster is ideal),
+# e.g. via `kubectl port-forward svc/gatekeeper-policy-manager 8080:80 -n gatekeeper-system`.
+run = """
+yarn install --frozen-lockfile
+yarn playwright install chromium
+node screenshots.mjs
+"""
+
 [tasks.e2e]
 description = "run the bats e2e suite; expects KUBECONFIG and LOAD_IMAGE to be set"
 run = """

@@ -251,7 +251,6 @@ You can also add the `aws` CLI for debugging. Use the same approach as before.
 <a href="screenshots/mutations.png"><img src="screenshots/mutations.png" width="250"/></a>
 <a href="screenshots/events.png"><img src="screenshots/events.png" width="250"/></a>
 <a href="screenshots/configurations.png"><img src="screenshots/configurations.png" width="250"/></a>
-<a href="screenshots/multicluster.png"><img src="screenshots/multicluster.png" width="250"/></a>
 <!-- markdownlint-enable MD033 -->
 
 ## Development
