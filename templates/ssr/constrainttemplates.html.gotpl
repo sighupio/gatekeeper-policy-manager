@@ -76,6 +76,11 @@ cross-links from the Events view (#<kind>) land on the right card.
         </details>
         {{- end }}
 
+        <details class="field">
+          <summary class="field-label">Full YAML definition</summary>
+          <div class="code">{{ highlight (toYAML .Raw) "yaml" }}</div>
+        </details>
+
         <div class="field">
           <p class="field-label">Constraints using this template</p>
           {{- if .Constraints }}
@@ -88,11 +93,6 @@ cross-links from the Events view (#<kind>) land on the right card.
           <p class="muted no-spec">No Constraint uses this Constraint Template.</p>
           {{- end }}
         </div>
-
-        <details class="field">
-          <summary class="field-label">Full YAML definition</summary>
-          <div class="code">{{ highlight (toYAML .Raw) "yaml" }}</div>
-        </details>
 
         {{- with .Created }}
         <p class="card-foot muted">Created on {{ . }}</p>
