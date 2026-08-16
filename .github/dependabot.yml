@@ -9,6 +9,14 @@ updates:
     schedule:
       interval: "weekly"
 
+  # Vendored browser assets. The root package.json pins Alpine.js, which ships as
+  # static/ssr/alpine.min.js; after a bump PR merges, run `mise run vendor-alpine` to refresh the
+  # vendored file (the check-alpine-version CI task fails until it matches).
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
   # Playwright end-to-end tests. NOTE: the Playwright version here must match the
   # mcr.microsoft.com/playwright image tag in .drone.yml, so a bump PR needs a manual
   # follow-up to update those image tags in the same change.

@@ -259,6 +259,10 @@ GPM is written in Go. It uses the Echo framework and renders the UI on the serve
 library's `html/template`, plus a small amount of Alpine.js for interactivity. There is no separate
 frontend build.
 
+Alpine.js is vendored as `static/ssr/alpine.min.js`. Its version is pinned in `package.json` so
+Dependabot tracks it; after a bump, run `mise run vendor-alpine` to refresh the vendored file (the
+`check-alpine-version` task, part of `mise run lint`, fails if the two drift).
+
 To develop GPM, run these commands:
 
 ```bash
