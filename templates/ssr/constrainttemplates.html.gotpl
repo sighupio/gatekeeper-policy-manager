@@ -65,10 +65,11 @@ cross-links from the Events view (#<kind>) land on the right card.
         {{- end }}
 
         {{- with .Schema }}
-        <div class="field">
-          <p class="field-label">Parameters schema</p>
-          <div class="code">{{ highlight (toYAML .) "yaml" }}</div>
-        </div>
+        {{- $y := toYAML . }}
+        <details class="field"{{ if le (lines $y) 12 }} open{{ end }}>
+          <summary class="field-label">Parameters schema</summary>
+          <div class="code">{{ highlight $y "yaml" }}</div>
+        </details>
         {{- end }}
 
         <div class="field">

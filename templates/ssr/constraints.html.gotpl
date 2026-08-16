@@ -136,17 +136,19 @@ land on the right card.
 
         {{- else }}
         {{- with .Match }}
-        <div class="field">
-          <p class="field-label">Match criteria</p>
-          <div class="code">{{ highlight (toYAML .) "yaml" }}</div>
-        </div>
+        {{- $y := toYAML . }}
+        <details class="field"{{ if le (lines $y) 12 }} open{{ end }}>
+          <summary class="field-label">Match criteria</summary>
+          <div class="code">{{ highlight $y "yaml" }}</div>
+        </details>
         {{- end }}
 
         {{- with .Parameters }}
-        <div class="field">
-          <p class="field-label">Parameters</p>
-          <div class="code">{{ highlight (toYAML .) "yaml" }}</div>
-        </div>
+        {{- $y := toYAML . }}
+        <details class="field"{{ if le (lines $y) 12 }} open{{ end }}>
+          <summary class="field-label">Parameters</summary>
+          <div class="code">{{ highlight $y "yaml" }}</div>
+        </details>
         {{- end }}
         {{- end }}
 
