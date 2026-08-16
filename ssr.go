@@ -774,9 +774,9 @@ func (s *server) publicLayout(c echo.Context, title string) ssrLayout {
 	return l
 }
 
-// renderSSRError renders the shared error page with the given status. login sensibly defaults BackURL
+// renderError renders the shared error page with the given status. login sensibly defaults BackURL
 // to home when the caller leaves it empty.
-func (s *server) renderSSRError(c echo.Context, status int, e ssrErrorView) error {
+func (s *server) renderError(c echo.Context, status int, e ssrErrorView) error {
 	if e.BackURL == "" {
 		e.BackURL = browserPath("/")
 	}
@@ -784,16 +784,16 @@ func (s *server) renderSSRError(c echo.Context, status int, e ssrErrorView) erro
 	return s.ssr.renderStatus(c, status, "error", map[string]any{"Layout": layout, "Err": e})
 }
 
-// renderSSRNotFound renders the shared 404 page.
-func (s *server) renderSSRNotFound(c echo.Context) error {
+// renderNotFound renders the shared 404 page.
+func (s *server) renderNotFound(c echo.Context) error {
 	layout := s.publicLayout(c, "Not found")
 	return s.ssr.renderStatus(c, http.StatusNotFound, "notfound", map[string]any{"Layout": layout})
 }
 
-// registerSSR wires the server-rendered UI: the embedded static assets and every view at its real
+// registerViews wires the server-rendered UI: the embedded static assets and every view at its real
 // path. Called from main after the server is built. Home is the landing page at "/". The 404 and
 // error pages are not routes; the global echo.HTTPErrorHandler in main renders them.
-func registerSSR(e *echo.Echo, s *server) {
+func registerViews(e *echo.Echo, s *server) {
 	assets, err := fs.Sub(ssrStaticFS, "static/ssr")
 	if err != nil {
 		slog.Error("SSR static assets could not be mounted", "error", err)
@@ -824,9 +824,9 @@ func registerSSR(e *echo.Echo, s *server) {
 	e.GET("/events/:context", s.getEvents)
 }
 
-// renderSSRLoggedOut renders the "you are signed out" page. It is what the local logout path lands
+// renderLoggedOut renders the "you are signed out" page. It is what the local logout path lands
 // on (see auth.go): a public page, so it does not bounce a just-logged-out user back to the IdP.
-func (s *server) renderSSRLoggedOut(c echo.Context) error {
+func (s *server) renderLoggedOut(c echo.Context) error {
 	layout := s.publicLayout(c, "Signed out")
 	return s.ssr.renderStatus(c, http.StatusOK, "loggedout",
 		map[string]any{"Layout": layout, "LoginURL": browserPath("/login")})

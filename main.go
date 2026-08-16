@@ -241,7 +241,7 @@ func main() {
 	s := &server{k8s: registry, ssr: newSSRRenderer()}
 
 	// The server-rendered UI: every view at its real path, plus the embedded static assets. See ssr.go.
-	registerSSR(e, s)
+	registerViews(e, s)
 
 	// Global error handler. For an HTML request it renders the server-side pages (404 -> notfound,
 	// anything else -> the error page); for the /api/* JSON endpoints it keeps echo's JSON default.
@@ -259,10 +259,10 @@ func main() {
 			code = he.Code
 		}
 		if code == http.StatusNotFound {
-			_ = s.renderSSRNotFound(c)
+			_ = s.renderNotFound(c)
 			return
 		}
-		_ = s.renderSSRError(c, code, ssrErrorView{
+		_ = s.renderError(c, code, ssrErrorView{
 			Message: "Something went wrong",
 			Action:  "Try again, and if the problem continues check the GPM logs.",
 		})
@@ -272,7 +272,7 @@ func main() {
 
 	if auth != nil {
 		// The local logout path renders the SSR "signed out" page; wire it now that s exists.
-		auth.renderLoggedOut = s.renderSSRLoggedOut
+		auth.renderLoggedOut = s.renderLoggedOut
 		e.GET(callbackPath, auth.callback)
 		e.GET("/login", auth.login)
 		e.GET("/logout", auth.logout)

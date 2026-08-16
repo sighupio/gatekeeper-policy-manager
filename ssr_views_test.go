@@ -167,8 +167,8 @@ func TestPublicPagesHideTheContextSwitcher(t *testing.T) {
 		t.Fatal("Home should render the context switcher when the kubeconfig has contexts")
 	}
 	for name, fn := range map[string]func(echo.Context) error{
-		"signed-out": s.renderSSRLoggedOut,
-		"not-found":  s.renderSSRNotFound,
+		"signed-out": s.renderLoggedOut,
+		"not-found":  s.renderNotFound,
 	} {
 		if out := render(fn); strings.Contains(out, "ctx-select") {
 			t.Errorf("the %s page rendered the context switcher; it must not expose context names", name)
