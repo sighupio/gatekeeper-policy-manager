@@ -21,18 +21,16 @@ shellcheck = "0.11.0"
 "github:google/addlicense" = "v1.1.1"
 # Checks the module graph against the Go vulnerability database.
 "go:golang.org/x/vuln/cmd/govulncheck" = "1.6.0"
-# For the frontend unit tests. node 24 is the current LTS line, matching the `node:lts-alpine`
-# base the Dockerfile builds the frontend with. yarn is v1 to match the committed yarn.lock.
+# For the end-to-end tests (tests/e2e runs Playwright through yarn). node 24 is the current LTS
+# line; yarn is v1 to match the committed yarn.lock.
 node = "24"
 yarn = "1.22.22"
-# Formats the frontend. Stylelint was considered and left out: it cannot resolve a shareable
-# config when installed through mise, and adding it to web-client/package.json would break the
-# byte-for-byte match with main that keeps the dependency sync a plain copy.
+# Formats the TypeScript in tests/e2e.
 "npm:prettier" = "3.9.6"
 
 [tasks."lint-shell"]
 description = "shellcheck the shell scripts"
-run = 'shellcheck $(find . -name "*.sh" -not -path "*/node_modules/*" -not -path "./web-client/*")'
+run = 'shellcheck $(find . -name "*.sh" -not -path "*/node_modules/*")'
 
 [tasks.lint]
 description = "run golangci-lint (and shellcheck via the lint-shell dep)"
@@ -51,7 +49,6 @@ addlicense -c "SIGHUP s.r.l" -v -l bsd -check \
   -ignore 'chart/**' \
   -ignore 'static-content/**' \
   -ignore '**/node_modules/**' \
-  -ignore 'web-client/build/**' \
   -ignore 'static/ssr/*.min.js' \
   -ignore 'gpm.yaml' \
   -ignore 'rendered_chart.yaml' \
@@ -65,7 +62,6 @@ addlicense -c "SIGHUP s.r.l" -y 2017-present -v -l bsd \
   -ignore 'chart/**' \
   -ignore 'static-content/**' \
   -ignore '**/node_modules/**' \
-  -ignore 'web-client/build/**' \
   -ignore 'static/ssr/*.min.js' \
   -ignore 'gpm.yaml' \
   -ignore 'rendered_chart.yaml' \
@@ -73,12 +69,12 @@ addlicense -c "SIGHUP s.r.l" -y 2017-present -v -l bsd \
 """
 
 [tasks.format]
-description = "format the frontend with prettier"
-run = 'prettier --write "web-client/src/**/*.{ts,tsx,scss}" "tests/e2e/**/*.{ts,js}"'
+description = "format the e2e tests with prettier"
+run = 'prettier --write "tests/e2e/**/*.{ts,js}"'
 
 [tasks."format:check"]
-description = "check the frontend formatting without changing anything"
-run = 'prettier --check "web-client/src/**/*.{ts,tsx,scss}" "tests/e2e/**/*.{ts,js}"'
+description = "check the e2e test formatting without changing anything"
+run = 'prettier --check "tests/e2e/**/*.{ts,js}"'
 
 [tasks."check-go-version"]
 description = "fail if the Dockerfile's Go version drifts from go.mod's toolchain"
@@ -108,19 +104,9 @@ description = "run the Go unit tests"
 # node_modules vendors Go sources (flatted) that `./...` would otherwise pick up.
 run = 'go test -count=1 $(go list ./... | grep -v /node_modules/)'
 
-[tasks."test:unit:js"]
-description = "run the frontend unit tests"
-# Installs first so the task works from a clean checkout; it is a no-op once node_modules exists.
-# CI=true stops react-scripts from starting its interactive watcher.
-run = """
-cd web-client
-yarn install --frozen-lockfile
-CI=true yarn test --watchAll=false
-"""
-
 [tasks."test:unit"]
-description = "run all unit tests"
-depends = ["test:unit:go", "test:unit:js"]
+description = "run the unit tests"
+depends = ["test:unit:go"]
 
 [tasks."chart-readme"]
 description = "regenerate chart/README.md from values.yaml"
