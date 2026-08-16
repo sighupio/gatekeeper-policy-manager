@@ -89,7 +89,7 @@ GPM is a stateless application. You can configure it with environment variables.
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
 | `GPM_LISTEN_ADDRESS` | Server listen address                                                                                                                                                                                                             | `:8080`              |
 | `GPM_LOG_LEVEL`      | Log level (`DEBUG`, `INFO`, `WARN`, `ERROR`)                                                                                                                                                                                     | `INFO`               |
-| `GPM_EVENTS_SOURCE`  | Used to filter out events by the defined source                                                                                                                                                                                   | `gatekeeper-webhook` |
+| `GPM_EVENTS_SOURCE`  | Comma-separated event source components to show. Gatekeeper tags admission events with `gatekeeper-webhook` and audit events with `gatekeeper-audit`.                                                                              | `gatekeeper-webhook,gatekeeper-audit` |
 | `GPM_SKIP_TLS_VERIFY` | Skip TLS certificate verification while connecting to the Kubernetes API Server. Needed on clusters whose CA certificate is missing the AKI/SKI extensions, as happens on EKS. **USE WITH CAUTION.**                            | `false`              |
 | `GPM_EVENTS_NAMESPACE` | Read events from this namespace only. Empty means every namespace, which needs a cluster-wide read on `events`. See [Events and RBAC](#events-and-rbac). | `` (every namespace) |
 | `GPM_BASE_PATH` | The subpath for GPM, for example `/gpm`. The image sets this value from the `PUBLIC_URL` build argument. See [Running behind a reverse proxy on a subpath](#running-behind-a-reverse-proxy-on-a-subpath). | `` (the domain root) |
@@ -145,41 +145,35 @@ reachable for a user who is not logged in yet:
 | Path | Why it is open |
 | --- | --- |
 | `/health` | the liveness and readiness probes run without credentials |
-| `/api/v1/auth` | the frontend asks whether there is anything to log into before showing a login |
 | `/login`, `/oidc-auth`, `/logout` | the login flow itself |
 | `/metrics` | Prometheus scrapes it. It holds request counters only, no policy data |
-| `/static/*`, `/favicon.ico`, `/manifest.json`, `/touch-icon.png` | assets the login and logout pages need |
+| `/static/*`, `/favicon.ico` | the assets the login and logout pages need |
 
-Everything else — every page and every other API endpoint, including the list of clusters — needs a
-valid session.
+Everything else — every page, including the list of clusters — needs a valid session.
 
-Requests under `/api/` answer `401` when the session expires. They do not redirect. This gives
-`fetch()` a readable error instead of an opaque cross-origin failure. Send users to `/login` to
-sign in again. It accepts `?next=` with a same-site path that says where they land.
+When the session expires, GPM sends the user to `/login` to sign in again. The login route accepts
+`?next=` with a same-site path that says where the user lands after signing in.
 
 ### Running behind a reverse proxy on a subpath
 
 GPM assumes by default that it is served from the domain root. If you put it behind a reverse proxy
-on a subpath, for example `example.com/gpm`, set the `PUBLIC_URL` build argument when building the
-image so the frontend's router and API calls use that subpath instead of `/`:
+on a subpath, for example `example.com/gpm`, set the `GPM_BASE_PATH` environment variable to that
+subpath. GPM prepends it to the paths it hands the browser: the asset URLs, the login URL and the
+OIDC redirects.
+
+You can also set the subpath at build time with the `PUBLIC_URL` build argument, which sets
+`GPM_BASE_PATH` in the image:
 
 ```bash
 docker build --build-arg PUBLIC_URL=/gpm -t gatekeeper-policy-manager:subpath .
 ```
 
-This uses [Create React App's standard `PUBLIC_URL` mechanism](https://create-react-app.dev/docs/using-the-public-folder/).
-The build puts the subpath into the assets: the router's `basename`, the API base path, and every
-in-app link.
-
-The same argument sets `GPM_BASE_PATH` in the image. The backend uses this value for the paths that
-it sends to the browser. These paths are the login URL and the OIDC redirects. You do not have to
-set `GPM_BASE_PATH`. If you set it to a different value than `PUBLIC_URL`, the links go to the
-wrong address. If you do not set `PUBLIC_URL`, GPM runs at the domain root, as before.
+If you set neither, GPM runs at the domain root, as before.
 
 > [!IMPORTANT]
-> Configure your reverse proxy to **strip the subpath** before forwarding to GPM. The backend still
-> serves everything from the root, so it expects to receive `/api/v1/...` and `/static/...`, not
-> `/gpm/api/v1/...`. With nginx, a `proxy_pass` ending in a slash does this for you.
+> Configure your reverse proxy to **strip the subpath** before forwarding to GPM. GPM matches its
+> routes at the root, so it expects to receive `/constraints` and `/static/...`, not
+> `/gpm/constraints`. With nginx, a `proxy_pass` ending in a slash does this for you.
 
 The image published on quay.io is built for the root path. If you need a subpath deployment, build
 your own image with the argument above and push it to your own registry, or reference the
@@ -257,25 +251,21 @@ You can also add the `aws` CLI for debugging. Use the same approach as before.
 <a href="screenshots/mutations.png"><img src="screenshots/mutations.png" width="250"/></a>
 <a href="screenshots/events.png"><img src="screenshots/events.png" width="250"/></a>
 <a href="screenshots/configurations.png"><img src="screenshots/configurations.png" width="250"/></a>
-<a href="screenshots/multicluster.png"><img src="screenshots/multicluster.png" width="250"/></a>
 <!-- markdownlint-enable MD033 -->
 
 ## Development
 
-GPM is written in Go using the Echo framework for the backend and React with Elastic UI and the Fury theme for the frontend.
+GPM is written in Go. It uses the Echo framework and renders the UI on the server with the standard
+library's `html/template`, plus a small amount of Alpine.js for interactivity. There is no separate
+frontend build.
 
 To develop GPM, run these commands:
 
 ```bash
-# Build Frontend and copy over to static folder
-$ pushd web-client
-$ yarn install && yarn build
-$ cp -r build/* ../static-content/
-$ popd
-# Install the Backend dependencies
+# Install the dependencies
 $ go mod download
 # Run the development server
-$ APP_ENV=development GPM_LOG_LEVEL=DEBUG go run main.go
+$ GPM_LOG_LEVEL=DEBUG go run .
 ```
 
 > [!TIP]

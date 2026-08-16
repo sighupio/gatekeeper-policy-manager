@@ -5,14 +5,9 @@
 package main
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -20,11 +15,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/spf13/viper"
 	"golang.org/x/exp/slog"
-)
-
-const (
-	defaultMessage = "An error ocurred while getting config objects from Kubernetes API."
-	defaultAction  = "Check that the Kubeconfig file is correct and that the Kubernetes API is accessible."
 )
 
 // Gives the test the configuration a freshly started GPM has, and takes back anything it changes.
@@ -65,7 +55,7 @@ func TestUseTestSettingsGivesTheStartupDefaults(t *testing.T) {
 		"auth_enabled":         "Anonymous",
 		"log_level":            "INFO",
 		"listen_address":       ":8080",
-		"events_source":        "gatekeeper-webhook",
+		"events_source":        "gatekeeper-webhook,gatekeeper-audit",
 		"secret_key":           insecureDefaultSecretKey,
 		"preferred_url_scheme": "http",
 		"session_max_age":      defaultSessionMaxAge,
@@ -97,76 +87,6 @@ func TestUseTestSettingsIgnoresTheDevelopersEnvironment(t *testing.T) {
 	}
 }
 
-// The error client-go actually surfaces for an untrusted certificate: an x509 error wrapped by
-// crypto/tls, wrapped again by net/url. If errors.As stops unwrapping anywhere along that chain
-// the hint silently disappears, so the nesting matters more than the leaf type.
-func realWorldTLSError() error {
-	return &url.Error{
-		Op:  "Get",
-		URL: "https://10.0.0.1:443/apis/config.gatekeeper.sh/v1alpha1/configs",
-		Err: &tls.CertificateVerificationError{Err: x509.UnknownAuthorityError{}},
-	}
-}
-
-func TestKubeAPIErrorAnswerAddsTLSHint(t *testing.T) {
-	tests := []struct {
-		name string
-		err  error
-	}{
-		{"unknown authority", x509.UnknownAuthorityError{}},
-		// Both of these format themselves from the certificate, so it must not be nil.
-		{"hostname mismatch", x509.HostnameError{Certificate: &x509.Certificate{}, Host: "10.0.0.1"}},
-		{"invalid certificate", x509.CertificateInvalidError{Cert: &x509.Certificate{}, Reason: x509.Expired}},
-		{"verification failure", &tls.CertificateVerificationError{Err: x509.UnknownAuthorityError{}}},
-		{"wrapped as client-go returns it", realWorldTLSError()},
-		{"wrapped in fmt.Errorf", fmt.Errorf("listing configs: %w", x509.UnknownAuthorityError{})},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := kubeAPIErrorAnswer(defaultMessage, defaultAction, tt.err)
-
-			if got.ErrorMessage == defaultMessage {
-				t.Errorf("expected the TLS message to replace the default, got the default back")
-			}
-			if !strings.Contains(got.Action, "GPM_SKIP_TLS_VERIFY") {
-				t.Errorf("expected the action to mention GPM_SKIP_TLS_VERIFY, got %q", got.Action)
-			}
-			if got.Description != tt.err.Error() {
-				t.Errorf("description = %q, want the original error %q", got.Description, tt.err.Error())
-			}
-		})
-	}
-}
-
-func TestKubeAPIErrorAnswerLeavesOtherErrorsAlone(t *testing.T) {
-	tests := []struct {
-		name string
-		err  error
-	}{
-		{"connection refused", errors.New("dial tcp 10.0.0.1:443: connect: connection refused")},
-		{"not found", errors.New(`the server could not find the requested resource`)},
-		// Mentions certificates but is not a certificate error: must not be misclassified.
-		{"mentions certificates only in text", errors.New("failed to read certificate file")},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := kubeAPIErrorAnswer(defaultMessage, defaultAction, tt.err)
-
-			if got.ErrorMessage != defaultMessage {
-				t.Errorf("message = %q, want the caller's message %q", got.ErrorMessage, defaultMessage)
-			}
-			if got.Action != defaultAction {
-				t.Errorf("action = %q, want the caller's action %q", got.Action, defaultAction)
-			}
-			if got.Description != tt.err.Error() {
-				t.Errorf("description = %q, want %q", got.Description, tt.err.Error())
-			}
-		})
-	}
-}
-
 // Calls a handler that needs no Kubernetes client and returns the decoded JSON body.
 func callHandler(t *testing.T, handler echo.HandlerFunc, path string) (int, map[string]any) {
 	t.Helper()
@@ -194,36 +114,6 @@ func TestGetHealth(t *testing.T) {
 	}
 	if body["status"] != "ok" {
 		t.Errorf(`status field = %v, want "ok"`, body["status"])
-	}
-}
-
-// The frontend decides whether to show the logout control from this endpoint, so it has to follow
-// GPM_AUTH_ENABLED rather than being hardcoded.
-func TestGetAuthReflectsConfiguration(t *testing.T) {
-	tests := []struct {
-		authEnabled string
-		want        bool
-	}{
-		{"OIDC", true},
-		{"oidc", true},
-		{"Anonymous", false},
-		{"", false},
-	}
-
-	for _, tt := range tests {
-		t.Run("GPM_AUTH_ENABLED="+tt.authEnabled, func(t *testing.T) {
-			useTestSettings(t)
-			viper.Set("auth_enabled", tt.authEnabled)
-
-			code, body := callHandler(t, getAuth, "/api/v1/auth")
-
-			if code != http.StatusOK {
-				t.Errorf("status = %d, want %d", code, http.StatusOK)
-			}
-			if body["auth_enabled"] != tt.want {
-				t.Errorf("auth_enabled = %v, want %v", body["auth_enabled"], tt.want)
-			}
-		})
 	}
 }
 

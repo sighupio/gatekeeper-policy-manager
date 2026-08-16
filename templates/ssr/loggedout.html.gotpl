@@ -1,0 +1,18 @@
+{{- /*
+Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+
+Shown after a local logout. A public page, so a just-logged-out user is not bounced to the IdP.
+*/ -}}
+{{- define "content" -}}
+<div class="view centered">
+  <div class="centered-box">
+    <h1>Signed out</h1>
+    <h2>You have been logged out.</h2>
+    <div class="centered-actions">
+      <a class="btn" href="{{ .LoginURL }}">Log in</a>
+    </div>
+  </div>
+</div>
+{{- end -}}

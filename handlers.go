@@ -2,21 +2,17 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// The HTTP handlers for the API, and the answer shapes they share.
+// Shared Kubernetes read helpers, the health probe, and the error answer shape. The views that use
+// these live in ssr.go; there is no JSON API any more.
 package main
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
-	"errors"
-	"fmt"
 	"net/http"
+	"slices"
 	"sort"
-	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/spf13/viper"
 	"golang.org/x/exp/slog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -24,42 +20,14 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
-// The answer every handler gives when the requested kubeconfig context cannot be used.
-func contextErrorAnswer(c echo.Context, err error) error {
-	name := c.Param("context")
-	slog.Error("resolving the Kubernetes context failed", "context", name, "error", err)
-	return c.JSON(http.StatusInternalServerError, ErrorAnswer{
-		ErrorMessage: fmt.Sprintf("GPM could not switch to context %s.", name),
-		Action:       "Make sure that the kubeconfig file defines this context correctly.",
-		Description:  err.Error(),
-	})
-}
-
+// The shape the auth middleware returns for an unauthenticated /api/* request.
 type ErrorAnswer struct {
 	ErrorMessage string `json:"error"`
 	Action       string `json:"action"`
 	Description  string `json:"description"`
-	// Set only when signing in would fix the error, so the frontend can offer a button instead of
+	// Set only when signing in would fix the error, so a client can offer a button instead of
 	// leaving the user to read a path out of the message. Omitted from every other error.
 	LoginURL string `json:"login_url,omitempty"`
-}
-
-// Builds the payload for a failed Kubernetes API call. When the failure turns out to be a TLS
-// certificate problem it replaces the message and the suggested action with a pointer to
-// GPM_SKIP_TLS_VERIFY, which is the usual fix on clusters whose CA lacks the AKI/SKI extensions.
-func kubeAPIErrorAnswer(message string, action string, err error) ErrorAnswer {
-	var (
-		verificationErr *tls.CertificateVerificationError
-		authorityErr    x509.UnknownAuthorityError
-		hostnameErr     x509.HostnameError
-		invalidCertErr  x509.CertificateInvalidError
-	)
-	if errors.As(err, &verificationErr) || errors.As(err, &authorityErr) ||
-		errors.As(err, &hostnameErr) || errors.As(err, &invalidCertErr) {
-		message = "GPM could not verify the Kubernetes API server's TLS certificate."
-		action = "Set GPM_SKIP_TLS_VERIFY=true if the cluster CA is missing the AKI/SKI extensions, as happens on EKS. Use with caution."
-	}
-	return ErrorAnswer{ErrorMessage: message, Action: action, Description: err.Error()}
 }
 
 // Helper function to get custom resources from the Kubernetes API of the specified group, verison and resource.
@@ -72,69 +40,6 @@ func getCustomResources(ctx context.Context, clientset dynamic.DynamicClient, gr
 // Health probe. Always returns OK.
 func getHealth(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
-}
-
-// Returns a JSON with information about the auth configuration. The frontend calls this before
-// login to decide whether to show the logout control, so it stays reachable without a session.
-func getAuth(c echo.Context) error {
-	return c.JSON(http.StatusOK, map[string]bool{"auth_enabled": authEnabled()})
-}
-
-// Returns a list of the available contexts in the kubeconfig file and the active context
-func (s *server) getContexts(c echo.Context) error {
-	// We need to format the response to align with the old Python backend (API v1)
-	type context struct {
-		Cluster string `json:"cluster"`
-		User    string `json:"user"`
-	}
-
-	type kubeconfigContext struct {
-		Name    string  `json:"name"`
-		Context context `json:"context"`
-	}
-
-	contexts, current := s.k8s.contexts()
-
-	kubeconfigContexts := []kubeconfigContext{}
-	var currentKubeconfigContext kubeconfigContext
-	for kc := range contexts {
-		c := context{
-			Cluster: contexts[kc].Cluster,
-			User:    contexts[kc].AuthInfo,
-		}
-		fullContext := kubeconfigContext{
-			Name:    kc,
-			Context: c,
-		}
-		kubeconfigContexts = append(kubeconfigContexts, fullContext)
-		// The kubeconfig's own default. There is no server-side "selected" context any more:
-		// the frontend tracks that and names it in the request path.
-		if kc == current {
-			currentKubeconfigContext = fullContext
-		}
-	}
-
-	v1Answer := []interface{}{kubeconfigContexts, currentKubeconfigContext}
-	return c.JSON(http.StatusOK, v1Answer)
-}
-
-// Returns a JSON with all the available Gatekeeper Configuration objects.
-// Gatekeeper only supports a single configuration object defined in the cluster but we return a list for future proofing.
-func (s *server) getConfigs(c echo.Context) error {
-	clients, err := s.clientsFor(c)
-	if err != nil {
-		return contextErrorAnswer(c, err)
-	}
-	ctx := c.Request().Context()
-	configResources, err := getCustomResources(ctx, *clients.dynamic, "config.gatekeeper.sh", "v1alpha1", "configs")
-	if err != nil {
-		slog.Debug("getting config resources failed", "error", err)
-		return c.JSON(http.StatusInternalServerError, kubeAPIErrorAnswer(
-			"GPM could not get the configuration objects from the Kubernetes API.",
-			"Make sure that the kubeconfig file is correct and the Kubernetes API is reachable.",
-			err))
-	}
-	return c.JSON(http.StatusOK, configResources.Items)
 }
 
 // Orders the constraints list: most violations first, then by name. A malformed object sorts as
@@ -155,152 +60,10 @@ func sortConstraints(response []map[string]interface{}) {
 	})
 }
 
-// Returns a JSON with all the Constraint Templates in the target cluster and a map with the all Constraints that exist
-// for each Constraint Template.
-func (s *server) getConstraintTemplates(c echo.Context) error {
-	clients, err := s.clientsFor(c)
-	if err != nil {
-		return contextErrorAnswer(c, err)
-	}
-	ctx := c.Request().Context()
-
-	var response struct {
-		Constrainttemplates                []unstructured.Unstructured            `json:"constrainttemplates"`
-		Constraints_by_constrainttemplates map[string][]unstructured.Unstructured `json:"constraints_by_constrainttemplates"`
-	}
-	// we need to initialize the variable otherwise assigning to a map memeber panics
-	response.Constraints_by_constrainttemplates = make(map[string][]unstructured.Unstructured)
-
-	// get all constraint templates
-	constrainttemplates, err := getCustomResources(ctx, *clients.dynamic, "templates.gatekeeper.sh", "v1", "constrainttemplates")
-	if err != nil {
-		slog.Error("getting Constraint Templates resources failed", "error", err)
-		return c.JSON(http.StatusInternalServerError, kubeAPIErrorAnswer(
-			"GPM could not get the Constraint Template objects from the Kubernetes API.",
-			"Make sure that Gatekeeper is installed in the cluster.",
-			err))
-	}
-	// map all the constraints available for each constraint template
-	for _, ct := range constrainttemplates.Items {
-		ctName := ct.GetName()
-		constraints, err := getCustomResources(ctx, *clients.dynamic, "constraints.gatekeeper.sh", "v1beta1", ctName)
-		if err != nil {
-			slog.Debug("trying to get Constraints for ConstraintTemplate failed", "constraintTemplate", ctName, "error", err)
-			constraints = &unstructured.UnstructuredList{} // if there are no constraints for the template, we return an empty list
-		}
-		response.Constraints_by_constrainttemplates[ctName] = constraints.Items
-	}
-	response.Constrainttemplates = constrainttemplates.Items
-	return c.JSON(http.StatusOK, response)
-}
-
-// Will discover all the constraint Kinds and their objects and will return:
-// - by default: a JSON with all the constraints objects sorted by 1. number of violations and 2. alphabetically.
-// - when a "report" Query parameter is present in the URL: an HTML report of the violations made from a template.
-func (s *server) getConstraints(c echo.Context) error {
-	clients, err := s.clientsFor(c)
-	if err != nil {
-		return contextErrorAnswer(c, err)
-	}
-	ctx := c.Request().Context()
-
-	var response []map[string]interface{}
-
-	// constraints are a kind by themselves. The resource Kind is created dynamically by Gateeeper for each template.
-	// we need to discover the available Kinds for the constraints first.
-	availableConstraints, err := clients.discovery.ServerResourcesForGroupVersion("constraints.gatekeeper.sh/v1beta1")
-	if err != nil {
-		slog.Error("listing constraints kinds from Kubernetes API server failed", "error", err)
-		return c.JSON(http.StatusInternalServerError, kubeAPIErrorAnswer(
-			"GPM could not list the Constraints.",
-			"Make sure that Gatekeeper is installed in the target Kubernetes cluster.",
-			err))
-	}
-
-	for _, constraintKind := range availableConstraints.APIResources {
-		// we are interested in the root resources only.
-		// subresources (like <kind>/status) seem to have the categories field emtpy, so we use that to filter them out.
-		if constraintKind.Categories != nil {
-			constraints, err := getCustomResources(ctx, *clients.dynamic, "constraints.gatekeeper.sh", "v1beta1", constraintKind.SingularName)
-			if err != nil {
-				slog.Error("getting Constraint resources failed", "error", err)
-				return c.JSON(http.StatusInternalServerError, kubeAPIErrorAnswer(
-					"GPM could not get the constraint objects from the Kubernetes API.",
-					"Make sure that Gatekeeper is deployed in the target cluster.",
-					err))
-			}
-			for _, i := range constraints.Items {
-				response = append(response, i.Object)
-			}
-		}
-	}
-
-	// Sort the constraints by 1. totalViolations and 2. by name for better UX and easier e2e testing.
-	sortConstraints(response)
-
-	// We support HTML reports only for now, so we don't check the param value, just that is present.
-	if c.QueryParam("report") != "" {
-		// The context named in the route, or the kubeconfig's current one when the route names none.
-		// Which cluster the report describes is otherwise ambiguous on a multi-context kubeconfig.
-		selectedContext := c.Param("context")
-		if selectedContext == "" {
-			_, selectedContext = s.k8s.contexts()
-		}
-		data := map[string]interface{}{
-			"constraints":   response,
-			"apiServerHost": clients.rest.Host,
-			"context":       selectedContext,
-			"timestamp":     time.Now().Format(time.ANSIC),
-		}
-
-		return c.Render(http.StatusOK, "report", data)
-	}
-
-	// v1 API compatibility
-	// We need to return an empty list instead of null when there are no objects as the Python backend did
-	// otherwise the frontend breaks
-	if len(response) == 0 {
-		return c.JSON(http.StatusOK, []string{})
-	}
-	return c.JSON(http.StatusOK, response)
-}
-
-// Returns a JSON with all the Constraint Templates in the target cluster and a map with the all Constraints that exist
-// for each Constraint Template.
-func (s *server) getMutations(c echo.Context) error {
-	clients, err := s.clientsFor(c)
-	if err != nil {
-		return contextErrorAnswer(c, err)
-	}
-	ctx := c.Request().Context()
-
-	// Mutators are well-known, but we could use dynamic client like we do for the constraints
-	// to discover the available kinds.
-	mutators := []string{"assign", "assignmetadata", "modifyset", "assignimage"}
-	var response []interface{}
-
-	for _, mutator := range mutators {
-		slog.Debug("getting mutations", "kind", mutator)
-		mutations, err := getCustomResources(ctx, *clients.dynamic, "mutations.gatekeeper.sh", "v1", mutator)
-		if err != nil {
-			// We get an error when there are no mutations defined in the cluster also,so we don't return
-			slog.Error("getting mutator resources failed", "mutator", mutator, "error", err)
-		} else {
-			for _, i := range mutations.Items {
-				response = append(response, i.Object)
-			}
-		}
-	}
-
-	if len(response) == 0 {
-		return c.JSON(http.StatusOK, []string{})
-	}
-	return c.JSON(http.StatusOK, response)
-}
-
-// Returns a slice of unstructured objects with all the events generated by the 'gatekeeper-wbhook' source
-// If namespace is an empty string, it returns the events from all namespaces.
-func getKubernetesEvents(ctx context.Context, clientset dynamic.DynamicClient, namespace string, eventsSource string) (*[]unstructured.Unstructured, error) {
+// Returns the events whose source.component is one of the given sources (Gatekeeper tags admission
+// events with gatekeeper-webhook and audit events with gatekeeper-audit). An empty namespace lists
+// events from every namespace.
+func getKubernetesEvents(ctx context.Context, clientset dynamic.DynamicClient, namespace string, sources []string) (*[]unstructured.Unstructured, error) {
 	// FieldSeletor is very limited in the supported fields, we can't filter like this:
 	//   listOptions := metav1.ListOptions{
 	// 	  FieldSelector: "involvedObject.metadata.source.component=gatekeeper-webhook", //Filter events related to Pods
@@ -316,48 +79,11 @@ func getKubernetesEvents(ctx context.Context, clientset dynamic.DynamicClient, n
 	var filteredList []unstructured.Unstructured
 	for i := range events.Items {
 		source, found, err := unstructured.NestedString(events.Items[i].Object, "source", "component")
-		if found && err == nil && source == eventsSource {
+		if found && err == nil && slices.Contains(sources, source) {
 			filteredList = append(filteredList, events.Items[i])
 		} else if err != nil {
 			slog.Debug("error getting event source", "event", events.Items[i].GetName(), "error", err)
 		}
 	}
 	return &filteredList, nil
-}
-
-// Returns the events from the configured source (GPM_EVENTS_SOURCE, "gatekeeper-webhook" by
-// default) as unstructured objects. By default it reads the namespace GPM runs in; the "namespace"
-// query parameter, or GPM_EVENTS_NAMESPACE, changes that.
-//
-// getKubernetesEvents reads the core v1 Event API and filters on source.component, which is
-// correct for how Gatekeeper emits today. If Gatekeeper moves to events.k8s.io/v1
-// (reportingController, not source.component) the filter matches nothing and the view goes silently
-// empty. This path has no end-to-end test, so the events view is alpha.
-func (s *server) getEvents(c echo.Context) error {
-	clients, err := s.clientsFor(c)
-	if err != nil {
-		return contextErrorAnswer(c, err)
-	}
-	ctx := c.Request().Context()
-
-	// TODO: maybe we should Lookup this once at start-time and save it instead of on each call to this func
-	eventsSource := viper.GetString("events_source")
-
-	// GPM_EVENTS_NAMESPACE wins over the query parameter. It is what the deployment's RBAC is cut
-	// to, so letting a request widen it would only produce a 403 from the Kubernetes API.
-	namespace := viper.GetString("events_namespace")
-	if namespace == "" {
-		namespace = c.QueryParam("namespace")
-	}
-
-	events, err := getKubernetesEvents(ctx, *clients.dynamic, namespace, eventsSource)
-	if err != nil {
-		slog.Error("got error while getting namespace events", "namespace", namespace, "source", eventsSource, "error", err)
-		return c.JSON(http.StatusInternalServerError, kubeAPIErrorAnswer(
-			"GPM could not get the events from the Kubernetes API.",
-			"Make sure that the kubeconfig file is correct and the Kubernetes API is reachable.",
-			err))
-	}
-
-	return c.JSON(http.StatusOK, events)
 }

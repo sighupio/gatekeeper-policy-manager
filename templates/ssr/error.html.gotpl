@@ -1,0 +1,34 @@
+{{- /*
+Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+
+Generic error page. Mirrors the fields the React Error page shows: a message, a suggested action,
+the error details, an optional "Log in" button when a session expired, and a "Go back" link.
+*/ -}}
+{{- define "content" -}}
+<div class="view centered">
+  <div class="centered-box">
+    <h1 class="error-title"><span class="error-mark" aria-hidden="true">&#9888;</span> Error</h1>
+
+    {{- with .Err.Message }}
+    <h2>{{ . }}</h2>
+    {{- end }}
+
+    {{- with .Err.Action }}
+    <p class="muted">{{ . }}</p>
+    {{- end }}
+
+    {{- with .Err.Description }}
+    <div class="alert alert-error">{{ . }}</div>
+    {{- end }}
+
+    <div class="centered-actions">
+      {{- with .Err.LoginURL }}
+      <a class="btn" href="{{ . }}">Log in</a>
+      {{- end }}
+      <a class="btn btn-ghost" href="{{ .Err.BackURL }}">Go back</a>
+    </div>
+  </div>
+</div>
+{{- end -}}

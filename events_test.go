@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 
@@ -24,6 +25,7 @@ type recordingAPI struct {
 
 	mu    sync.Mutex
 	paths []string
+	body  string // response body; empty means an empty EventList
 }
 
 func newRecordingAPI(t *testing.T) *recordingAPI {
@@ -33,14 +35,25 @@ func newRecordingAPI(t *testing.T) *recordingAPI {
 	api.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		api.mu.Lock()
 		api.paths = append(api.paths, r.URL.Path)
+		body := api.body
 		api.mu.Unlock()
 
+		if body == "" {
+			body = `{"apiVersion":"v1","kind":"EventList","items":[]}`
+		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprint(w, `{"apiVersion":"v1","kind":"EventList","items":[]}`)
+		_, _ = fmt.Fprint(w, body)
 	}))
 	t.Cleanup(api.server.Close)
 
 	return api
+}
+
+// respondWith sets the JSON body the stand-in API returns for a list call.
+func (a *recordingAPI) respondWith(body string) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.body = body
 }
 
 func (a *recordingAPI) requested() []string {
@@ -75,14 +88,17 @@ users:
 	if err != nil {
 		t.Fatalf("building the registry failed: %v", err)
 	}
-	return &server{k8s: registry}
+	return &server{k8s: registry, ssr: newSSRRenderer()}
 }
 
+// Drives the events view handler. The namespace resolution under test lives in getEvents (it is
+// what the JSON getEvents used to hold); the assertions check which namespace the handler asked the
+// Kubernetes API for, not the rendered page.
 func callGetEvents(t *testing.T, s *server, query string) {
 	t.Helper()
 
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/events"+query, nil)
+	req := httptest.NewRequest(http.MethodGet, "/events"+query, nil)
 	rec := httptest.NewRecorder()
 
 	if err := s.getEvents(e.NewContext(req, rec)); err != nil {
@@ -171,7 +187,37 @@ func TestGetKubernetesEventsHonorsContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // already cancelled before the call
 
-	if _, err := getKubernetesEvents(ctx, *clients.dynamic, "", "gatekeeper-webhook"); err == nil {
+	if _, err := getKubernetesEvents(ctx, *clients.dynamic, "", []string{"gatekeeper-webhook"}); err == nil {
 		t.Error("a cancelled context did not abort the events list; the context is not threaded")
+	}
+}
+
+// The default GPM_EVENTS_SOURCE lists both the webhook (admission) and audit source components, so
+// the view shows admission and audit events and drops everything else.
+func TestEventsViewShowsWebhookAndAuditSources(t *testing.T) {
+	api := newRecordingAPI(t)
+	api.respondWith(`{"apiVersion":"v1","kind":"EventList","items":[
+	  {"metadata":{"name":"adm"},"reason":"AdmissionEvent","source":{"component":"gatekeeper-webhook"}},
+	  {"metadata":{"name":"aud"},"reason":"AuditEvent","source":{"component":"gatekeeper-audit"}},
+	  {"metadata":{"name":"noise"},"reason":"UnrelatedEvent","source":{"component":"kubelet"}}
+	]}`)
+	useTestSettings(t)
+	s := newEventsTestServer(t, api)
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/events", nil)
+	rec := httptest.NewRecorder()
+	if err := s.getEvents(e.NewContext(req, rec)); err != nil {
+		t.Fatalf("the handler returned an error: %v", err)
+	}
+	out := rec.Body.String()
+	if !strings.Contains(out, "AdmissionEvent") {
+		t.Error("the admission (gatekeeper-webhook) event is missing")
+	}
+	if !strings.Contains(out, "AuditEvent") {
+		t.Error("the audit (gatekeeper-audit) event is missing")
+	}
+	if strings.Contains(out, "UnrelatedEvent") {
+		t.Error("a non-Gatekeeper event was not filtered out")
 	}
 }

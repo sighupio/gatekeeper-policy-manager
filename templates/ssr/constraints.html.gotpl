@@ -1,0 +1,187 @@
+{{- /*
+Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+
+Constraints view. One card per Constraint (getConstraints' data path, sorted most-violations-first).
+The per-constraint violations table is a client-side Alpine component: it reads a <script> data
+island of that constraint's violations and gives it incremental search, all-column sort and
+pagination. Every card gets its own independent table instance via violationsTable(...). The card
+anchor is the Constraint name, so the cross-links from Constraint Templates and Events (#<name>)
+land on the right card.
+*/ -}}
+{{- define "content" -}}
+<div class="view">
+  <div class="view-head">
+    <h1>Constraints</h1>
+    <p class="muted">The policies active in this cluster and the resources that violate them, most violations first.</p>
+  </div>
+
+  {{- if .Error }}
+  <div class="alert alert-error">{{ .Error }}</div>
+
+  {{- else if not .Constraints }}
+  <div class="empty">
+    <h2>No constraints</h2>
+    <p class="muted">There are no Gatekeeper <code>Constraint</code> objects defined in this cluster.</p>
+  </div>
+
+  {{- else }}
+  <div class="layout-sidebar">
+    <aside class="sidebar">
+      <p class="sidebar-title">Constraints</p>
+      <nav class="sidebar-nav cnav">
+        {{- range .Constraints }}
+        <a href="#{{ .Name }}" title="{{ .Name }}">
+          {{- if .ViolationsKnown }}
+          <span class="badge {{ if gt .TotalViolations 0 }}badge-danger{{ else }}badge-success{{ end }}">{{ .TotalViolations }}</span>
+          {{- else }}
+          <span class="badge badge-neutral" title="Not audited yet">?</span>
+          {{- end }}
+          <span class="side-name">{{ .Name }}</span>
+          <span class="side-mode">{{ .EnforcementMode }}</span>
+        </a>
+        {{- end }}
+      </nav>
+      <a class="btn btn-block" href="{{ .ReportURL }}" download>
+        <svg class="btn-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M8 1.5v8.5M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/>
+        </svg>
+        Download violations report</a>
+    </aside>
+
+    <div class="stack">
+      {{- range .Constraints }}
+      <section class="card" id="{{ .Name }}">
+        <div class="card-head">
+          <h2>{{ .Name }}</h2>
+          <span class="tag tag-mode tag-{{ .EnforcementMode }}">{{ .EnforcementMode }} mode</span>
+          <a class="card-head-link" href="{{ browserPath `/constrainttemplates` }}#{{ .Kind }}"><span class="tag-key">template</span> {{ .Kind }}</a>
+        </div>
+
+        {{- /* Violations: unknown (not audited yet), none, or the searchable/sortable table. */}}
+        {{- if not .ViolationsKnown }}
+        <div class="alert alert-warn">Violations for this Constraint are unknown. Gatekeeper has probably not audited it yet. Try refreshing the page.</div>
+
+        {{- else if eq .TotalViolations 0 }}
+        <p class="status-ok">No violations for this Constraint.</p>
+
+        {{- else }}
+        <details class="field">
+          <summary class="field-label">Violations <span class="badge badge-danger">{{ .TotalViolations }}</span></summary>
+
+          <div class="vtable-wrap" x-data="violationsTable('viol-{{ .Name }}')">
+            <script type="application/json" id="viol-{{ .Name }}">{{ toJSON .Violations }}</script>
+
+            <div class="vtable-controls">
+              <input class="vsearch" type="text" placeholder="Filter violations..."
+                     x-model="q" x-on:input="page = 0" aria-label="Filter violations">
+              <span class="muted vshowing" x-text="`showing ${from}–${to} of ${total}`"></span>
+            </div>
+
+            <div class="table-scroll">
+              <table class="vtable">
+                <thead>
+                  <tr>
+                    <template x-for="col in columns" x-bind:key="col.key">
+                      <th x-on:click="sort(col.key)" role="button" tabindex="0"
+                          x-on:keydown.enter="sort(col.key)"
+                          x-bind:aria-sort="sortKey === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'">
+                        <span x-text="col.label"></span>
+                        <span class="sort-ind" x-text="sortKey === col.key ? (sortDir === 'asc' ? '▲' : '▼') : ''"></span>
+                      </th>
+                    </template>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="(row, i) in paged" x-bind:key="i">
+                    <tr>
+                      <td x-text="row.enforcementAction"></td>
+                      <td x-text="row.kind"></td>
+                      <td x-text="row.namespace"></td>
+                      <td x-text="row.name"></td>
+                      <td class="vmsg" x-text="row.message"></td>
+                    </tr>
+                  </template>
+                  <tr x-show="total === 0">
+                    <td colspan="5" class="muted">No violation matches the filter.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="vpager">
+              <label class="vpage-size">Rows
+                <select x-model.number="pageSize" x-on:change="page = 0">
+                  <option>10</option>
+                  <option>25</option>
+                  <option>50</option>
+                </select>
+              </label>
+              <div class="vpage-btns">
+                <button type="button" class="vpage-btn" x-on:click="page = Math.max(0, page - 1)"
+                        x-bind:disabled="page <= 0">Prev</button>
+                <span class="muted" x-text="`page ${page + 1} / ${pageCount}`"></span>
+                <button type="button" class="vpage-btn" x-on:click="page = Math.min(pageCount - 1, page + 1)"
+                        x-bind:disabled="page >= pageCount - 1">Next</button>
+              </div>
+            </div>
+          </div>
+
+          {{- if .AuditLimited }}
+          <div class="alert alert-warn">Not all violations are shown. Gatekeeper's audit limit caps the reported violations for this Constraint at {{ .ReturnedCount }}. See the <code>--constraint-violations-limit</code> audit flag.</div>
+          {{- end }}
+        </details>
+        {{- end }}
+
+        {{- /* Spec: match criteria and parameters, as YAML. */}}
+        {{- if not .HasSpec }}
+        <p class="status-bad">This Constraint has no spec defined.</p>
+
+        {{- else }}
+        {{- with .Match }}
+        <details class="field">
+          <summary class="field-label">Match criteria</summary>
+          <div class="code">{{ highlight (toYAML .) "yaml" }}</div>
+        </details>
+        {{- end }}
+
+        {{- with .Parameters }}
+        <details class="field">
+          <summary class="field-label">Parameters</summary>
+          <div class="code">{{ highlight (toYAML .) "yaml" }}</div>
+        </details>
+        {{- end }}
+        {{- end }}
+
+        {{- with .Pods }}
+        <div class="field">
+          <p class="field-label">Status by pod</p>
+          <div class="pods dynamic">
+            {{- range . }}
+            <span class="tag pod-tag {{ if .Enforced }}pod-on{{ else }}pod-off{{ end }}"
+                  title="Constraint is {{ if not .Enforced }}NOT {{ end }}being enforced by this pod">
+              {{ if .Enforced }}✓{{ else }}✕{{ end }} {{ .ID }}<span class="muted"> · gen {{ .ObservedGeneration }}</span>
+            </span>
+            {{- end }}
+          </div>
+        </div>
+        {{- end }}
+
+        <p class="card-foot muted dynamic">
+          {{- with .AuditTimestamp }}Audited on {{ . }}{{ end }}
+          {{- if and .AuditTimestamp .Created }} · {{ end }}
+          {{- with .Created }}Created on {{ . }}{{ end }}
+        </p>
+      </section>
+      {{- end }}
+    </div>
+  </div>
+  {{- end }}
+</div>
+
+{{- /* The per-constraint violations table component (x-data="violationsTable(id)"). External, so
+       the page needs no script-src 'unsafe-inline'; loaded here in the body, before the deferred
+       Alpine bundle, so the global function exists when Alpine initializes the components. */}}
+<script src="{{ .Layout.AssetBase }}/violations-table.js"></script>
+{{- end -}}

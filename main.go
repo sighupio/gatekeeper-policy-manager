@@ -13,7 +13,6 @@ import (
 	"time"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"k8s.io/client-go/tools/clientcmd/api"
 
 	"github.com/labstack/echo-contrib/prometheus"
 	"github.com/labstack/echo-contrib/session"
@@ -28,7 +27,11 @@ import (
 // so that nothing reaches for shared mutable state, and so tests can build one with fakes.
 type server struct {
 	k8s *clientRegistry
+	ssr *ssrRenderer
 }
+
+// The single source of truth for the version string shown in logs and the UI.
+const appVersion = "v2.0.0-rc.0"
 
 // Resolves the Kubernetes clients for the context named in the route, or the kubeconfig default
 // when the route carries no :context.
@@ -80,8 +83,10 @@ func bindSettings() {
 	viper.SetDefault("log_level", "INFO")
 	_ = viper.BindEnv("listen_address")
 	viper.SetDefault("listen_address", ":8080")
+	// Comma-separated event source components to show. Gatekeeper tags admission (webhook) events
+	// with gatekeeper-webhook and audit events with gatekeeper-audit; show both by default.
 	_ = viper.BindEnv("events_source")
-	viper.SetDefault("events_source", "gatekeeper-webhook")
+	viper.SetDefault("events_source", "gatekeeper-webhook,gatekeeper-audit")
 	// Which namespace to read events from. Empty means every namespace, which needs a cluster-wide
 	// read on events; naming one lets the deployment get by with a Role in that namespace.
 	_ = viper.BindEnv("events_namespace")
@@ -133,10 +138,34 @@ func main() {
 	p.RequestCounterHostLabelMappingFunc = func(echo.Context) string { return "" }
 	p.Use(e)
 
-	// Response security headers: X-Content-Type-Options nosniff, X-Frame-Options SAMEORIGIN, the
-	// legacy XSS header. echo's defaults; deliberately no CSP (a strict one breaks the built React
-	// app) and no HSTS (that is the operator's TLS decision, not GPM's to force).
-	e.Use(middleware.Secure())
+	// Response security headers. echo's defaults (X-Content-Type-Options nosniff, X-Frame-Options
+	// SAMEORIGIN, the legacy XSS header) plus a Content Security Policy. No HSTS: that is the
+	// operator's TLS decision, not GPM's to force.
+	//
+	// The policy keeps every script and stylesheet same-origin and blocks framing and plugins. Two
+	// deliberate relaxations, both documented for the security review:
+	//   - script-src 'unsafe-eval': Alpine.js evaluates its x- expressions with the Function
+	//     constructor. Removing it needs Alpine's CSP build and rewriting every inline expression as
+	//     a registered component method.
+	//   - style-src 'unsafe-inline': the standalone printable violations report is self-contained
+	//     with an inline <style>. No style value anywhere derives from user or cluster data (all
+	//     data is HTML-escaped text content), so inline style is not an injection vector here.
+	// img-src allows data: for the small SVG icons the stylesheet inlines as data URIs.
+	e.Use(middleware.SecureWithConfig(middleware.SecureConfig{
+		XSSProtection:      "1; mode=block",
+		ContentTypeNosniff: "nosniff",
+		XFrameOptions:      "SAMEORIGIN",
+		ContentSecurityPolicy: "default-src 'self'; " +
+			"script-src 'self' 'unsafe-eval'; " +
+			"style-src 'self' 'unsafe-inline'; " +
+			"img-src 'self' data:; " +
+			"font-src 'self'; " +
+			"connect-src 'self'; " +
+			"base-uri 'self'; " +
+			"form-action 'self'; " +
+			"frame-ancestors 'self'; " +
+			"object-src 'none'",
+	}))
 
 	// Setup logging
 	e.Use(middleware.Recover())
@@ -174,22 +203,11 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: programLevel}))
 	slog.SetDefault(logger)
 
-	slog.Info("starting Gatekeeper Policy Manager", "version", "v2.0.0-rc.0")
+	slog.Info("starting Gatekeeper Policy Manager", "version", appVersion)
 	setLogLevel(programLevel, viper.GetString("log_level"))
 
 	// Renders the HTML violations report at /constraints?report=html.
 	e.Renderer = newRenderer()
-
-	// CORS configuration for frontend development purposes
-	if os.Getenv("APP_ENV") == "development" {
-		origins := []string{"http://localhost:3000", "http://localhost:3001"}
-		headers := []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept}
-		slog.Warn("running in development mode, allowing CORS from other origins", "origins", origins, "headers", headers)
-		e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-			AllowOrigins: origins,
-			AllowHeaders: headers,
-		}))
-	}
 
 	// Authentication. When it is off, no session or auth middleware is installed at all, so the
 	// unauthenticated path stays exactly as it was.
@@ -222,11 +240,41 @@ func main() {
 		slog.Error("Kubernetes client initialization failed", "error", err)
 		os.Exit(1)
 	}
-	s := &server{k8s: registry}
+	s := &server{k8s: registry, ssr: newSSRRenderer()}
+
+	// The server-rendered UI: every view at its real path, plus the embedded static assets. See ssr.go.
+	registerViews(e, s)
+
+	// Global error handler. For an HTML request it renders the server-side pages (404 -> notfound,
+	// anything else -> the error page); for the /api/* JSON endpoints it keeps echo's JSON default.
+	// There is no SPA fallback anymore, so an unmatched path reaches here as a 404.
+	e.HTTPErrorHandler = func(err error, c echo.Context) {
+		if c.Response().Committed {
+			return
+		}
+		if isAPIPath(c.Request().URL.Path) {
+			e.DefaultHTTPErrorHandler(err, c)
+			return
+		}
+		code := http.StatusInternalServerError
+		if he, ok := err.(*echo.HTTPError); ok {
+			code = he.Code
+		}
+		if code == http.StatusNotFound {
+			_ = s.renderNotFound(c)
+			return
+		}
+		_ = s.renderError(c, code, ssrErrorView{
+			Message: "Something went wrong",
+			Action:  "Try again, and if the problem continues check the GPM logs.",
+		})
+	}
 
 	// Routes configuration
 
 	if auth != nil {
+		// The local logout path renders the SSR "signed out" page; wire it now that s exists.
+		auth.renderLoggedOut = s.renderLoggedOut
 		e.GET(callbackPath, auth.callback)
 		e.GET("/login", auth.login)
 		e.GET("/logout", auth.logout)
@@ -235,44 +283,7 @@ func main() {
 	// One rewrite instead of registering every route twice. Pre, so it runs before routing.
 	e.Pre(middleware.RemoveTrailingSlash())
 
-	// Everything under the frontend goes through serveIndex, /static included: it serves any real
-	// file and falls back to index.html for client-side routes (see
-	// https://create-react-app.dev/docs/deployment#serving-apps-with-client-side-routing).
-	// Do not add a separate e.Static route: it serves over http.Dir, which follows symlinks out of
-	// the root, the escape serveIndex closes with os.Root.
-	e.GET("/*", serveIndex)
-
 	e.GET("/health", getHealth)
-
-	e.GET("/api/v1/auth", getAuth)
-
-	e.GET("/api/v1/contexts", s.getContexts)
-
-	e.GET("/api/v1/configs", s.getConfigs)
-	e.GET("/api/v1/configs/:context", s.getConfigs)
-
-	e.GET("/api/v1/constrainttemplates", s.getConstraintTemplates)
-	e.GET("/api/v1/constrainttemplates/:context", s.getConstraintTemplates)
-
-	e.GET("/api/v1/constraints", s.getConstraints)
-	e.GET("/api/v1/constraints/:context", s.getConstraints)
-
-	e.GET("/api/v1/mutations", s.getMutations)
-	e.GET("/api/v1/mutations/:context", s.getMutations)
-
-	e.GET("/api/v1/events", s.getEvents)
-	e.GET("/api/v1/events/:context", s.getEvents)
-
-	// Returns an object with the list of available contets and the currently selected context
-	e.GET("/api/v2/contexts/", func(c echo.Context) error {
-		type v2Answer struct {
-			Current  string                  `json:"currentContext"`
-			Contexts map[string]*api.Context `json:"contexts"`
-		}
-
-		contexts, current := s.k8s.contexts()
-		return c.JSON(http.StatusOK, v2Answer{current, contexts})
-	})
 
 	address := viper.GetString("listen_address")
 

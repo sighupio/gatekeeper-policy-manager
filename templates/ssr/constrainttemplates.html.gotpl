@@ -1,0 +1,106 @@
+{{- /*
+Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+
+Constraint Templates view. Renders the ConstraintTemplate objects and the Constraints that use
+each one, as getConstraintTemplates returns them. The card anchor is the template Kind, so the
+cross-links from the Events view (#<kind>) land on the right card.
+*/ -}}
+{{- define "content" -}}
+<div class="view">
+  <div class="view-head">
+    <h1>Constraint Templates</h1>
+    <p class="muted">The reusable policy definitions that Constraints are built on. Each holds its rego source and parameter schema.</p>
+  </div>
+
+  {{- if .Error }}
+  <div class="alert alert-error">{{ .Error }}</div>
+
+  {{- else if not .Templates }}
+  <div class="empty">
+    <h2>No constraint templates</h2>
+    <p class="muted">There are no Gatekeeper <code>ConstraintTemplate</code> objects defined in this cluster.</p>
+  </div>
+
+  {{- else }}
+  <div class="layout-sidebar">
+    <aside class="sidebar">
+      <p class="sidebar-title">Constraint Templates</p>
+      <nav class="sidebar-nav">
+        {{- range .Templates }}
+        <a href="#{{ .Kind }}">{{ .Kind }}</a>
+        {{- end }}
+      </nav>
+    </aside>
+
+    <div class="stack">
+      {{- range .Templates }}
+      <section class="card" id="{{ .Kind }}">
+        <div class="card-head">
+          <h2>{{ .Kind }}</h2>
+          {{- if .StatusCreated }}
+          <span class="badge badge-success card-head-badge" title="Gatekeeper compiled this template into a CRD">created</span>
+          {{- else }}
+          <span class="badge badge-warn card-head-badge" title="Gatekeeper has not reported this template as created">unknown state</span>
+          {{- end }}
+        </div>
+
+        {{- with .Description }}
+        <p class="muted">{{ linkify . }}</p>
+        {{- end }}
+
+        {{- if .Rego }}
+        <details class="field">
+          <summary class="field-label">Rego definition{{ with .Target }} · target {{ . }}{{ end }}</summary>
+          <div class="code">{{ highlight .Rego "rego" }}</div>
+        </details>
+        {{- else }}
+        <div class="field">
+          <p class="field-label">Rego{{ with .Target }} · target {{ . }}{{ end }}</p>
+          <p class="muted no-spec">This template defines no Rego source.</p>
+        </div>
+        {{- end }}
+
+        {{- range .Libs }}
+        <details class="field">
+          <summary class="field-label">Libs definition</summary>
+          <div class="code">{{ highlight . "rego" }}</div>
+        </details>
+        {{- end }}
+
+        {{- with .Schema }}
+        <details class="field">
+          <summary class="field-label">Parameters schema</summary>
+          <div class="code">{{ highlight (toYAML .) "yaml" }}</div>
+        </details>
+        {{- end }}
+
+        <details class="field">
+          <summary class="field-label">Full YAML definition</summary>
+          <div class="code">{{ highlight (toYAML .Raw) "yaml" }}</div>
+        </details>
+
+        <div class="field">
+          <p class="field-label">Constraints using this template</p>
+          {{- if .Constraints }}
+          <nav class="linklist">
+            {{- range .Constraints }}
+            <a href="{{ browserPath `/constraints` }}#{{ . }}">{{ . }}</a>
+            {{- end }}
+          </nav>
+          {{- else }}
+          <p class="muted no-spec">No Constraint uses this Constraint Template.</p>
+          {{- end }}
+        </div>
+
+        {{- with .Created }}
+        <p class="card-foot muted dynamic">Created on {{ . }}</p>
+        {{- end }}
+      </section>
+      {{- end }}
+    </div>
+  </div>
+  {{- end }}
+</div>
+{{- end -}}
