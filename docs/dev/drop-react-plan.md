@@ -52,10 +52,16 @@ JSON API is removed. What has landed:
   kind cluster deployed exactly as CI does, captured in the `mcr.microsoft.com/playwright:v1.55.1`
   linux container, and committed; a second compare run is stable.
 
+- **Security and ponytail reviews.** Both ran, scoped to the whole `feat/drop-react` diff. The
+  security review found no merge blockers (escaping, routing/traversal, the auth allowlist, redirect
+  guards and the CSP all clean) and one low-severity item: the session-less pages exposed context
+  names on a multi-context kubeconfig — fixed with `publicLayout` plus a regression test. The
+  ponytail review found the branch lean; its clear wins (the dead Create React App allowlist and a
+  duplicated context derivation) are applied.
+
 ### Remaining before merge
 
 1. **Update the README screenshots.** They still show the old React UI.
-2. **Security and ponytail reviews** (see below), scoped to the whole `feat/drop-react` diff.
 
 ## POC files
 
