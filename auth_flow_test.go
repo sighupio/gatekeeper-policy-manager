@@ -194,6 +194,9 @@ func newAuthTestServerOnSubpath(t *testing.T, p *fakeProvider, base string, extr
 	if err != nil {
 		t.Fatalf("configuring the authenticator failed: %v", err)
 	}
+	// In production this renders the SSR "signed out" page; the tests only exercise the redirect
+	// behaviour of logout, so a stub stands in for the template layer.
+	auth.renderLoggedOut = func(c echo.Context) error { return c.String(http.StatusOK, "signed out") }
 
 	e := echo.New()
 	e.Use(session.Middleware(newSessionStore()))
@@ -416,9 +419,8 @@ func TestLogoutRoundTripDoesNotLoop(t *testing.T) {
 	rec = httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 
-	// Assert only the property under test. Whether the page renders depends on static-content/
-	// being present, which is a gitignored frontend build artifact that CI does not produce for
-	// the Go test step — asserting 200 here made the suite pass locally and fail in CI.
+	// The property under test: the return hop lands on a page, it does not redirect again. The
+	// local logout path now renders an embedded SSR page, so there is no static-content dependency.
 	if rec.Code == http.StatusFound || rec.Header().Get("Location") != "" {
 		t.Fatalf("the return hop redirected again to %q — this is the redirect loop",
 			rec.Header().Get("Location"))

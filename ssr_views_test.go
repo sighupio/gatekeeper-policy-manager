@@ -97,13 +97,13 @@ func TestSSRNewViewsRenderWithoutError(t *testing.T) {
 
 	// Home reuses .Layout.Nav for its cards, so give the layout one nav entry to exercise that path.
 	homeLayout := minimalLayout()
-	homeLayout.Nav = []navLink{{Name: "Constraints", Href: "/ssr/constraints"}}
+	homeLayout.Nav = []navLink{{Name: "Constraints", Href: "/constraints"}}
 	homeData := map[string]any{"Layout": homeLayout}
 	buf.Reset()
 	if err := r.pages["home"].ExecuteTemplate(&buf, "layout", homeData); err != nil {
 		t.Fatalf("home render failed: %v", err)
 	}
-	for _, want := range []string{"Welcome", "Constraints", "/ssr/constraints"} {
+	for _, want := range []string{"Welcome", "Constraints", "/constraints"} {
 		if !strings.Contains(buf.String(), want) {
 			t.Errorf("home output missing %q", want)
 		}
@@ -111,7 +111,7 @@ func TestSSRNewViewsRenderWithoutError(t *testing.T) {
 
 	errData := map[string]any{"Layout": minimalLayout(), "Err": ssrErrorView{
 		Message: "Something went wrong", Action: "Try again", Description: "boom",
-		LoginURL: "/login", BackURL: "/ssr/home",
+		LoginURL: "/login", BackURL: "/home",
 	}}
 	buf.Reset()
 	if err := r.pages["error"].ExecuteTemplate(&buf, "layout", errData); err != nil {
@@ -135,7 +135,7 @@ func TestSSRNewViewsRenderWithoutError(t *testing.T) {
 }
 
 func minimalLayout() ssrLayout {
-	return ssrLayout{Title: "t", Version: appVersion, AssetBase: "/ssr/static"}
+	return ssrLayout{Title: "t", Version: appVersion, AssetBase: "/static"}
 }
 
 // stripHTMLTags removes tags and unescapes entities so an assertion can match source text that

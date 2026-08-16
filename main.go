@@ -13,7 +13,6 @@ import (
 	"time"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"k8s.io/client-go/tools/clientcmd/api"
 
 	"github.com/labstack/echo-contrib/prometheus"
 	"github.com/labstack/echo-contrib/session"
@@ -184,17 +183,6 @@ func main() {
 	// Renders the HTML violations report at /constraints?report=html.
 	e.Renderer = newRenderer()
 
-	// CORS configuration for frontend development purposes
-	if os.Getenv("APP_ENV") == "development" {
-		origins := []string{"http://localhost:3000", "http://localhost:3001"}
-		headers := []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept}
-		slog.Warn("running in development mode, allowing CORS from other origins", "origins", origins, "headers", headers)
-		e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-			AllowOrigins: origins,
-			AllowHeaders: headers,
-		}))
-	}
-
 	// Authentication. When it is off, no session or auth middleware is installed at all, so the
 	// unauthenticated path stays exactly as it was.
 	var auth *authenticator
@@ -228,12 +216,39 @@ func main() {
 	}
 	s := &server{k8s: registry, ssr: newSSRRenderer()}
 
-	// Server-rendered UI (proof of concept), additive under /ssr. See ssr.go.
+	// The server-rendered UI: every view at its real path, plus the embedded static assets. See ssr.go.
 	registerSSR(e, s)
+
+	// Global error handler. For an HTML request it renders the server-side pages (404 -> notfound,
+	// anything else -> the error page); for the /api/* JSON endpoints it keeps echo's JSON default.
+	// There is no SPA fallback anymore, so an unmatched path reaches here as a 404.
+	e.HTTPErrorHandler = func(err error, c echo.Context) {
+		if c.Response().Committed {
+			return
+		}
+		if isAPIPath(c.Request().URL.Path) {
+			e.DefaultHTTPErrorHandler(err, c)
+			return
+		}
+		code := http.StatusInternalServerError
+		if he, ok := err.(*echo.HTTPError); ok {
+			code = he.Code
+		}
+		if code == http.StatusNotFound {
+			_ = s.renderSSRNotFound(c)
+			return
+		}
+		_ = s.renderSSRError(c, code, ssrErrorView{
+			Message: "Something went wrong",
+			Action:  "Try again, and if the problem continues check the GPM logs.",
+		})
+	}
 
 	// Routes configuration
 
 	if auth != nil {
+		// The local logout path renders the SSR "signed out" page; wire it now that s exists.
+		auth.renderLoggedOut = s.renderSSRLoggedOut
 		e.GET(callbackPath, auth.callback)
 		e.GET("/login", auth.login)
 		e.GET("/logout", auth.logout)
@@ -241,13 +256,6 @@ func main() {
 
 	// One rewrite instead of registering every route twice. Pre, so it runs before routing.
 	e.Pre(middleware.RemoveTrailingSlash())
-
-	// Everything under the frontend goes through serveIndex, /static included: it serves any real
-	// file and falls back to index.html for client-side routes (see
-	// https://create-react-app.dev/docs/deployment#serving-apps-with-client-side-routing).
-	// Do not add a separate e.Static route: it serves over http.Dir, which follows symlinks out of
-	// the root, the escape serveIndex closes with os.Root.
-	e.GET("/*", serveIndex)
 
 	e.GET("/health", getHealth)
 
@@ -269,17 +277,6 @@ func main() {
 
 	e.GET("/api/v1/events", s.getEvents)
 	e.GET("/api/v1/events/:context", s.getEvents)
-
-	// Returns an object with the list of available contets and the currently selected context
-	e.GET("/api/v2/contexts/", func(c echo.Context) error {
-		type v2Answer struct {
-			Current  string                  `json:"currentContext"`
-			Contexts map[string]*api.Context `json:"contexts"`
-		}
-
-		contexts, current := s.k8s.contexts()
-		return c.JSON(http.StatusOK, v2Answer{current, contexts})
-	})
 
 	address := viper.GetString("listen_address")
 

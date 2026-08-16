@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Server-rendered UI (proof of concept). Templates and static assets are embedded, so this path
-// does not depend on the working directory the way the React static-content serving does. It is
-// additive: it lives under /ssr and touches none of the existing routes or handlers.
+// Server-rendered UI. Templates and static assets are embedded, so this path does not depend on
+// the working directory. Every view is rendered here on the server; there is no client-side SPA.
 package main
 
 import (
@@ -50,6 +49,7 @@ var ssrPages = map[string]string{
 	"events":              "templates/ssr/events.html.gotpl",
 	"error":               "templates/ssr/error.html.gotpl",
 	"notfound":            "templates/ssr/notfound.html.gotpl",
+	"loggedout":           "templates/ssr/loggedout.html.gotpl",
 }
 
 type ssrRenderer struct {
@@ -187,7 +187,7 @@ type ctxOption struct {
 type ssrLayout struct {
 	Title       string
 	Version     string
-	AssetBase   string // browserPath("/ssr/static"), where the CSS and Alpine live
+	AssetBase   string // browserPath("/static"), where the CSS and Alpine live
 	Nav         []navLink
 	Contexts    []ctxOption
 	HasContexts bool
@@ -195,19 +195,18 @@ type ssrLayout struct {
 	LogoutURL   string
 }
 
-// The top-nav destinations. Every view is server-rendered now. Home has no nav entry -- the logo
-// links back to it. As each view is ported its ssr flag flips and its path moves under /ssr.
+// The top-nav destinations, at their real paths. Home has no nav entry -- the logo links back to
+// it.
 var ssrNavRoutes = []struct {
 	Key  string
 	Name string
 	Path string
-	SSR  bool
 }{
-	{"constrainttemplates", "Constraint Templates", "/ssr/constrainttemplates", true},
-	{"constraints", "Constraints", "/ssr/constraints", true},
-	{"mutations", "Mutations", "/ssr/mutations", true},
-	{"events", "Events", "/ssr/events", true},
-	{"configurations", "Configurations", "/ssr/configurations", true},
+	{"constrainttemplates", "Constraint Templates", "/constrainttemplates"},
+	{"constraints", "Constraints", "/constraints"},
+	{"mutations", "Mutations", "/mutations"},
+	{"events", "Events", "/events"},
+	{"configurations", "Configurations", "/configurations"},
 }
 
 // Builds the data every SSR page shares: nav with the active item highlighted, the context switcher
@@ -247,7 +246,7 @@ func (s *server) ssrLayoutData(c echo.Context, active, switchBase, title string)
 	return ssrLayout{
 		Title:       title,
 		Version:     appVersion,
-		AssetBase:   browserPath("/ssr/static"),
+		AssetBase:   browserPath("/static"),
 		Nav:         nav,
 		Contexts:    options,
 		HasContexts: len(options) > 0,
@@ -261,7 +260,7 @@ func (s *server) ssrLayoutData(c echo.Context, active, switchBase, title string)
 // getSSRConfigurations renders the Configurations view. It reads the very same Gatekeeper Config
 // objects as the JSON handler getConfigs, then hands them to the template instead of to c.JSON.
 func (s *server) getSSRConfigurations(c echo.Context) error {
-	layout := s.ssrLayoutData(c, "configurations", "/ssr/configurations", "Configurations")
+	layout := s.ssrLayoutData(c, "configurations", "/configurations", "Configurations")
 
 	data := map[string]any{"Layout": layout}
 
@@ -292,7 +291,7 @@ func (s *server) getSSRConfigurations(c echo.Context) error {
 // the JSON handler getMutations (assign, assignmetadata, modifyset, assignimage under
 // mutations.gatekeeper.sh/v1), then hands them to the template instead of to c.JSON.
 func (s *server) getSSRMutations(c echo.Context) error {
-	layout := s.ssrLayoutData(c, "mutations", "/ssr/mutations", "Mutations")
+	layout := s.ssrLayoutData(c, "mutations", "/mutations", "Mutations")
 
 	data := map[string]any{"Layout": layout}
 
@@ -394,7 +393,7 @@ func ssrConstraintTemplateModel(ct map[string]any, related []unstructured.Unstru
 // getSSRConstraintTemplates renders the Constraint Templates view. It reads the same objects as the
 // JSON handler getConstraintTemplates: the templates, plus the Constraints that use each one.
 func (s *server) getSSRConstraintTemplates(c echo.Context) error {
-	layout := s.ssrLayoutData(c, "constrainttemplates", "/ssr/constrainttemplates", "Constraint Templates")
+	layout := s.ssrLayoutData(c, "constrainttemplates", "/constrainttemplates", "Constraint Templates")
 
 	data := map[string]any{"Layout": layout}
 
@@ -548,7 +547,7 @@ func ssrConstraintModel(o map[string]any) ssrConstraint {
 // then sortConstraints (most violations first, then by name). The report link in the sidebar points
 // at the existing HTML report the JSON handler serves with ?report=html.
 func (s *server) getSSRConstraints(c echo.Context) error {
-	layout := s.ssrLayoutData(c, "constraints", "/ssr/constraints", "Constraints")
+	layout := s.ssrLayoutData(c, "constraints", "/constraints", "Constraints")
 
 	data := map[string]any{"Layout": layout}
 
@@ -698,7 +697,7 @@ func ssrEventModel(e map[string]any) ssrEvent {
 // core v1 Events filtered to the configured source (GPM_EVENTS_SOURCE), in the configured or
 // requested namespace. Like getEvents, this is an alpha feature; see its note in handlers.go.
 func (s *server) getSSREvents(c echo.Context) error {
-	layout := s.ssrLayoutData(c, "events", "/ssr/events", "Events")
+	layout := s.ssrLayoutData(c, "events", "/events", "Events")
 
 	data := map[string]any{"Layout": layout}
 
@@ -737,7 +736,7 @@ func (s *server) getSSREvents(c echo.Context) error {
 // views, and ssrLayoutData already builds those links context-aware in .Layout.Nav, so the template
 // reuses them.
 func (s *server) getSSRHome(c echo.Context) error {
-	layout := s.ssrLayoutData(c, "home", "/ssr/home", "Home")
+	layout := s.ssrLayoutData(c, "home", "/home", "Home")
 	return s.ssr.render(c, "home", map[string]any{"Layout": layout})
 }
 
@@ -755,64 +754,56 @@ type ssrErrorView struct {
 // to home when the caller leaves it empty.
 func (s *server) renderSSRError(c echo.Context, status int, e ssrErrorView) error {
 	if e.BackURL == "" {
-		e.BackURL = browserPath("/ssr/home")
+		e.BackURL = browserPath("/")
 	}
-	layout := s.ssrLayoutData(c, "", "/ssr/home", "Error")
+	layout := s.ssrLayoutData(c, "", "/home", "Error")
 	return s.ssr.renderStatus(c, status, "error", map[string]any{"Layout": layout, "Err": e})
 }
 
 // renderSSRNotFound renders the shared 404 page.
 func (s *server) renderSSRNotFound(c echo.Context) error {
-	layout := s.ssrLayoutData(c, "", "/ssr/home", "Not found")
+	layout := s.ssrLayoutData(c, "", "/home", "Not found")
 	return s.ssr.renderStatus(c, http.StatusNotFound, "notfound", map[string]any{"Layout": layout})
 }
 
-// registerSSR wires the server-rendered POC: embedded static assets and the ported views. Called
-// from main after the server is built. Echo matches these specific paths ahead of the "/*"
-// SPA-fallback, so nothing here shadows the existing app.
+// registerSSR wires the server-rendered UI: the embedded static assets and every view at its real
+// path. Called from main after the server is built. Home is the landing page at "/". The 404 and
+// error pages are not routes; the global echo.HTTPErrorHandler in main renders them.
 func registerSSR(e *echo.Echo, s *server) {
 	assets, err := fs.Sub(ssrStaticFS, "static/ssr")
 	if err != nil {
 		slog.Error("SSR static assets could not be mounted", "error", err)
 		return
 	}
-	e.GET("/ssr/static/*", echo.WrapHandler(
-		http.StripPrefix("/ssr/static/", http.FileServer(http.FS(assets)))))
+	e.GET("/static/*", echo.WrapHandler(
+		http.StripPrefix("/static/", http.FileServer(http.FS(assets)))))
 
-	e.GET("/ssr/configurations", s.getSSRConfigurations)
-	e.GET("/ssr/configurations/:context", s.getSSRConfigurations)
+	// Home is the landing page. "/home" and "/home/:context" also resolve to it so the context
+	// switcher has a target that keeps the selected context.
+	e.GET("/", s.getSSRHome)
+	e.GET("/home", s.getSSRHome)
+	e.GET("/home/:context", s.getSSRHome)
 
-	e.GET("/ssr/mutations", s.getSSRMutations)
-	e.GET("/ssr/mutations/:context", s.getSSRMutations)
+	e.GET("/configurations", s.getSSRConfigurations)
+	e.GET("/configurations/:context", s.getSSRConfigurations)
 
-	e.GET("/ssr/constrainttemplates", s.getSSRConstraintTemplates)
-	e.GET("/ssr/constrainttemplates/:context", s.getSSRConstraintTemplates)
+	e.GET("/mutations", s.getSSRMutations)
+	e.GET("/mutations/:context", s.getSSRMutations)
 
-	e.GET("/ssr/constraints", s.getSSRConstraints)
-	e.GET("/ssr/constraints/:context", s.getSSRConstraints)
+	e.GET("/constrainttemplates", s.getSSRConstraintTemplates)
+	e.GET("/constrainttemplates/:context", s.getSSRConstraintTemplates)
 
-	e.GET("/ssr/events", s.getSSREvents)
-	e.GET("/ssr/events/:context", s.getSSREvents)
+	e.GET("/constraints", s.getSSRConstraints)
+	e.GET("/constraints/:context", s.getSSRConstraints)
 
-	e.GET("/ssr/home", s.getSSRHome)
-	e.GET("/ssr/home/:context", s.getSSRHome)
+	e.GET("/events", s.getSSREvents)
+	e.GET("/events/:context", s.getSSREvents)
+}
 
-	// Bare /ssr is not a view; send it to the landing so the entry point is obvious while the SSR
-	// UI lives under /ssr. (At the cutover the views move to their real paths and this goes away.)
-	e.GET("/ssr", func(c echo.Context) error {
-		return c.Redirect(http.StatusFound, browserPath("/ssr/home"))
-	})
-
-	// Demo routes so the error and 404 pages are reachable and reviewable. The global
-	// echo.HTTPErrorHandler that drives these for real (404 -> notfound, 5xx -> error for HTML,
-	// JSON for /api/*) is a cutover concern; see docs/dev/drop-react-plan.md, Retirement.
-	e.GET("/ssr/error", func(c echo.Context) error {
-		return s.renderSSRError(c, http.StatusInternalServerError, ssrErrorView{
-			Message:     "Something went wrong",
-			Action:      "Try again, and if the problem continues check the GPM logs.",
-			Description: "This is a demo of the server-rendered error page.",
-			LoginURL:    browserPath("/login"),
-		})
-	})
-	e.GET("/ssr/notfound", s.renderSSRNotFound)
+// renderSSRLoggedOut renders the "you are signed out" page. It is what the local logout path lands
+// on (see auth.go): a public page, so it does not bounce a just-logged-out user back to the IdP.
+func (s *server) renderSSRLoggedOut(c echo.Context) error {
+	layout := s.ssrLayoutData(c, "", "/home", "Signed out")
+	return s.ssr.renderStatus(c, http.StatusOK, "loggedout",
+		map[string]any{"Layout": layout, "LoginURL": browserPath("/login")})
 }

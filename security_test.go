@@ -12,8 +12,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -24,91 +22,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/spf13/viper"
 )
-
-// Puts a static-content tree in a temp directory, with a secret alongside it that must stay
-// unreachable, and points the process at it for the duration of the test.
-func withStaticContent(t *testing.T) string {
-	t.Helper()
-
-	root := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(root, "app", "static-content", "static"), 0o755); err != nil {
-		t.Fatalf("building the fixture failed: %v", err)
-	}
-	write := func(p, body string) {
-		if err := os.WriteFile(filepath.Join(root, p), []byte(body), 0o600); err != nil {
-			t.Fatalf("writing %s failed: %v", p, err)
-		}
-	}
-	write("secret.txt", "SERVICE-ACCOUNT-TOKEN")
-	write(filepath.Join("app", "static-content", "index.html"), "<html>spa</html>")
-	write(filepath.Join("app", "static-content", "static", "main.js"), "console.log(1)")
-
-	old, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("getwd failed: %v", err)
-	}
-	if err := os.Chdir(filepath.Join(root, "app")); err != nil {
-		t.Fatalf("chdir failed: %v", err)
-	}
-	t.Cleanup(func() { _ = os.Chdir(old) })
-
-	return root
-}
-
-// serveIndex used to join the raw RequestURI — query string included, unnormalised — into a
-// filesystem path, so "?x=/../../.." walked straight out of the static root. Because /logout falls
-// through to the SPA when there is no session, that was reachable with no authentication at all.
-func TestServeIndexRefusesToEscapeTheStaticRoot(t *testing.T) {
-	withStaticContent(t)
-
-	escapes := []string{
-		"/logout?x=/../../../secret.txt",
-		"/../../secret.txt",
-		"/x/../../secret.txt",
-		"/static/../../../secret.txt",
-		"/%2e%2e/%2e%2e/secret.txt",
-		"/..%2f..%2fsecret.txt",
-	}
-
-	for _, target := range escapes {
-		t.Run(target, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, target, nil)
-			rec := httptest.NewRecorder()
-			if err := serveIndex(echo.New().NewContext(req, rec)); err != nil {
-				t.Fatalf("serveIndex returned an error: %v", err)
-			}
-			if strings.Contains(rec.Body.String(), "SERVICE-ACCOUNT-TOKEN") {
-				t.Fatalf("leaked a file from outside the static root: %q", rec.Body.String())
-			}
-		})
-	}
-}
-
-// The traversal fix must not stop it serving the files it exists to serve.
-func TestServeIndexStillServesTheApp(t *testing.T) {
-	withStaticContent(t)
-
-	cases := map[string]string{
-		"/":                  "<html>spa</html>",
-		"/constraints":       "<html>spa</html>", // client-side route, falls back to the shell
-		"/static/main.js":    "console.log(1)",
-		"/index.html":        "<html>spa</html>",
-		"/constraints?a=b#c": "<html>spa</html>",
-	}
-
-	for target, want := range cases {
-		t.Run(target, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, target, nil)
-			rec := httptest.NewRecorder()
-			if err := serveIndex(echo.New().NewContext(req, rec)); err != nil {
-				t.Fatalf("serveIndex returned an error: %v", err)
-			}
-			if got := strings.TrimSpace(rec.Body.String()); got != want {
-				t.Errorf("served %q, want %q", got, want)
-			}
-		})
-	}
-}
 
 // Replacing store.Options wholesale left the securecookie codecs on their 30-day default, so
 // GPM_SESSION_MAX_AGE only shortened the cookie attribute the browser sees. The server-side check
@@ -344,37 +257,6 @@ func TestBackendPathCannotSmuggleAnOffsiteRedirect(t *testing.T) {
 	// And a legitimate target still survives the same path.
 	if got, want := safeRedirectTarget(backendPath("/gpm/constraints")), "/constraints"; got != want {
 		t.Errorf("safeRedirectTarget(backendPath(%q)) = %q, want %q", "/gpm/constraints", got, want)
-	}
-}
-
-// A symlink planted inside static-content that points out of it must not be followed. Not reachable
-// in the distroless image, where the directory is copied at build time, but reachable the moment
-// anyone mounts a volume or a ConfigMap over it. os.Root refuses the traversal at the syscall
-// level, at any depth -- the /static/ case was a real hole while a separate e.Static route served
-// it over http.Dir. The fixture chdirs to <tmp>/app with staticContentDir ./static-content, so the
-// targets climb to <tmp>/secret.txt.
-func TestServeIndexRefusesToFollowSymlinksOutOfTheRoot(t *testing.T) {
-	cases := map[string]struct{ link, target string }{
-		"/leak.txt":       {filepath.Join("static-content", "leak.txt"), filepath.Join("..", "..", "secret.txt")},
-		"/static/leak.js": {filepath.Join("static-content", "static", "leak.js"), filepath.Join("..", "..", "..", "secret.txt")},
-	}
-
-	for request, c := range cases {
-		t.Run(request, func(t *testing.T) {
-			withStaticContent(t)
-			if err := os.Symlink(c.target, c.link); err != nil {
-				t.Skipf("symlinks not supported here: %v", err)
-			}
-
-			req := httptest.NewRequest(http.MethodGet, request, nil)
-			rec := httptest.NewRecorder()
-			if err := serveIndex(echo.New().NewContext(req, rec)); err != nil {
-				t.Fatalf("serveIndex returned an error: %v", err)
-			}
-			if strings.Contains(rec.Body.String(), "SERVICE-ACCOUNT-TOKEN") {
-				t.Fatalf("followed a symlink out of the static root: %q", rec.Body.String())
-			}
-		})
 	}
 }
 

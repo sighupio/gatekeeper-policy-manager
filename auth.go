@@ -52,6 +52,9 @@ type authenticator struct {
 	verifier *oidc.IDTokenVerifier
 	// Empty when the provider does not advertise one, in which case logout is local only.
 	endSessionEndpoint string
+	// Renders the "signed out" page at the end of the local logout path. main wires this to the
+	// SSR renderer; auth.go stays free of the template layer.
+	renderLoggedOut func(echo.Context) error
 }
 
 // Reports whether the operator asked for OIDC. Anything other than "OIDC" (including the Python
@@ -600,7 +603,7 @@ func (a *authenticator) logout(c echo.Context) error {
 	sess, err := session.Get(sessionName, c)
 	if sess == nil {
 		slog.Error("the session store is not available, logging out locally only", "error", err)
-		return serveSPAShell(c)
+		return a.renderLoggedOut(c)
 	}
 	if err != nil {
 		slog.Debug("could not read the session being logged out, clearing it anyway", "error", err)
@@ -634,9 +637,8 @@ func (a *authenticator) logout(c echo.Context) error {
 		slog.Error("could not parse the end session endpoint, logging out locally only", "error", err)
 	}
 
-	// No provider logout: serve the SPA, which renders the logout page. Deliberately not
-	// serveIndex, so this never derives a filesystem path from the request.
-	return serveSPAShell(c)
+	// No provider logout: render the server-side "signed out" page.
+	return a.renderLoggedOut(c)
 }
 
 func firstNonEmpty(values ...string) string {
