@@ -49,26 +49,7 @@ volumes:
       path: /root/mise_data_dir
 
 steps:
-  # Superlint stays disabled: it was switched off for the Go rewrite and never re-tuned.
-  # Go is linted by the lint-go step below (golangci-lint via mise). The front end, YAML and
-  # shell scripts are still unlinted in CI — restore this step or replace it to cover them.
-  # - name: lint
-  #   image: quay.io/sighup/policeman
-  #   pull: always
-  #   environment:
-  #     FILTER_REGEX_EXCLUDE: (chart/|tests/e2e/)
-  #     # Identifies false positives like missing 'selector'.
-  #     # Doing this is valid for Kustomize patches
-  #     VALIDATE_KUBERNETES_KUBEVAL: "false"
-  #     # Some duplicated code is intended.
-  #     VALIDATE_JSCPD: "false"
-  #     # Go is linted with golangci-lint via mise instead.
-  #     VALIDATE_GO: "false"
-  #     TYPESCRIPT_DEFAULT_STYLE: "prettier"
-  #   depends_on:
-  #     - clone
-
-  - name: lint-go
+  - name: lint
     image: quay.io/sighup/mise:v2026.8.6
     pull: always
     depends_on:

@@ -35,7 +35,7 @@ description = "shellcheck the shell scripts"
 run = 'shellcheck $(find . -name "*.sh" -not -path "*/node_modules/*")'
 
 [tasks.lint]
-description = "run golangci-lint (plus the shell and Alpine-version checks via deps)"
+description = "run golangci-lint (plus the shell and Alpine-version and Playwright-version checks via deps)"
 # The deps run first in the same qa step, so a shell-script fault or a stale vendored Alpine fails
 # CI too.
 depends = ["lint-shell", "check-alpine-version", "check-playwright-version"]
