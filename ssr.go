@@ -8,8 +8,10 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"embed"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
@@ -18,6 +20,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/alecthomas/chroma/v2"
@@ -542,7 +545,67 @@ func ssrConstraintModel(o map[string]any) ssrConstraint {
 	return m
 }
 
-// getConstraints renders the Constraints view. It walks the same data path as the JSON handler
+// listConstraintsConcurrency caps the in-flight per-Kind list calls, so a cluster with dozens of
+// Constraint Kinds does not open dozens of simultaneous API connections.
+const listConstraintsConcurrency = 16
+
+// listConstraints discovers every Constraint Kind Gatekeeper created under
+// constraints.gatekeeper.sh/v1beta1 and returns all Constraint objects across those Kinds. The
+// constraints view and the multi-cluster dashboard both read Constraints this way.
+//
+// Each Kind is a separate API round-trip, and a cluster can define dozens of them (most empty), so
+// the lists run concurrently: sequentially this is N*RTT, which is seconds against a remote cluster.
+func listConstraints(ctx context.Context, clients *kubeClients) ([]map[string]interface{}, error) {
+	// Constraint Kinds are created dynamically by Gatekeeper per template, so discover them first.
+	kinds, err := clients.discovery.ServerResourcesForGroupVersion("constraints.gatekeeper.sh/v1beta1")
+	if err != nil {
+		return nil, fmt.Errorf("listing constraint kinds: %w", err)
+	}
+
+	names := make([]string, 0, len(kinds.APIResources))
+	for _, k := range kinds.APIResources {
+		// Subresources (like <kind>/status) have no categories; skip them.
+		if k.Categories == nil {
+			continue
+		}
+		names = append(names, k.SingularName)
+	}
+
+	perKind := make([][]map[string]interface{}, len(names))
+	errs := make([]error, len(names))
+	sem := make(chan struct{}, listConstraintsConcurrency)
+	var wg sync.WaitGroup
+	for i, name := range names {
+		wg.Add(1)
+		go func(i int, name string) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			list, err := getCustomResources(ctx, *clients.dynamic, "constraints.gatekeeper.sh", "v1beta1", name)
+			if err != nil {
+				errs[i] = fmt.Errorf("getting %s constraints: %w", name, err)
+				return
+			}
+			items := make([]map[string]interface{}, 0, len(list.Items))
+			for j := range list.Items {
+				items = append(items, list.Items[j].Object)
+			}
+			perKind[i] = items
+		}(i, name)
+	}
+	wg.Wait()
+
+	var raw []map[string]interface{}
+	for i := range perKind {
+		if errs[i] != nil {
+			return nil, errs[i]
+		}
+		raw = append(raw, perKind[i]...)
+	}
+	return raw, nil
+}
+
 // getConstraints: discover the constraint Kinds under constraints.gatekeeper.sh/v1beta1, list each,
 // then sortConstraints (most violations first, then by name). The report link in the sidebar points
 // at the existing HTML report the JSON handler serves with ?report=html.
@@ -560,29 +623,11 @@ func (s *server) getConstraints(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	// Constraint Kinds are created dynamically by Gatekeeper per template, so discover them first.
-	availableConstraints, err := clients.discovery.ServerResourcesForGroupVersion("constraints.gatekeeper.sh/v1beta1")
+	raw, err := listConstraints(ctx, clients)
 	if err != nil {
-		slog.Error("SSR constraints: listing constraint kinds failed", "error", err)
-		data["Error"] = "GPM could not list the Constraints. Make sure Gatekeeper is installed in the cluster."
+		slog.Error("SSR constraints: reading constraints failed", "error", err)
+		data["Error"] = "GPM could not read the Constraints from the Kubernetes API. Make sure Gatekeeper is installed in the cluster."
 		return s.ssr.render(c, "constraints", data)
-	}
-
-	var raw []map[string]interface{}
-	for _, constraintKind := range availableConstraints.APIResources {
-		// Subresources (like <kind>/status) have no categories; skip them, as getConstraints does.
-		if constraintKind.Categories == nil {
-			continue
-		}
-		constraints, err := getCustomResources(ctx, *clients.dynamic, "constraints.gatekeeper.sh", "v1beta1", constraintKind.SingularName)
-		if err != nil {
-			slog.Error("SSR constraints: getting constraint resources failed", "kind", constraintKind.SingularName, "error", err)
-			data["Error"] = "GPM could not get the constraint objects from the Kubernetes API. Make sure Gatekeeper is deployed in the cluster."
-			return s.ssr.render(c, "constraints", data)
-		}
-		for i := range constraints.Items {
-			raw = append(raw, constraints.Items[i].Object)
-		}
 	}
 
 	sortConstraints(raw)
@@ -758,7 +803,327 @@ func (s *server) getEvents(c echo.Context) error {
 // reuses them.
 func (s *server) getHome(c echo.Context) error {
 	layout := s.ssrLayoutData(c, "home", "/home", "Home")
-	return s.ssr.render(c, "home", map[string]any{"Layout": layout})
+	// The dashboard is fleet-wide, so a per-context switcher would be a no-op here. Drop it; the
+	// cluster cards are how you drill into one cluster.
+	layout.Contexts = nil
+	layout.HasContexts = false
+	dashboard := s.buildDashboard(c.Request().Context())
+	return s.ssr.render(c, "home", map[string]any{"Layout": layout, "Dashboard": dashboard})
+}
+
+// --- Multi-cluster dashboard ------------------------------------------------------------------
+
+// dashboardCluster is one cluster's roll-up on the home dashboard. The json tags feed the sortable
+// clusters table, which Alpine renders client-side from a data island.
+type dashboardCluster struct {
+	Name            string `json:"name"`     // display name; the unnamed in-cluster context reads as "current cluster"
+	Selected        bool   `json:"selected"` // the kubeconfig's current-context
+	Reachable       bool   `json:"reachable"`
+	ConstraintCount int    `json:"constraints"`
+	Violations      int    `json:"violations"`
+	ConstraintsURL  string `json:"url"`    // link to this cluster's constraints view
+	Status          string `json:"status"` // Violations | Compliant | Unreachable (sortable label)
+	State           string `json:"state"`  // bad | ok | warn (drives the status dot color)
+	// The raw fetch error is deliberately not carried here: it can name internal API-server hosts,
+	// IPs and cert details, and the dashboard is reachable without a session under Anonymous auth.
+	// It is logged server-side in fetchClusterConstraints; the table only shows "Unreachable".
+}
+
+// dashboardConstraintCluster is one cluster's share of a Constraint's cross-cluster violations.
+type dashboardConstraintCluster struct {
+	Cluster    string `json:"cluster"`
+	Violations int    `json:"violations"`
+	URL        string `json:"url"` // deep link to the Constraint on that cluster's constraints page
+}
+
+// dashboardConstraint aggregates one Constraint (by kind and name) across every cluster.
+type dashboardConstraint struct {
+	Kind         string                       `json:"kind"`
+	Name         string                       `json:"name"`
+	Violations   int                          `json:"violations"`
+	ClusterCount int                          `json:"clusterCount"` // sortable "Clusters" column
+	Clusters     []dashboardConstraintCluster `json:"clusters"`
+}
+
+// dashboardData is the whole home dashboard: the grand totals, two donut charts, a per-cluster
+// roll-up, and a per-Constraint breakdown of everything that is violating, most-violated first.
+type dashboardData struct {
+	Clusters          []dashboardCluster
+	Violating         []dashboardConstraint
+	ClustersDonut     donut // clusters split into violating / compliant / unreachable
+	EnforcementDonut  donut // constraints split by enforcement mode (deny / warn / dry run)
+	TotalClusters     int
+	ReachableClusters int
+	TotalConstraints  int
+	TotalViolations   int
+	GeneratedUnixMs   int64 // when this data was fetched, for the "updated Ns ago" hint (may be cached)
+}
+
+// donutSegment is one slice of a donut chart: its share of the ring (as SVG stroke geometry over a
+// circle whose circumference is normalised to 100) and its legend entry.
+type donutSegment struct {
+	Label      string
+	Count      int
+	Class      string // danger | warn | success | indigo | muted -> a color in CSS
+	DashArray  string // "<len> <gap>" over a circumference of 100
+	DashOffset string // rotates the slice to continue where the previous one ended
+}
+
+// donut is a server-rendered SVG donut: a number in the middle (the card heading names it) and its
+// segments.
+type donut struct {
+	Center   string
+	Segments []donutSegment
+}
+
+// newDonut computes the ring geometry for the non-empty slices. With the SVG circle's circumference
+// normalised to 100, a slice's dash length is its percentage and the offset is 25 (12 o'clock) minus
+// the percentages already drawn, so the slices sit clockwise from the top with no gaps.
+func newDonut(center string, slices []donutSegment) donut {
+	total := 0
+	for _, s := range slices {
+		total += s.Count
+	}
+	d := donut{Center: center}
+	if total == 0 {
+		return d
+	}
+	var drawn float64
+	for _, s := range slices {
+		if s.Count == 0 {
+			continue
+		}
+		pct := float64(s.Count) / float64(total) * 100
+		s.DashArray = fmt.Sprintf("%.4f %.4f", pct, 100-pct)
+		s.DashOffset = fmt.Sprintf("%.4f", 25-drawn)
+		drawn += pct
+		d.Segments = append(d.Segments, s)
+	}
+	return d
+}
+
+// clusterConstraints is the raw per-cluster fetch that aggregateDashboard rolls up.
+type clusterConstraints struct {
+	context     string
+	selected    bool
+	reachable   bool
+	err         error
+	constraints []ssrConstraint
+}
+
+// dashboardCache holds the last-built dashboard for a short TTL. The dashboard is fleet-wide (the
+// same for every viewer) and fans out to every cluster, so caching it briefly coalesces repeated
+// loads into a single fan-out. That matters because /home is reachable without a session under the
+// default Anonymous auth, so it is a cheap unauthenticated lever otherwise.
+type dashboardCache struct {
+	mu       sync.Mutex
+	data     dashboardData
+	computed time.Time // zero until the dashboard has been built at least once
+}
+
+const dashboardCacheTTL = 10 * time.Second
+
+// buildDashboard returns the cached dashboard when it is still fresh, otherwise rebuilds it. The lock
+// is held across the rebuild on purpose: concurrent loads then coalesce onto one fan-out instead of
+// each launching its own. Data can be up to dashboardCacheTTL stale, which is fine — Gatekeeper's
+// audit lags by ~a minute anyway.
+func (s *server) buildDashboard(ctx context.Context) dashboardData {
+	s.dashCache.mu.Lock()
+	defer s.dashCache.mu.Unlock()
+
+	if !s.dashCache.computed.IsZero() && time.Since(s.dashCache.computed) < dashboardCacheTTL {
+		return s.dashCache.data
+	}
+
+	// Build under a context detached from the caller's cancellation. The result is cached and served
+	// to every viewer, so a client that disconnects mid-rebuild must not poison the shared entry with
+	// a "context canceled" (every-cluster-unreachable) dashboard. The per-cluster timeout in
+	// fetchClusterConstraints still bounds the fan-out.
+	data := s.computeDashboard(context.WithoutCancel(ctx))
+	now := time.Now()
+	data.GeneratedUnixMs = now.UnixMilli()
+	s.dashCache.data = data
+	s.dashCache.computed = now
+	return data
+}
+
+// computeDashboard reads the Constraints of every kubeconfig context in parallel, each bounded by its
+// own timeout so one unreachable cluster cannot hang the page, then aggregates them. An unreachable
+// cluster becomes an error row rather than failing the whole view.
+func (s *server) computeDashboard(ctx context.Context) dashboardData {
+	contexts, current := s.k8s.contexts()
+
+	names := make([]string, 0, len(contexts))
+	for n := range contexts {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	if len(names) == 0 {
+		// In-cluster or a kubeconfig with no named contexts: the single default cluster.
+		names = []string{defaultKubeContext}
+	}
+
+	// ponytail: one goroutine per cluster, unbounded. A kubeconfig holds a handful of clusters, not
+	// hundreds; add a worker pool only if that stops being true.
+	results := make([]clusterConstraints, len(names))
+	var wg sync.WaitGroup
+	for i, name := range names {
+		wg.Add(1)
+		go func(i int, name string) {
+			defer wg.Done()
+			results[i] = s.fetchClusterConstraints(ctx, name, name == current)
+		}(i, name)
+	}
+	wg.Wait()
+
+	return aggregateDashboard(results)
+}
+
+// fetchClusterConstraints resolves one context and lists its Constraints under a 10s timeout.
+func (s *server) fetchClusterConstraints(ctx context.Context, name string, selected bool) clusterConstraints {
+	res := clusterConstraints{context: name, selected: selected}
+
+	clients, err := s.k8s.forContext(name)
+	if err != nil {
+		slog.Warn("dashboard: resolving cluster failed", "cluster", name, "error", err)
+		res.err = err
+		return res
+	}
+
+	cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	raw, err := listConstraints(cctx, clients)
+	if err != nil {
+		slog.Warn("dashboard: reading cluster constraints failed", "cluster", name, "error", err)
+		res.err = err
+		return res
+	}
+
+	res.reachable = true
+	res.constraints = make([]ssrConstraint, 0, len(raw))
+	for _, o := range raw {
+		res.constraints = append(res.constraints, ssrConstraintModel(o))
+	}
+	return res
+}
+
+// aggregateDashboard turns the per-cluster fetches into the dashboard model. It is free of any
+// Kubernetes client so it can be unit-tested directly.
+func aggregateDashboard(results []clusterConstraints) dashboardData {
+	d := dashboardData{TotalClusters: len(results)}
+
+	// Aggregate violating Constraints by kind+name across clusters, keeping first-seen order with a
+	// slice plus an index map so the output is deterministic before the final sort.
+	type key struct{ kind, name string }
+	index := map[key]int{}
+	var violating []dashboardConstraint
+
+	// Donut tallies.
+	var clustersViolating, clustersCompliant, clustersUnreachable int
+	var deny, warn, dryrun int
+
+	for _, r := range results {
+		cluster := dashboardCluster{
+			Name:           clusterLabel(r.context),
+			Selected:       r.selected,
+			Reachable:      r.reachable,
+			ConstraintsURL: constraintsURL(r.context, ""),
+		}
+		if r.err != nil {
+			cluster.Status, cluster.State = "Unreachable", "warn"
+			clustersUnreachable++
+			d.Clusters = append(d.Clusters, cluster)
+			continue
+		}
+
+		d.ReachableClusters++
+		cluster.ConstraintCount = len(r.constraints)
+		for _, c := range r.constraints {
+			d.TotalConstraints++
+			switch c.EnforcementMode {
+			case "warn":
+				warn++
+			case "dryrun":
+				dryrun++
+			default:
+				deny++
+			}
+			if !c.ViolationsKnown || c.TotalViolations == 0 {
+				continue
+			}
+			v := int(c.TotalViolations)
+			cluster.Violations += v
+			d.TotalViolations += v
+
+			k := key{c.Kind, c.Name}
+			i, ok := index[k]
+			if !ok {
+				i = len(violating)
+				index[k] = i
+				violating = append(violating, dashboardConstraint{Kind: c.Kind, Name: c.Name})
+			}
+			violating[i].Violations += v
+			violating[i].Clusters = append(violating[i].Clusters, dashboardConstraintCluster{
+				Cluster:    cluster.Name,
+				Violations: v,
+				URL:        constraintsURL(r.context, c.Name),
+			})
+		}
+		if cluster.Violations > 0 {
+			cluster.Status, cluster.State = "Violations", "bad"
+			clustersViolating++
+		} else {
+			cluster.Status, cluster.State = "Compliant", "ok"
+			clustersCompliant++
+		}
+		d.Clusters = append(d.Clusters, cluster)
+	}
+
+	// Most-violated first, then by name for a stable order.
+	sort.SliceStable(violating, func(i, j int) bool {
+		if violating[i].Violations != violating[j].Violations {
+			return violating[i].Violations > violating[j].Violations
+		}
+		return violating[i].Name < violating[j].Name
+	})
+	for i := range violating {
+		violating[i].ClusterCount = len(violating[i].Clusters)
+	}
+	d.Violating = violating
+
+	d.ClustersDonut = newDonut(strconv.Itoa(d.TotalClusters), []donutSegment{
+		{Label: "With violations", Count: clustersViolating, Class: "danger"},
+		{Label: "Compliant", Count: clustersCompliant, Class: "success"},
+		{Label: "Unreachable", Count: clustersUnreachable, Class: "warn"},
+	})
+	d.EnforcementDonut = newDonut(strconv.Itoa(d.TotalConstraints), []donutSegment{
+		{Label: "Deny", Count: deny, Class: "indigo"},
+		{Label: "Warn", Count: warn, Class: "warn"},
+		{Label: "Dry run", Count: dryrun, Class: "muted"},
+	})
+	return d
+}
+
+// clusterLabel is the display name for a context. The unnamed default (in-cluster) context has no
+// name, so give it a readable label.
+func clusterLabel(context string) string {
+	if context == "" {
+		return "current cluster"
+	}
+	return context
+}
+
+// constraintsURL links to the constraints view for a context, optionally anchored at a Constraint.
+func constraintsURL(kubeContext, constraintName string) string {
+	path := "/constraints"
+	if kubeContext != "" {
+		path += "/" + url.PathEscape(kubeContext)
+	}
+	if constraintName != "" {
+		path += "#" + constraintName
+	}
+	return browserPath(path)
 }
 
 // ssrErrorView is the flat shape the error page renders. It mirrors the fields the React Error page

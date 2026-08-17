@@ -99,15 +99,16 @@ func TestSSRNewViewsRenderWithoutError(t *testing.T) {
 		}
 	}
 
-	// Home reuses .Layout.Nav for its cards, so give the layout one nav entry to exercise that path.
+	// Home reuses .Layout.Nav for its quick-nav cards, so give the layout one nav entry to exercise
+	// that path. The dashboard itself is covered in dashboard_test.go.
 	homeLayout := minimalLayout()
 	homeLayout.Nav = []navLink{{Name: "Constraints", Href: "/constraints"}}
-	homeData := map[string]any{"Layout": homeLayout}
+	homeData := map[string]any{"Layout": homeLayout, "Dashboard": dashboardData{TotalClusters: 1}}
 	buf.Reset()
 	if err := r.pages["home"].ExecuteTemplate(&buf, "layout", homeData); err != nil {
 		t.Fatalf("home render failed: %v", err)
 	}
-	for _, want := range []string{"Welcome", "Constraints", "/constraints"} {
+	for _, want := range []string{"Overview", "Constraints", "/constraints"} {
 		if !strings.Contains(buf.String(), want) {
 			t.Errorf("home output missing %q", want)
 		}
@@ -144,8 +145,9 @@ func minimalLayout() ssrLayout {
 
 // The pages served without a session -- the signed-out page and the error/404 pages -- must not
 // render the context switcher, or an anonymous visitor could read the operator's context names off
-// a multi-context kubeconfig. A normal view (Home) still shows it, which proves the registry here
-// does have contexts and the suppression is what hides them.
+// a multi-context kubeconfig. The Home dashboard is fleet-wide, so it drops the switcher too (a
+// per-context choice would be a no-op there). ssrLayoutData proves the registry does have contexts,
+// so the suppression is deliberate rather than an empty kubeconfig.
 func TestPublicPagesHideTheContextSwitcher(t *testing.T) {
 	useTestKubeconfig(t, twoClusterKubeconfig)
 	registry, err := newClientRegistry()
@@ -153,6 +155,11 @@ func TestPublicPagesHideTheContextSwitcher(t *testing.T) {
 		t.Fatalf("building the registry failed: %v", err)
 	}
 	s := &server{k8s: registry, ssr: newSSRRenderer()}
+
+	layoutCtx := echo.New().NewContext(httptest.NewRequest(http.MethodGet, "/", nil), httptest.NewRecorder())
+	if !s.ssrLayoutData(layoutCtx, "constraints", "/constraints", "Constraints").HasContexts {
+		t.Fatal("expected the two-context kubeconfig to produce a context switcher")
+	}
 
 	render := func(fn func(echo.Context) error) string {
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -163,10 +170,8 @@ func TestPublicPagesHideTheContextSwitcher(t *testing.T) {
 		return rec.Body.String()
 	}
 
-	if home := render(s.getHome); !strings.Contains(home, "ctx-select") {
-		t.Fatal("Home should render the context switcher when the kubeconfig has contexts")
-	}
 	for name, fn := range map[string]func(echo.Context) error{
+		"home":       s.getHome,
 		"signed-out": s.renderLoggedOut,
 		"not-found":  s.renderNotFound,
 	} {
