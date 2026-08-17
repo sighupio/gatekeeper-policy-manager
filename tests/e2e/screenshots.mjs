@@ -8,7 +8,7 @@
 // README's thumbnail grid stays uniform. The "expand" shots open the first card or event row so
 // the rego, the violations table, or an event's detail is visible.
 
-import { chromium } from "playwright";
+import { chromium } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 
 const base = process.env.GPM_BASE_URL ?? "http://localhost:8080";
