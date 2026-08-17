@@ -12,4 +12,4 @@ rendered_chart.yaml
 # Local working notes for the drop-React migration; not part of the product.
 /PORTING.md
 /PORTING.backup-*.md
-/docs/dev/drop-react-plan.md
+/docs/dev
