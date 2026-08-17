@@ -92,7 +92,7 @@
                 <td>{{ .kind }}</td>
                 <td>{{ .namespace }}</td>
                 <td>{{ .name }}</td>
-                <td>{{ .message }}</td>
+                <td>{{ linkify .message }}</td>
             </tr>
             {{- end }}
             {{- if gt .status.totalViolations (len .status.violations) }}

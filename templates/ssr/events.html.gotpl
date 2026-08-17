@@ -113,7 +113,7 @@ row for the fuller detail. No sidebar. Emitting events is a Gatekeeper alpha fea
           {{- with .Message }}
           <div class="event-message">
             <p class="field-label">Message</p>
-            <p>{{ . }}</p>
+            <p>{{ linkify . }}</p>
           </div>
           {{- end }}
         </div>

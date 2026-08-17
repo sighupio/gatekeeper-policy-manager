@@ -109,7 +109,7 @@ land on the right card.
                       <td x-text="row.namespace"></td>
                       <td x-text="row.kind"></td>
                       <td x-text="row.name"></td>
-                      <td class="vmsg" x-text="row.message"></td>
+                      <td class="vmsg" x-effect="linkifyInto($el, row.message)"></td>
                     </tr>
                   </template>
                   <tr x-show="total === 0">

@@ -26,7 +26,11 @@ type Template struct {
 // renderer does not depend on the working directory.
 func newRenderer() *Template {
 	return &Template{templates: template.Must(
-		template.ParseFS(reportTemplateFS, "templates/constraints-report.html.gotpl"))}
+		template.New("constraints-report.html.gotpl").
+			// linkify turns bare URLs in violation messages into anchors (self-escaping, so it is
+			// safe on cluster-controlled text); it is the same helper the server-rendered views use.
+			Funcs(template.FuncMap{"linkify": linkify}).
+			ParseFS(reportTemplateFS, "templates/constraints-report.html.gotpl"))}
 }
 
 func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {

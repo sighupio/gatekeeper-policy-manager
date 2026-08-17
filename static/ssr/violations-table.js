@@ -27,6 +27,33 @@ function violationId(dataId, r) {
   return `${dataId}-${(h >>> 0).toString(36)}`;
 }
 
+// Bare http(s) URL matcher, mirrored from urlRE in ssr.go. Keep the two in step: the report and the
+// server-rendered views linkify with the Go one, this table linkifies with this one.
+const violationUrlRE = /https?:\/\/[^\s<>"]+/g;
+
+// linkifyInto renders a plain violation message into el, turning bare http(s) URLs into links, the
+// way the old React UI did (issue #1325). It appends text and <a> nodes and never sets innerHTML, so
+// a cluster-controlled message cannot inject markup. It is the client-side twin of linkify in ssr.go
+// (used by the download report and the events view); x-effect re-runs it as the table sorts, filters
+// and paginates. Trailing sentence punctuation is kept out of the link, as on the server.
+function linkifyInto(el, msg) {
+  el.textContent = "";
+  const s = String(msg ?? "");
+  let last = 0;
+  for (const m of s.matchAll(violationUrlRE)) {
+    const url = m[0].replace(/[.,;:!?)\]}'"]+$/, "");
+    const a = document.createElement("a");
+    a.href = url;
+    a.textContent = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    // append() is variadic: the text before the URL, the link, then the punctuation trimmed off it.
+    el.append(s.slice(last, m.index), a, m[0].slice(url.length));
+    last = m.index + m[0].length;
+  }
+  el.append(s.slice(last));
+}
+
 function violationsTable(dataId) {
   return {
     columns: [

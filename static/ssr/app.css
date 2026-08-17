@@ -437,7 +437,9 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 }
 .event-detail .field-label { margin-bottom: 8px; }
 .event-message { grid-column: 1 / -1; }
-.event-message p:last-child { margin: 0; }
+/* Same treatment as the violations table's message cell: show the message whole, keep its line
+   breaks, and break a long unbroken token (a URL) instead of letting it widen the grid. */
+.event-message p:last-child { margin: 0; white-space: pre-wrap; word-break: break-word; }
 
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; }
 .kv dt { color: var(--text-muted); font-weight: 600; }
