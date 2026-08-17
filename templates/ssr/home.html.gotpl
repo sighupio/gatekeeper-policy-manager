@@ -3,27 +3,129 @@ Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
 Use of this source code is governed by a BSD-style
 license that can be found in the LICENSE file.
 
-Home landing. A short welcome plus a card per view. The cards reuse .Layout.Nav, which
-ssrLayoutData already builds context-aware, so the links keep the selected context.
+Home dashboard. An at-a-glance policy roll-up across every configured cluster: grand totals and two
+donut charts (server-rendered SVG, no chart library), then two sortable tables — clusters, and the
+Constraints that are violating with links into the offending clusters. The tables are rendered
+client-side by Alpine from <script> data islands (dashboard-table.js), so headers sort without a
+page load; the totals and donuts above stay static server HTML.
 */ -}}
+{{- define "donut" -}}
+<div class="donut">
+  <svg viewBox="0 0 42 42" class="donut-svg" aria-hidden="true">
+    <circle class="donut-track" cx="21" cy="21" r="15.915" fill="none"></circle>
+    {{- range .Segments }}
+    <circle class="donut-seg {{ .Class }}" cx="21" cy="21" r="15.915" fill="none"
+            stroke-dasharray="{{ .DashArray }}" stroke-dashoffset="{{ .DashOffset }}"></circle>
+    {{- end }}
+  </svg>
+  <div class="donut-center"><span class="donut-num">{{ .Center }}</span></div>
+</div>
+<ul class="donut-legend">
+  {{- range .Segments }}
+  <li><span class="donut-dot {{ .Class }}"></span><span class="donut-leg-n">{{ .Count }}</span> {{ .Label }}</li>
+  {{- else }}
+  <li class="muted">No data</li>
+  {{- end }}
+</ul>
+{{- end -}}
+
 {{- define "content" -}}
 <div class="view home">
-  <div class="home-hero">
-    <img class="home-logo" src="{{ .Layout.AssetBase }}/logo.svg" alt="" height="80">
-    <h1>Welcome</h1>
+  <div class="dash-head">
+    <h1>Overview</h1>
     <p class="muted">
-      Gatekeeper Policy Manager is a simple web tool to see the policies deployed in your
-      cluster and their status.
+      Policy status across {{ .Dashboard.TotalClusters }} cluster{{ if ne .Dashboard.TotalClusters 1 }}s{{ end }}<!--
+      --><span class="dash-updated" x-data="updatedAgo({{ .Dashboard.GeneratedUnixMs }})" x-bind:title="title" x-cloak> · <span x-text="text"></span></span>
     </p>
   </div>
 
-  <div class="home-cards">
-    {{- range .Layout.Nav }}
-    <a class="home-card" href="{{ .Href }}">
-      <span class="home-card-name">{{ .Name }}</span>
-      <span class="home-card-arrow" aria-hidden="true">&rarr;</span>
-    </a>
-    {{- end }}
+  <div class="dash-charts">
+    <div class="chart-card">
+      <h2>Total violations</h2>
+      <div class="chart-body chart-stat {{ if gt .Dashboard.TotalViolations 0 }}is-bad{{ else }}is-good{{ end }}">
+        <span class="chart-stat-num">{{ .Dashboard.TotalViolations }}</span>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h2>Clusters</h2>
+      <div class="chart-body">{{ template "donut" .Dashboard.ClustersDonut }}</div>
+    </div>
+    <div class="chart-card">
+      <h2>Constraints by enforcement</h2>
+      <div class="chart-body">{{ template "donut" .Dashboard.EnforcementDonut }}</div>
+    </div>
   </div>
+
+  <section class="dash-section" x-data="dashboardTable('dash-clusters-data', 'violations', 'desc')" x-cloak>
+    <h2>Clusters</h2>
+    <div class="card table-scroll">
+      <table class="ctable">
+        <thead>
+          <tr>
+            <th role="button" tabindex="0" x-on:click="sort('name')" x-on:keydown.enter="sort('name')" x-bind:aria-sort="aria('name')">Cluster <span class="sort-ind" x-text="ind('name')"></span></th>
+            <th role="button" tabindex="0" x-on:click="sort('status')" x-on:keydown.enter="sort('status')" x-bind:aria-sort="aria('status')">Status <span class="sort-ind" x-text="ind('status')"></span></th>
+            <th class="num" role="button" tabindex="0" x-on:click="sort('constraints')" x-on:keydown.enter="sort('constraints')" x-bind:aria-sort="aria('constraints')">Constraints <span class="sort-ind" x-text="ind('constraints')"></span></th>
+            <th class="num" role="button" tabindex="0" x-on:click="sort('violations')" x-on:keydown.enter="sort('violations')" x-bind:aria-sort="aria('violations')">Violations <span class="sort-ind" x-text="ind('violations')"></span></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="c in sorted" x-bind:key="c.name">
+            <tr>
+              <td><a class="ctable-name" x-bind:href="c.url" x-text="c.name"></a> <span class="badge badge-neutral" x-show="c.selected" title="The kubeconfig's default context">default</span></td>
+              <td><span class="st"><span class="st-dot" x-bind:class="c.state"></span><span x-text="c.status"></span></span></td>
+              <td class="num" x-text="c.reachable ? c.constraints : '—'"></td>
+              <td class="num">
+                <template x-if="!c.reachable"><span class="muted">—</span></template>
+                <template x-if="c.reachable && c.violations > 0"><span class="badge badge-danger" x-text="c.violations"></span></template>
+                <template x-if="c.reachable && c.violations === 0"><span class="muted">0</span></template>
+              </td>
+              <td class="num"><a class="ctable-go" x-bind:href="c.url">View &rarr;</a></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+    <script type="application/json" id="dash-clusters-data">{{ toJSON .Dashboard.Clusters }}</script>
+  </section>
+
+  <section class="dash-section" x-data="dashboardTable('dash-violating-data', 'violations', 'desc')" x-cloak>
+    <h2>Violations by Constraint</h2>
+    {{- if .Dashboard.Violating }}
+    <div class="card table-scroll">
+      <table class="dash-table">
+        <thead>
+          <tr>
+            <th role="button" tabindex="0" x-on:click="sort('name')" x-on:keydown.enter="sort('name')" x-bind:aria-sort="aria('name')">Constraint <span class="sort-ind" x-text="ind('name')"></span></th>
+            <th role="button" tabindex="0" x-on:click="sort('kind')" x-on:keydown.enter="sort('kind')" x-bind:aria-sort="aria('kind')">Kind <span class="sort-ind" x-text="ind('kind')"></span></th>
+            <th class="num" role="button" tabindex="0" x-on:click="sort('violations')" x-on:keydown.enter="sort('violations')" x-bind:aria-sort="aria('violations')">Violations <span class="sort-ind" x-text="ind('violations')"></span></th>
+            <th role="button" tabindex="0" x-on:click="sort('clusterCount')" x-on:keydown.enter="sort('clusterCount')" x-bind:aria-sort="aria('clusterCount')">Clusters <span class="sort-ind" x-text="ind('clusterCount')"></span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="v in sorted" x-bind:key="v.kind + '/' + v.name">
+            <tr>
+              <td class="dash-cname" x-text="v.name"></td>
+              <td class="muted" x-text="v.kind"></td>
+              <td class="num"><span class="badge badge-danger" x-text="v.violations"></span></td>
+              <td>
+                <div class="dash-chips">
+                  <template x-for="cc in v.clusters" x-bind:key="cc.cluster">
+                    <a class="dash-chip" x-bind:href="cc.url"><span x-text="cc.cluster"></span> <span class="dash-chip-n" x-text="cc.violations"></span></a>
+                  </template>
+                </div>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+    {{- else }}
+    <p class="muted">No violations across any reachable cluster.</p>
+    {{- end }}
+    <script type="application/json" id="dash-violating-data">{{ toJSON .Dashboard.Violating }}</script>
+  </section>
+
+  <script src="{{ .Layout.AssetBase }}/dashboard-table.js"></script>
 </div>
 {{- end -}}

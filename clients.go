@@ -21,6 +21,13 @@ import (
 // this one.
 const defaultKubeContext = ""
 
+// Client-side API rate limits, well above client-go's 5/10 default so GPM's read-only, list-heavy
+// views do not serialize behind the limiter. The apiserver's own flow control is the real guard.
+const (
+	kubeClientQPS   = 50
+	kubeClientBurst = 100
+)
+
 // Everything needed to talk to one cluster. The client-go clients are safe for concurrent use, so
 // a single set is shared by every request targeting the same kubeconfig context.
 type kubeClients struct {
@@ -123,6 +130,13 @@ func buildKubeClients(kubeContext string) (*kubeClients, *api.Config, error) {
 		restConfig.CAFile = ""
 		restConfig.CAData = nil
 	}
+
+	// client-go defaults to a 5 QPS / 10 burst client-side rate limiter. The constraints view and the
+	// dashboard list every Constraint Kind (a cluster can have dozens), so at 5 QPS those calls
+	// serialize into seconds against a remote cluster. GPM is a read-only UI; raise the ceiling and
+	// let the apiserver's own flow control (APF) protect it.
+	restConfig.QPS = kubeClientQPS
+	restConfig.Burst = kubeClientBurst
 
 	kubeconfig, err := loader.ConfigAccess().GetStartingConfig()
 	if err != nil {

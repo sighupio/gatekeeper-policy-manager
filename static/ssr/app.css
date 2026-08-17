@@ -16,6 +16,14 @@
   --text-muted: #626a78;
   --accent: #2f6feb;
   --accent-contrast: #ffffff;
+  /* Chart fills, deliberately theme-independent. The semantic colors above are tuned for text
+     contrast, so they look muddy as large donut segments (especially --warn in the light theme);
+     charts use their own vivid mid-tones that read on both light and dark surfaces. */
+  --chart-red: #ef4444;
+  --chart-amber: #f59e0b;
+  --chart-green: #22c55e;
+  --chart-indigo: #6366f1;
+  --chart-grey: #94a3b8;
   --danger: #c0362c;
   --danger-bg: #fdecea;
   --success: #1f8b4c;
@@ -196,7 +204,9 @@ code { font-family: var(--mono); font-size: 0.9em; }
    give their width back to the cards and long constraint names stop wrapping when there is room. */
 .layout-sidebar { display: grid; grid-template-columns: fit-content(460px) 1fr; gap: 28px; align-items: start; }
 
-.sidebar { position: sticky; top: 76px; }
+/* Its own scroll: the constraint-templates list can be very long, so cap it to the viewport and let
+   it scroll internally instead of dragging the whole page. */
+.sidebar { position: sticky; top: 76px; max-height: calc(100vh - 96px); overflow-y: auto; padding-right: 4px; }
 .sidebar-title { margin: 0 0 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
 .sidebar-nav { display: flex; flex-direction: column; gap: 1px; }
 .sidebar-nav a {
@@ -207,6 +217,15 @@ code { font-family: var(--mono); font-size: 0.9em; }
 }
 .sidebar-nav a:hover { color: var(--text); background: var(--surface-2); text-decoration: none; }
 .sidebar-nav a:target { color: var(--accent); }
+/* Scroll-spy marks the entry whose section is in view (sidebar-spy.js). After :hover so an active
+   item keeps its highlight while hovered. The name inherits the accent; the mode and badge keep
+   their own colors. */
+.sidebar-nav a.active {
+  border-left-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  font-weight: 600;
+}
 
 /* Related-item link lists (e.g. "Constraints using this template"). Styled as obvious links -- the
    accent color and a trailing arrow -- so they don't read as plain text like the sidebar nav. */
@@ -375,7 +394,7 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 .events-head,
 .event-row > summary {
   display: grid;
-  grid-template-columns: 18px 160px 140px minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
+  grid-template-columns: 18px 160px 130px minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.2fr);
   gap: 12px;
   align-items: center;
   padding: 10px 14px;
@@ -390,6 +409,9 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
   background: var(--surface-2);
   border-bottom: 1px solid var(--border);
 }
+.events-head span[role="button"] { cursor: pointer; white-space: nowrap; }
+.events-head span[role="button"]:hover { color: var(--text); }
+.events-head span[role="button"]:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 .event-row { border-bottom: 1px solid var(--border); }
 .event-row:last-child { border-bottom: none; }
@@ -491,15 +513,15 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 6px 10px 6px 32px;
-  min-width: 220px;
-  flex: 1;
+  width: 240px;
+  max-width: 100%;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M21 21l-4.2-4.2'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: left 9px center;
   background-size: 15px;
 }
 .vsearch:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.vshowing { white-space: nowrap; font-size: 12px; }
+.vcount { white-space: nowrap; font-size: 12px; }
 
 .vtable { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 13px; }
 .vtable th, .vtable td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
@@ -518,6 +540,27 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 .sort-ind { color: var(--accent); font-size: 10px; margin-left: 2px; }
 .vtable td.vmsg { white-space: pre-wrap; word-break: break-word; min-width: 240px; }
 .vtable tbody tr:last-child td { border-bottom: none; }
+
+/* Per-row "copy link to this violation" control (issue #1324). */
+.vlink-col { width: 30px; }
+.vtable td.vlink-cell { padding: 8px 4px 8px 8px; }
+.vlink {
+  display: inline-flex;
+  padding: 3px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.vlink:hover { color: var(--accent); background: var(--surface-2); }
+.vlink:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* A shared link lands here: flash the row so the reader sees which one was meant. */
+.viol-flash td { animation: violFlash 2.2s ease-out; }
+@keyframes violFlash {
+  0%, 15% { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+  100% { background: transparent; }
+}
 
 .vpager { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
 .vpage-size { font-size: 12px; color: var(--text-muted); }
@@ -543,29 +586,116 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 .vpage-btn:hover:not(:disabled) { border-color: var(--accent); }
 .vpage-btn:disabled { opacity: 0.5; cursor: default; }
 
-/* --- Home landing -------------------------------------------------------- */
+/* --- Home dashboard ------------------------------------------------------ */
 
-.home-hero { text-align: center; max-width: 620px; margin: 24px auto 36px; }
-.home-logo { height: 80px; width: auto; margin-bottom: 12px; }
-.home-hero h1 { margin: 0 0 8px; font-size: 26px; font-weight: 700; }
-.home-hero p { margin: 0; font-size: 15px; }
+.dash-head { margin-bottom: 20px; }
+.dash-head h1 { margin: 0 0 4px; font-size: 22px; font-weight: 700; }
+.dash-head p { margin: 0; }
 
-.home-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
-.home-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 18px 20px;
+.dash-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin-bottom: 28px; }
+.chart-card {
+  padding: 16px 20px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  color: var(--text);
-  font-weight: 600;
 }
-.home-card:hover { border-color: var(--accent); text-decoration: none; }
-.home-card-arrow { color: var(--accent); font-size: 18px; }
+.chart-card h2 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+}
+.chart-body { display: flex; align-items: center; gap: 18px; min-height: 96px; }
+
+.chart-stat { justify-content: center; }
+.chart-stat-num { font-size: 46px; font-weight: 700; line-height: 1; }
+.chart-stat.is-bad .chart-stat-num { color: var(--danger); }
+.chart-stat.is-good .chart-stat-num { color: var(--success); }
+
+.donut { position: relative; width: 104px; height: 104px; flex: none; }
+.donut-svg { width: 100%; height: 100%; }
+.donut-track { stroke: var(--surface-2); stroke-width: 5; }
+.donut-seg { stroke-width: 5; }
+.donut-seg.danger { stroke: var(--chart-red); }
+.donut-seg.warn { stroke: var(--chart-amber); }
+.donut-seg.success { stroke: var(--chart-green); }
+.donut-seg.indigo { stroke: var(--chart-indigo); }
+.donut-seg.muted { stroke: var(--chart-grey); }
+.donut-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.donut-num { font-size: 26px; font-weight: 700; line-height: 1; }
+.donut-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.donut-legend li { display: flex; align-items: center; gap: 8px; }
+.donut-dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.donut-dot.danger { background: var(--chart-red); }
+.donut-dot.warn { background: var(--chart-amber); }
+.donut-dot.success { background: var(--chart-green); }
+.donut-dot.indigo { background: var(--chart-indigo); }
+.donut-dot.muted { background: var(--chart-grey); }
+.donut-leg-n { font-weight: 700; }
+
+.dash-section { margin-bottom: 28px; }
+.dash-section h2 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+}
+
+[x-cloak] { display: none !important; }
+
+/* Dashboard tables -- clusters and violations-by-constraint share almost everything */
+.ctable, .dash-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ctable th, .ctable td,
+.dash-table th, .dash-table td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--border); }
+.dash-table th, .dash-table td { padding: 10px 12px; vertical-align: top; }
+.ctable thead th,
+.dash-table thead th {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ctable thead th:hover, .dash-table thead th:hover { color: var(--text); }
+.ctable thead th:focus-visible,
+.dash-table thead th:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.ctable td.num, .ctable th.num,
+.dash-table td.num, .dash-table th.num { text-align: right; white-space: nowrap; }
+.ctable tbody tr:last-child td, .dash-table tbody tr:last-child td { border-bottom: none; }
+.ctable tbody tr:hover, .dash-table tbody tr:hover { background: var(--surface-2); }
+.ctable-name { font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+.ctable-name:hover { color: var(--accent); text-decoration: none; }
+.ctable-go { color: var(--accent); font-weight: 700; white-space: nowrap; }
+.ctable-go:hover { text-decoration: none; }
+.dash-cname { font-weight: 600; overflow-wrap: anywhere; }
+
+.st { display: inline-flex; align-items: center; gap: 8px; }
+.st-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--text-muted); }
+.st-dot.bad { background: var(--danger); }
+.st-dot.ok { background: var(--success); }
+.st-dot.warn { background: var(--warn); }
+
+.dash-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.dash-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+}
+.dash-chip:hover { border-color: var(--accent); text-decoration: none; }
+.dash-chip-n { font-weight: 700; color: var(--danger); }
 
 /* --- Centered pages (error, 404) ---------------------------------------- */
 
@@ -605,6 +735,6 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 @media (max-width: 860px) {
   .brand-text { display: none; }
   .layout-sidebar { grid-template-columns: 1fr; }
-  .sidebar { position: static; }
+  .sidebar { position: static; max-height: none; overflow: visible; padding-right: 0; }
   .sidebar-nav { flex-direction: row; flex-wrap: wrap; }
 }

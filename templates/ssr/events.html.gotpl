@@ -27,23 +27,30 @@ row for the fuller detail. No sidebar. Emitting events is a Gatekeeper alpha fea
 
   {{- else }}
   <div class="table-scroll">
-    <div class="events">
+    <div class="events" x-data="sortableGrid('.event-row')">
       <div class="events-head">
         <span></span>
-        <span>Last Seen</span>
-        <span>Reason</span>
-        <span>Object</span>
-        <span>Template</span>
-        <span>Constraint</span>
-        <span>Message</span>
+        <span role="button" tabindex="0" x-on:click="sort('lastseen')" x-on:keydown.enter="sort('lastseen')" x-bind:aria-sort="aria('lastseen')">Last Seen <span class="sort-ind" x-text="ind('lastseen')"></span></span>
+        <span role="button" tabindex="0" x-on:click="sort('reason')" x-on:keydown.enter="sort('reason')" x-bind:aria-sort="aria('reason')">Reason <span class="sort-ind" x-text="ind('reason')"></span></span>
+        <span role="button" tabindex="0" x-on:click="sort('object')" x-on:keydown.enter="sort('object')" x-bind:aria-sort="aria('object')">Object <span class="sort-ind" x-text="ind('object')"></span></span>
+        <span role="button" tabindex="0" x-on:click="sort('namespace')" x-on:keydown.enter="sort('namespace')" x-bind:aria-sort="aria('namespace')">Namespace <span class="sort-ind" x-text="ind('namespace')"></span></span>
+        <span role="button" tabindex="0" x-on:click="sort('template')" x-on:keydown.enter="sort('template')" x-bind:aria-sort="aria('template')">Template <span class="sort-ind" x-text="ind('template')"></span></span>
+        <span role="button" tabindex="0" x-on:click="sort('constraint')" x-on:keydown.enter="sort('constraint')" x-bind:aria-sort="aria('constraint')">Constraint <span class="sort-ind" x-text="ind('constraint')"></span></span>
       </div>
 
       {{- range .Events }}
-      <details class="event-row">
+      <details class="event-row"
+               data-lastseen="{{ .LastTimestamp }}"
+               data-reason="{{ .Reason }}"
+               data-object="{{ with .ObjKind }}{{ . }}{{ end }}{{ if and .ObjKind .ObjName }}/{{ end }}{{ .ObjName }}"
+               data-namespace="{{ or .ResourceNamespace .ObjNamespace }}"
+               data-template="{{ .ConstraintKind }}"
+               data-constraint="{{ .ConstraintName }}">
         <summary>
           <span>{{ .LastTimestamp }}</span>
           <span>{{ .Reason }}</span>
           <span>{{ with .ObjKind }}{{ . }}{{ end }}{{ if and .ObjKind .ObjName }}/{{ end }}{{ .ObjName }}</span>
+          <span>{{ or .ResourceNamespace .ObjNamespace }}</span>
           <span>
             {{- if .ConstraintKind }}
             <a href="{{ browserPath `/constrainttemplates` }}#{{ .ConstraintKind }}">{{ .ConstraintKind }}</a>
@@ -54,7 +61,6 @@ row for the fuller detail. No sidebar. Emitting events is a Gatekeeper alpha fea
             <a href="{{ browserPath `/constraints` }}#{{ .ConstraintName }}">{{ .ConstraintName }}</a>
             {{- else }}—{{ end }}
           </span>
-          <span class="ev-msg">{{ .Message }}</span>
         </summary>
 
         <div class="event-detail">
@@ -115,6 +121,7 @@ row for the fuller detail. No sidebar. Emitting events is a Gatekeeper alpha fea
       {{- end }}
     </div>
   </div>
+  <script src="{{ .Layout.AssetBase }}/dashboard-table.js"></script>
   {{- end }}
 </div>
 {{- end -}}

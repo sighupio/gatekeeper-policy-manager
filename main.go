@@ -26,8 +26,9 @@ import (
 // Holds everything the handlers need. They are methods on it rather than package-level functions
 // so that nothing reaches for shared mutable state, and so tests can build one with fakes.
 type server struct {
-	k8s *clientRegistry
-	ssr *ssrRenderer
+	k8s       *clientRegistry
+	ssr       *ssrRenderer
+	dashCache dashboardCache
 }
 
 // The single source of truth for the version string shown in logs and the UI.

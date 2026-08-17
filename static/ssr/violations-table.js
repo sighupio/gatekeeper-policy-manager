@@ -7,12 +7,32 @@
 // paginates them entirely client-side. External (not inline) so the page can carry a strict
 // Content Security Policy; loaded before the deferred Alpine bundle, so the global function exists
 // when Alpine initializes the components.
+// A stable, content-derived id for one violation, so a shared deep link keeps pointing at the same
+// violation across audits even as others come and go (issue #1324). Two identical violations hash
+// the same, which is fine -- they are interchangeable. djb2 over the fields, base36.
+// decodeURIComponent throws on a malformed percent sequence; a bad URL fragment must degrade to
+// "no match", never throw out of the caller.
+function decodeHash(s) {
+  try {
+    return decodeURIComponent(s);
+  } catch (e) {
+    return s;
+  }
+}
+
+function violationId(dataId, r) {
+  const s = `${r.enforcementAction}|${r.kind}|${r.namespace}|${r.name}|${r.message}`;
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = (((h << 5) + h) ^ s.charCodeAt(i)) | 0;
+  return `${dataId}-${(h >>> 0).toString(36)}`;
+}
+
 function violationsTable(dataId) {
   return {
     columns: [
       { key: "enforcementAction", label: "Action" },
-      { key: "kind", label: "Kind" },
       { key: "namespace", label: "Namespace" },
+      { key: "kind", label: "Kind" },
       { key: "name", label: "Name" },
       { key: "message", label: "Message" },
     ],
@@ -22,11 +42,56 @@ function violationsTable(dataId) {
     sortDir: "asc",
     page: 0,
     pageSize: 10,
+    copiedId: "",
     init() {
       try {
-        this.rows = JSON.parse(document.getElementById(dataId).textContent) || [];
+        const raw = JSON.parse(document.getElementById(dataId).textContent) || [];
+        this.rows = raw.map((r) => ({ ...r, _id: violationId(dataId, r) }));
       } catch (e) {
         this.rows = [];
+      }
+      // Deep link: if the URL hash names one of our violations, reveal it. Runs on load and on
+      // later hashchange (e.g. someone pastes a link while the page is open). decodeURIComponent
+      // throws on a malformed fragment (e.g. "#%"), so guard it -- a bad hash must not kill init.
+      const reveal = () => {
+        const id = decodeHash(location.hash.slice(1));
+        if (id && this.rows.some((r) => r._id === id)) this.focusViolation(id);
+      };
+      reveal();
+      window.addEventListener("hashchange", reveal);
+    },
+    // Clears any filter/sort so the row sits at its natural index, jumps to its page, expands the
+    // collapsed Violations section, then scrolls to it and flashes it.
+    focusViolation(id) {
+      const idx = this.rows.findIndex((r) => r._id === id);
+      if (idx < 0) return;
+      this.q = "";
+      this.sortKey = "";
+      this.page = Math.floor(idx / this.pageSize);
+      this.$root.closest("details")?.setAttribute("open", "");
+      this.$nextTick(() => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.scrollIntoView({ block: "center", behavior: "smooth" });
+        el.classList.remove("viol-flash");
+        void el.offsetWidth; // reflow so the animation restarts if the row was already flashed
+        el.classList.add("viol-flash");
+      });
+    },
+    copyLink(row) {
+      const url = location.origin + location.pathname + location.search + "#" + row._id;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(
+          () => {
+            this.copiedId = row._id;
+            setTimeout(() => {
+              if (this.copiedId === row._id) this.copiedId = "";
+            }, 1500);
+          },
+          () => (location.hash = row._id),
+        );
+      } else {
+        location.hash = row._id; // insecure context: no clipboard, put it in the address bar instead
       }
     },
     // ponytail: re-filters/re-sorts on every read; fine at Gatekeeper's audit limit (~20 rows).
@@ -54,18 +119,22 @@ function violationsTable(dataId) {
     get total() {
       return this.filtered.length;
     },
+    // Filter + pager only appear once the list needs more than one page; a filter box over a
+    // handful of rows is noise. Gate on the full count against the default page size (10) -- a
+    // fixed threshold, not the mutable pageSize, so raising Rows to 50 cannot hide the controls
+    // you are using, and so a filter that narrows to a few rows cannot hide the box you type in.
+    get showControls() {
+      return this.rows.length > 10;
+    },
+    get countLabel() {
+      return this.q.trim() ? `${this.total} of ${this.rows.length} match` : `${this.rows.length} violations`;
+    },
     get pageCount() {
       return Math.max(1, Math.ceil(this.total / this.pageSize));
     },
     get paged() {
       const start = Math.min(this.page, this.pageCount - 1) * this.pageSize;
       return this.filtered.slice(start, start + this.pageSize);
-    },
-    get from() {
-      return this.total === 0 ? 0 : Math.min(this.page, this.pageCount - 1) * this.pageSize + 1;
-    },
-    get to() {
-      return Math.min(this.total, (Math.min(this.page, this.pageCount - 1) + 1) * this.pageSize);
     },
     sort(key) {
       if (this.sortKey === key) {
