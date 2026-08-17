@@ -50,8 +50,14 @@ frigate gen . > README.md
 
 3. Tag and push the commit. This can be done as part of the release of a version of GPM or independently.
 
-> If you want to release just a new version of the chart, notice that the pipeline by default executes the Helm Release step only if the GPM release has been successful. You might need to disable the dependency between the pipeline steps.
-> This is to avoid publishing a chart that references a failed build of GPM.
-> You can use a tag like `helm-chart-<version>`.
+> The `release-helm-chart` pipeline packages the chart and pushes it as an OCI artifact to
+> `oci://quay.io/sighup/charts/gatekeeper-policy-manager`, next to the container image on quay.io. It
+> runs on any tag except release candidates (`v**-rc**`), and only after the `release` pipeline
+> succeeds, so a failed GPM build cannot publish a chart that references it.
 >
-> ⚠️ Notice that the tags `gatekeeper-policy-manager-<version>` are used by helm/chart-releaser.
+> If you want to release just the chart, use a tag like `helm-chart-<version>` and relax the
+> dependency on the `release` pipeline.
+>
+> ⚠️ The first push of a new repository to quay creates it as **private**. Set
+> `quay.io/sighup/charts/gatekeeper-policy-manager` to public once, or `helm install` needs
+> authentication.
