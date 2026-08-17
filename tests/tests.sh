@@ -55,18 +55,23 @@ load ./helper
 # snapshot spec carry its own retry loop.
 @test "Wait for Gatekeeper's audit to run" {
     info
-    audited(){
-        # The audit is a full scan, so once every Constraint carries a status.auditTimestamp its
-        # totalViolations is final. Require that, plus a non-zero total (the e2e cluster always has
-        # some violations) so we do not pass on a half-populated status.
-        local total_c audited_c total_v
+    settled(){
+        # Wait until the audit status the UI renders is fully populated, on two counts:
+        #  - every Constraint carries a status.auditTimestamp (the audit's full scan has run, so
+        #    totalViolations is final) and the total is non-zero (the e2e cluster always has some);
+        #  - every Constraint's status.byPod lists all the Gatekeeper pods (audit + controllers), so
+        #    the "Status by pod" block on the Constraints page has stopped growing.
+        # With both settled, the Home and Constraints snapshots need no retry loop of their own.
+        local total_c audited_c total_v reporters incomplete
         total_c=$(kubectl get constraints -o jsonpath='{.items[*].metadata.name}' | wc -w)
         audited_c=$(kubectl get constraints -o jsonpath='{range .items[*]}{.status.auditTimestamp}{"\n"}{end}' | grep -c .)
         total_v=$(kubectl get constraints -o jsonpath='{range .items[*]}{.status.totalViolations}{" "}{end}' | tr ' ' '\n' | awk '{s+=$1} END{print s+0}')
-        echo "audited ${audited_c}/${total_c} constraints, ${total_v} violations"
-        [ "$total_c" -gt 0 ] && [ "$audited_c" -eq "$total_c" ] && [ "$total_v" -gt 0 ]
+        reporters=$(kubectl get pods -n gatekeeper-system -l gatekeeper.sh/system=yes --field-selector=status.phase=Running -o name | wc -l)
+        incomplete=$(kubectl get constraints -o jsonpath='{range .items[*]}{.status.byPod[*].id}{"\n"}{end}' | awk -v r="$reporters" 'NF < r {c++} END{print c+0}')
+        echo "audited ${audited_c}/${total_c} constraints, ${total_v} violations, ${incomplete} with incomplete byPod (reporters=${reporters})"
+        [ "$total_c" -gt 0 ] && [ "$audited_c" -eq "$total_c" ] && [ "$total_v" -gt 0 ] && [ "$reporters" -gt 0 ] && [ "$incomplete" -eq 0 ]
     }
-    loop_it audited 30 10
+    loop_it settled 30 10
     [ "$loop_it_result" -eq 0 ]
 }
 
