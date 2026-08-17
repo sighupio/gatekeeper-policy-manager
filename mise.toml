@@ -27,6 +27,8 @@ node = "24"
 yarn = "1.22.22"
 # Formats the TypeScript in tests/e2e.
 "npm:prettier" = "3.9.6"
+# Losslessly shrinks the README screenshots after capture (gen:screenshots).
+oxipng = "10.2.0"
 
 [tasks."lint-shell"]
 description = "shellcheck the shell scripts"
@@ -170,6 +172,8 @@ run = """
 yarn install --frozen-lockfile
 yarn playwright install chromium
 node screenshots.mjs
+# Chromium writes unoptimized PNGs; losslessly shrink them (~25% smaller) before they are committed.
+oxipng -o max --strip safe ../../screenshots/*.png
 """
 
 [tasks.e2e]
