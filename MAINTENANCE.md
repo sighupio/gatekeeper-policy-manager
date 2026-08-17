@@ -13,19 +13,25 @@ Releasing a new version of GPM is done automatically with our CI, to trigger the
 5. Commit all changes.
 6. Run [`bumpversion`](https://github.com/c4urself/bump2version/#installation) to update the version strings automatically everywhere.
 
-For example, assuming the latest version is 1.0.0, to release a new patch version run:
+The version is `X.Y.Z` with optional `-rc.N` pre-releases, modelled as a `stage` part (`rc` → `ga`).
+Pick the command for what you are releasing:
+
+- **Next release candidate** (`2.0.0-rc.0` → `2.0.0-rc.1`): `bumpversion rc`
+- **Promote a candidate to the final release** (`2.0.0-rc.1` → `2.0.0`): `bumpversion stage`
+- **Start a new cycle from a final version**, which begins at `-rc.0` (`2.0.0` → `2.1.0-rc.0`):
+  `bumpversion minor` (or `patch`, or `major`)
+
+You can also force an exact version with `--new-version`, for example:
 
 ```bash
-bumpversion --dry-run --verbose --new-version 1.0.1 bugfix
+bumpversion --dry-run --verbose --new-version 2.0.0-rc.2 rc
 ```
 
-or to release a new minor:
-
-```bash
-bumpversion --dry-run --verbose --new-version 1.1.0 minor
-```
-
-> Notice that the command includes a `--dry-run` flag, drop it to actually perform the change. You can drop the `--verbose` flag too.
+> Keep the `--dry-run` flag to preview, then drop it (and `--verbose`) to apply.
+>
+> ⚠️ **Always run `git diff` after the bump and before pushing.** Eyeball the version strings — a bad
+> bump can be subtle (a broken config once produced `v2.0.0-rc.1-rc.0` everywhere, and the `--dry-run`
+> summary only listed the files, not the changes).
 
 7. `bumpversion` will create some commits and tags. Push the commits and then the tag:
 
