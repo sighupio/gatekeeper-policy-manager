@@ -39,7 +39,9 @@ nav, context switcher and footer data (see ssrLayoutData in ssr.go).
       {{- if .Layout.HasContexts }}
       <label class="ctx" >
         <span class="ctx-label">Context</span>
-        <select class="ctx-select" aria-label="Kubernetes context"
+        {{- /* x-data makes this select an Alpine root so x-on:change is actually wired up; without
+               it Alpine never processes the directive and switching context does nothing. */}}
+        <select class="ctx-select" aria-label="Kubernetes context" x-data
                 x-on:change="if ($event.target.value) window.location.href = $event.target.value">
           {{- range .Layout.Contexts }}
           <option value="{{ .URL }}"{{ if .Selected }} selected{{ end }}>{{ .Name }}</option>
