@@ -204,7 +204,9 @@ code { font-family: var(--mono); font-size: 0.9em; }
    give their width back to the cards and long constraint names stop wrapping when there is room. */
 .layout-sidebar { display: grid; grid-template-columns: fit-content(460px) 1fr; gap: 28px; align-items: start; }
 
-.sidebar { position: sticky; top: 76px; }
+/* Its own scroll: the constraint-templates list can be very long, so cap it to the viewport and let
+   it scroll internally instead of dragging the whole page. */
+.sidebar { position: sticky; top: 76px; max-height: calc(100vh - 96px); overflow-y: auto; padding-right: 4px; }
 .sidebar-title { margin: 0 0 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
 .sidebar-nav { display: flex; flex-direction: column; gap: 1px; }
 .sidebar-nav a {
@@ -215,6 +217,15 @@ code { font-family: var(--mono); font-size: 0.9em; }
 }
 .sidebar-nav a:hover { color: var(--text); background: var(--surface-2); text-decoration: none; }
 .sidebar-nav a:target { color: var(--accent); }
+/* Scroll-spy marks the entry whose section is in view (sidebar-spy.js). After :hover so an active
+   item keeps its highlight while hovered. The name inherits the accent; the mode and badge keep
+   their own colors. */
+.sidebar-nav a.active {
+  border-left-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  font-weight: 600;
+}
 
 /* Related-item link lists (e.g. "Constraints using this template"). Styled as obvious links -- the
    accent color and a trailing arrow -- so they don't read as plain text like the sidebar nav. */
@@ -383,7 +394,7 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 .events-head,
 .event-row > summary {
   display: grid;
-  grid-template-columns: 18px 160px 140px minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
+  grid-template-columns: 18px 160px 130px minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.2fr);
   gap: 12px;
   align-items: center;
   padding: 10px 14px;
@@ -398,6 +409,9 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
   background: var(--surface-2);
   border-bottom: 1px solid var(--border);
 }
+.events-head span[role="button"] { cursor: pointer; white-space: nowrap; }
+.events-head span[role="button"]:hover { color: var(--text); }
+.events-head span[role="button"]:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 .event-row { border-bottom: 1px solid var(--border); }
 .event-row:last-child { border-bottom: none; }
@@ -499,15 +513,15 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 6px 10px 6px 32px;
-  min-width: 220px;
-  flex: 1;
+  width: 240px;
+  max-width: 100%;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M21 21l-4.2-4.2'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: left 9px center;
   background-size: 15px;
 }
 .vsearch:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.vshowing { white-space: nowrap; font-size: 12px; }
+.vcount { white-space: nowrap; font-size: 12px; }
 
 .vtable { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 13px; }
 .vtable th, .vtable td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
@@ -526,6 +540,27 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 .sort-ind { color: var(--accent); font-size: 10px; margin-left: 2px; }
 .vtable td.vmsg { white-space: pre-wrap; word-break: break-word; min-width: 240px; }
 .vtable tbody tr:last-child td { border-bottom: none; }
+
+/* Per-row "copy link to this violation" control (issue #1324). */
+.vlink-col { width: 30px; }
+.vtable td.vlink-cell { padding: 8px 4px 8px 8px; }
+.vlink {
+  display: inline-flex;
+  padding: 3px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.vlink:hover { color: var(--accent); background: var(--surface-2); }
+.vlink:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* A shared link lands here: flash the row so the reader sees which one was meant. */
+.viol-flash td { animation: violFlash 2.2s ease-out; }
+@keyframes violFlash {
+  0%, 15% { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+  100% { background: transparent; }
+}
 
 .vpager { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
 .vpage-size { font-size: 12px; color: var(--text-muted); }
@@ -700,6 +735,6 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 @media (max-width: 860px) {
   .brand-text { display: none; }
   .layout-sidebar { grid-template-columns: 1fr; }
-  .sidebar { position: static; }
+  .sidebar { position: static; max-height: none; overflow: visible; padding-right: 0; }
   .sidebar-nav { flex-direction: row; flex-wrap: wrap; }
 }

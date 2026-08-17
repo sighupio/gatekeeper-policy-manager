@@ -74,6 +74,12 @@ func TestSSRNewViewsRenderWithoutError(t *testing.T) {
 	for _, want := range []string{
 		"must-have-owner", "K8sRequiredLabels", "deny mode", "violationsTable('viol-must-have-owner')",
 		"missing owner", "audit limit", "Download violations report", "Filter violations",
+		// The filter + pager are gated to long lists, and the count label replaced "showing X of Y".
+		`x-show="showControls"`, "countLabel",
+		// Sidebar scroll-spy is wired via the shared layout script on every page.
+		"sidebar-spy.js",
+		// Per-violation shareable links (issue #1324): each row has a stable id and a copy control.
+		"copyLink(row)", `class="vlink"`, `x-bind:id="row._id"`,
 	} {
 		if !strings.Contains(buf.String(), want) {
 			t.Errorf("constraints output missing %q", want)

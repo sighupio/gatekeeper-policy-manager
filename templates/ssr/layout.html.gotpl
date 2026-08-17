@@ -20,6 +20,7 @@ nav, context switcher and footer data (see ssrLayoutData in ssr.go).
          synchronous so it runs before Alpine and needs no script-src 'unsafe-inline' under the CSP. */}}
   <script src="{{ .Layout.AssetBase }}/theme.js"></script>
   <script defer src="{{ .Layout.AssetBase }}/alpine.min.js"></script>
+  <script defer src="{{ .Layout.AssetBase }}/sidebar-spy.js"></script>
 </head>
 <body>
   <header class="topbar">
