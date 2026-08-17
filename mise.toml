@@ -38,7 +38,7 @@ run = 'shellcheck $(find . -name "*.sh" -not -path "*/node_modules/*")'
 description = "run golangci-lint (plus the shell and Alpine-version checks via deps)"
 # The deps run first in the same qa step, so a shell-script fault or a stale vendored Alpine fails
 # CI too.
-depends = ["lint-shell", "check-alpine-version"]
+depends = ["lint-shell", "check-alpine-version", "check-playwright-version"]
 run = "golangci-lint run --config=.rules/.golangci.yml ./..."
 
 [tasks."lint-fix"]
@@ -161,6 +161,29 @@ if [ "$want" != "$have" ]; then
   exit 1
 fi
 echo "Alpine aligned across package.json and alpine.min.js: ${want}"
+"""
+
+[tasks."check-playwright-version"]
+description = "fail if the Playwright container tag in .drone.yml drifts from tests/e2e's @playwright/test"
+# The CI e2e steps run INSIDE mcr.microsoft.com/playwright:vX.Y.Z, which ships the browser binaries
+# for Playwright X.Y.Z. The @playwright/test npm version must equal that image tag, or the browser the
+# JS library expects is not in the image. Nothing links them but the version number, so guard it here
+# (same idea as check-alpine-version / check-go-version). A matching bump also needs the -linux.png
+# baselines regenerated, since the container's browser renders them.
+run = """
+want=$(node -p "require('./tests/e2e/package.json').devDependencies['@playwright/test'].replace(/[^0-9.]/g,'')")
+count=$(grep -oE 'mcr.microsoft.com/playwright:v[0-9.]+' .drone.yml | sed 's/.*:v//' | sort -u | wc -l | tr -d ' ')
+have=$(grep -oE 'mcr.microsoft.com/playwright:v[0-9.]+' .drone.yml | sed 's/.*:v//' | sort -u | head -1)
+if [ "$count" != "1" ]; then
+  echo "The mcr.microsoft.com/playwright image tags in .drone.yml disagree with each other." >&2
+  exit 1
+fi
+if [ "$want" != "$have" ]; then
+  echo "Playwright version mismatch: @playwright/test=$want, .drone.yml image=v$have" >&2
+  echo "Bump every mcr.microsoft.com/playwright:v tag in .drone.yml to v$want, then regenerate the -linux.png baselines." >&2
+  exit 1
+fi
+echo "Playwright aligned across tests/e2e/package.json and .drone.yml: $want"
 """
 
 [tasks."gen:screenshots"]
