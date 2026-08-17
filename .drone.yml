@@ -306,7 +306,7 @@ steps:
       - kubectl port-forward svc/gatekeeper-policy-manager $PORT:80 -n gatekeeper-system
 
   - name: ui-tests
-    image: mcr.microsoft.com/playwright:v1.55.1
+    image: mcr.microsoft.com/playwright:v1.62.1
     pull: always
     network_mode: host
     commands:
@@ -337,7 +337,7 @@ steps:
         cd tests/e2e && yarn install && yarn test
 
   - name: echo-diff-images
-    image: mcr.microsoft.com/playwright:v1.55.1
+    image: mcr.microsoft.com/playwright:v1.62.1
     commands:
       - for f in tests/e2e/test-results/*/*diff.png; do echo $f; base64 -w 0 $f; echo; done;
       - "echo 'Use base64 to decode the images and see the diff'"
