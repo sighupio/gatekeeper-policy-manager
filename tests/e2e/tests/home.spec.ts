@@ -6,8 +6,10 @@
 
 import { test, expect } from "@playwright/test";
 
-// The UI is server-rendered, so the whole page is in the initial HTML: there is nothing to wait for
-// after the load. toHaveScreenshot still auto-waits for the page to stop changing before comparing.
+// The Home dashboard rolls up Gatekeeper's audit across the cluster. The e2e pipeline waits for the
+// audit to run before this stage (the "Wait for Gatekeeper's audit to run" step in tests/tests.sh),
+// so the violation counts are already converged here and no per-test retry is needed.
+//
 // The lede carries a ticking "updated Ns ago" hint whose width changes as it counts, so masking the
 // hint span alone leaves a moving edge; mask the whole lede <p> instead -- a block, so its box is
 // full-width and stable regardless of the hint text.

@@ -49,6 +49,27 @@ load ./helper
     [ "$status" -eq 0 ]
 }
 
+# The UI snapshot tests (the Home dashboard and the Constraints view) render Gatekeeper's audit
+# results. The audit runs a few cycles after deploy, so on a fresh cluster the views briefly show
+# zero violations. Gate the whole UI-test stage on the audit here, once, instead of making every
+# snapshot spec carry its own retry loop.
+@test "Wait for Gatekeeper's audit to run" {
+    info
+    audited(){
+        # The audit is a full scan, so once every Constraint carries a status.auditTimestamp its
+        # totalViolations is final. Require that, plus a non-zero total (the e2e cluster always has
+        # some violations) so we do not pass on a half-populated status.
+        local total_c audited_c total_v
+        total_c=$(kubectl get constraints -o jsonpath='{.items[*].metadata.name}' | wc -w)
+        audited_c=$(kubectl get constraints -o jsonpath='{range .items[*]}{.status.auditTimestamp}{"\n"}{end}' | grep -c .)
+        total_v=$(kubectl get constraints -o jsonpath='{range .items[*]}{.status.totalViolations}{" "}{end}' | tr ' ' '\n' | awk '{s+=$1} END{print s+0}')
+        echo "audited ${audited_c}/${total_c} constraints, ${total_v} violations"
+        [ "$total_c" -gt 0 ] && [ "$audited_c" -eq "$total_c" ] && [ "$total_v" -gt 0 ]
+    }
+    loop_it audited 30 10
+    [ "$loop_it_result" -eq 0 ]
+}
+
 @test "Trigger an admission event" {
     info
     # K8sUniqueIngressHost is the one deny constraint that matches Ingress and nothing else, so a
