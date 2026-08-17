@@ -32,7 +32,7 @@ type server struct {
 }
 
 // The single source of truth for the version string shown in logs and the UI.
-const appVersion = "v2.0.0-rc.1-rc.0"
+const appVersion = "v2.0.0-rc.1"
 
 // Resolves the Kubernetes clients for the context named in the route, or the kubeconfig default
 // when the route carries no :context.
