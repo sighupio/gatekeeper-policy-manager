@@ -46,17 +46,23 @@ row for the fuller detail. No sidebar. Emitting events is a Gatekeeper alpha fea
                data-namespace="{{ or .ResourceNamespace .ObjNamespace }}"
                data-template="{{ .ConstraintKind }}"
                data-constraint="{{ .ConstraintName }}">
+        {{- /* The collapsed row is a fixed grid, so a long value is clipped with an ellipsis. Each
+               cell carries the whole value as a title, so hovering recovers it without expanding the
+               row. The detail below still holds every field in full. */}}
+        {{- $sep := "" }}{{ if and .ObjKind .ObjName }}{{ $sep = "/" }}{{ end }}
+        {{- $object := printf "%s%s%s" .ObjKind $sep .ObjName }}
+        {{- $namespace := or .ResourceNamespace .ObjNamespace }}
         <summary>
-          <span>{{ .LastTimestamp }}</span>
-          <span>{{ .Reason }}</span>
-          <span>{{ with .ObjKind }}{{ . }}{{ end }}{{ if and .ObjKind .ObjName }}/{{ end }}{{ .ObjName }}</span>
-          <span>{{ or .ResourceNamespace .ObjNamespace }}</span>
-          <span>
+          <span title="{{ .LastTimestamp }}">{{ .LastTimestamp }}</span>
+          <span title="{{ .Reason }}">{{ .Reason }}</span>
+          <span title="{{ $object }}">{{ $object }}</span>
+          <span title="{{ $namespace }}">{{ $namespace }}</span>
+          <span title="{{ .ConstraintKind }}">
             {{- if .ConstraintKind }}
             <a href="{{ browserPath `/constrainttemplates` }}#{{ .ConstraintKind }}">{{ .ConstraintKind }}</a>
             {{- else }}—{{ end }}
           </span>
-          <span>
+          <span title="{{ .ConstraintName }}">
             {{- if .ConstraintName }}
             <a href="{{ browserPath `/constraints` }}#{{ constraintAnchor .ConstraintKind .ConstraintName }}">{{ .ConstraintName }}</a>
             {{- else }}—{{ end }}

@@ -29,7 +29,15 @@ func TestContextSwitcherIsAlpineWired(t *testing.T) {
 	if !strings.Contains(out, `class="ctx-select"`) {
 		t.Fatal("the context switcher did not render with contexts present")
 	}
-	if !strings.Contains(out, `class="ctx-select" aria-label="Kubernetes context" x-data`) {
-		t.Error("the context switcher <select> is missing x-data; x-on:change will not fire and switching does nothing")
+	// Read the tag itself rather than a fixed attribute order, so adding an attribute to the select
+	// cannot make this fail while the wiring is intact.
+	tag := out[strings.Index(out, "<select"):]
+	tag = tag[:strings.Index(tag, ">")+1]
+	if !strings.Contains(tag, "x-data") {
+		t.Errorf("the context switcher <select> is missing x-data; x-on:change will not fire and switching does nothing: %s", tag)
+	}
+	// A long context name is clipped in the topbar, so the whole one has to be recoverable on hover.
+	if !strings.Contains(tag, `title="alpha"`) {
+		t.Errorf("the context switcher does not carry the selected context as its title: %s", tag)
 	}
 }

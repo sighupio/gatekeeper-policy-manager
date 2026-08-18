@@ -154,7 +154,18 @@ code { font-family: var(--mono); font-size: 0.9em; }
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 6px 28px 6px 10px;
-  max-width: 320px;
+  /* Scales with the window rather than a fixed cap: a kubeconfig context can be an EKS ARN, and 320px
+     cut every one of them at the same place. A native select sizes itself to its widest option, so the
+     control stays the same width whichever context is chosen -- it never jitters as you switch.
+     Anything still too long ends in an ellipsis and is recoverable from the title.
+
+     Three regimes, and the nesting is not clamp(): clamp(42ch, 22vw, 32vw) reduces to max(42ch, 22vw)
+     and would never narrow below 42ch.
+       narrow  32vw wins    -- the control gives way so the nav keeps its links
+       normal  42ch wins    -- at 1280 this is the widest it can be before the nav starts scrolling
+       wide    22vw wins    -- past ~1600 there is slack, so let more of the name show */
+  max-width: min(max(42ch, 22vw), 32vw);
+  text-overflow: ellipsis;
   cursor: pointer;
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M3 4.5L6 8l3-3.5z'/%3E%3C/svg%3E");
