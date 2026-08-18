@@ -165,6 +165,61 @@ func linkify(s string) template.HTML {
 	return template.HTML(b.String())
 }
 
+// The report renders the raw Constraint objects, so it has to read them as defensively as
+// ssrConstraintModel does. A Constraint applied since the last audit carries no
+// status.totalViolations at all, and `gt` against that missing value aborts the whole template: one
+// un-audited Constraint turned the downloaded report into a 500 error page. 1.x printed "unknown"
+// for it instead, and these three helpers let the report do the same.
+func reportViolationsKnown(c any) bool {
+	obj, ok := c.(map[string]any)
+	if !ok {
+		return false
+	}
+	_, found, err := unstructured.NestedInt64(obj, "status", "totalViolations")
+	return found && err == nil
+}
+
+// reportTotalViolations is the audited count, and 0 for a Constraint that has not been audited.
+func reportTotalViolations(c any) int64 {
+	obj, ok := c.(map[string]any)
+	if !ok {
+		return 0
+	}
+	n, found, err := unstructured.NestedInt64(obj, "status", "totalViolations")
+	if !found || err != nil {
+		return 0
+	}
+	return n
+}
+
+// reportEnforcement is the violation's action, collapsed the way enforcementMode collapses the
+// spec. Today's CRD carries `default: deny`, so the API server always materialises the field and
+// every violation record has it -- verified against a live cluster. This keeps the report honest
+// against an older Gatekeeper whose CRD has no default, where the UI would say DENY (it normalises)
+// and the report would print nothing.
+func reportEnforcement(v any) string {
+	obj, ok := v.(map[string]any)
+	if !ok {
+		return enforcementMode("")
+	}
+	action, _, _ := unstructured.NestedString(obj, "enforcementAction")
+	return enforcementMode(action)
+}
+
+// reportViolations is the violation list, and empty when there is none. Gatekeeper can report a
+// count with no list behind it, and `len` on that missing value is another way to abort the render.
+func reportViolations(c any) []any {
+	obj, ok := c.(map[string]any)
+	if !ok {
+		return nil
+	}
+	vs, found, err := unstructured.NestedSlice(obj, "status", "violations")
+	if !found || err != nil {
+		return nil
+	}
+	return vs
+}
+
 // toJSON marshals a value for a <script type="application/json"> data island. encoding/json escapes
 // <, > and & by default, so a "</script>" inside a violation message cannot break out of the tag;
 // template.JS then lets html/template emit the result verbatim instead of re-escaping it.

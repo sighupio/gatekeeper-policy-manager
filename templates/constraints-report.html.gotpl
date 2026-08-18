@@ -84,21 +84,30 @@
         <tbody>
             {{- range .constraints}}
             {{- $constraint := .metadata.name }}
-            {{- if gt .status.totalViolations 0 }}
-            {{- range .status.violations }}
+            {{- $known := violationsKnown . }}
+            {{- $total := totalViolations . }}
+            {{- $violations := violationsOf . }}
+            {{- if not $known }}
             <tr>
                 <td>{{ $constraint }}</td>
-                <td {{ if eq .enforcementAction "deny" }}style="color:red;" {{ end }}>{{ .enforcementAction }}</td>
+                <td colspan="5">violations for this Constraint are unknown. Gatekeeper has not audited it yet.</td>
+            </tr>
+            {{- else if gt $total 0 }}
+            {{- range $violations }}
+            <tr>
+                <td>{{ $constraint }}</td>
+                {{- $action := enforcementOf . }}
+                <td {{ if eq $action "deny" }}style="color:red;" {{ end }}>{{ $action }}</td>
                 <td>{{ .kind }}</td>
                 <td>{{ .namespace }}</td>
                 <td>{{ .name }}</td>
                 <td>{{ linkify .message }}</td>
             </tr>
             {{- end }}
-            {{- if gt .status.totalViolations (len .status.violations) }}
+            {{- if gt $total (len $violations) }}
             <tr>
                 <td>{{ $constraint }}</td>
-                <td colspan="5"> &hellip; showing {{len .status.violations}} of {{ .status.totalViolations }}
+                <td colspan="5"> &hellip; showing {{ len $violations }} of {{ $total }}
                     violations as per Gatekeeper configuration.</td>
             </tr>
             {{- end }}

@@ -29,7 +29,13 @@ func newRenderer() *Template {
 		template.New("constraints-report.html.gotpl").
 			// linkify turns bare URLs in violation messages into anchors (self-escaping, so it is
 			// safe on cluster-controlled text); it is the same helper the server-rendered views use.
-			Funcs(template.FuncMap{"linkify": linkify}).
+			Funcs(template.FuncMap{
+				"linkify":         linkify,
+				"violationsKnown": reportViolationsKnown,
+				"totalViolations": reportTotalViolations,
+				"violationsOf":    reportViolations,
+				"enforcementOf":   reportEnforcement,
+			}).
 			ParseFS(reportTemplateFS, "templates/constraints-report.html.gotpl"))}
 }
 

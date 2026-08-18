@@ -74,3 +74,77 @@ func TestConstraintsReportShowsContext(t *testing.T) {
 		t.Errorf("the report showed an empty context")
 	}
 }
+
+// A Constraint applied since the last audit has no status.totalViolations. The report compared that
+// missing value with gt, which aborts the render, so a single un-audited Constraint answered the
+// "Download violations report" button with a 500 page. Verified against the live e2e cluster before
+// the fix: applying one new Constraint took the report from HTTP 200 to HTTP 500 immediately.
+func TestConstraintsReportHandlesUnauditedConstraints(t *testing.T) {
+	constraint := func(name string, status map[string]any) map[string]any {
+		c := map[string]any{"metadata": map[string]any{"name": name}}
+		if status != nil {
+			c["status"] = status
+		}
+		return c
+	}
+
+	for _, tt := range []struct {
+		name       string
+		constraint map[string]any
+		want       string
+	}{
+		{"no status at all", constraint("fresh", nil), "unknown"},
+		{"status without totalViolations", constraint("pending", map[string]any{"auditTimestamp": "now"}), "unknown"},
+		{"audited, no violations", constraint("clean", map[string]any{"totalViolations": int64(0)}), "there are no violations"},
+		{
+			"a count with no list behind it",
+			constraint("counted", map[string]any{"totalViolations": int64(3)}),
+			"showing 0 of 3",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			data := map[string]any{
+				"constraints":   []map[string]any{tt.constraint},
+				"apiServerHost": "https://example.invalid",
+				"timestamp":     "now",
+			}
+			if err := newRenderer().Render(&buf, "report", data, nil); err != nil {
+				t.Fatalf("rendering the report failed: %v", err)
+			}
+			if !strings.Contains(buf.String(), tt.want) {
+				t.Errorf("report missing %q\n%s", tt.want, buf.String())
+			}
+		})
+	}
+}
+
+// One un-audited Constraint must not cost the report the Constraints that were audited.
+func TestConstraintsReportKeepsAuditedRowsBesideUnauditedOnes(t *testing.T) {
+	data := map[string]any{
+		"constraints": []map[string]any{
+			{"metadata": map[string]any{"name": "fresh"}},
+			{
+				"metadata": map[string]any{"name": "audited"},
+				"status": map[string]any{
+					"totalViolations": int64(1),
+					"violations": []any{map[string]any{
+						"enforcementAction": "deny", "kind": "Pod",
+						"namespace": "default", "name": "nginx", "message": "no probe",
+					}},
+				},
+			},
+		},
+		"apiServerHost": "https://example.invalid",
+		"timestamp":     "now",
+	}
+	var buf bytes.Buffer
+	if err := newRenderer().Render(&buf, "report", data, nil); err != nil {
+		t.Fatalf("rendering the report failed: %v", err)
+	}
+	for _, want := range []string{"fresh", "unknown", "audited", "nginx", "no probe"} {
+		if !strings.Contains(buf.String(), want) {
+			t.Errorf("report missing %q", want)
+		}
+	}
+}
