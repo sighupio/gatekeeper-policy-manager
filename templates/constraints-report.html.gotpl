@@ -56,6 +56,12 @@
             border-bottom-color: black;
         }
 
+        /* Deny is a mode, not a severity. Same indigo as the UI's mode tag (--indigo in app.css);
+           this file is standalone, so the value is repeated here. */
+        .mode-deny {
+            color: #4f46e5;
+        }
+
         footer {
             font-family: Poppins, -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol;
             font-weight: 500;
@@ -97,7 +103,7 @@
             <tr>
                 <td>{{ $constraint }}</td>
                 {{- $action := enforcementOf . }}
-                <td {{ if eq $action "deny" }}style="color:red;" {{ end }}>{{ $action }}</td>
+                <td {{ if eq $action "deny" }}class="mode-deny" {{ end }}>{{ $action }}</td>
                 <td>{{ .kind }}</td>
                 <td>{{ .namespace }}</td>
                 <td>{{ .name }}</td>
