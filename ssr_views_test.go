@@ -441,3 +441,100 @@ func TestConstraintAnchorWithoutAKind(t *testing.T) {
 		t.Errorf("constraintAnchor = %q, want the bare name", got)
 	}
 }
+
+// Gatekeeper records, per pod, whether each enforcement point is actually enforcing. GPM read none
+// of it, so a Constraint whose ValidatingAdmissionPolicy engine is missing still read as fully
+// enforced on the card. Taken from a live cluster, where every Constraint reports
+// vap.k8s.io -> error "K8sNativeValidation engine is missing".
+func TestEnforcementIssuesFoldPodsTogether(t *testing.T) {
+	pod := func(id string, points ...map[string]any) map[string]any {
+		p := map[string]any{"id": id, "enforced": true}
+		if points != nil {
+			ps := make([]any, 0, len(points))
+			for _, x := range points {
+				ps = append(ps, x)
+			}
+			p["enforcementPointsStatus"] = ps
+		}
+		return p
+	}
+	point := func(name, state, msg string) map[string]any {
+		return map[string]any{"enforcementPoint": name, "state": state, "message": msg}
+	}
+
+	for _, tt := range []struct {
+		name string
+		pods []any
+		want []ssrEnforcementIssue
+	}{
+		{"nothing to report", []any{pod("audit-0", point("webhook.k8s.io", "active", ""))}, nil},
+		{"no status at all", []any{pod("audit-0")}, nil},
+		{
+			"one point, reported by two pods, folded into one line",
+			[]any{
+				pod("audit-0", point("vap.k8s.io", "error", "K8sNativeValidation engine is missing")),
+				pod("audit-1", point("vap.k8s.io", "error", "K8sNativeValidation engine is missing")),
+			},
+			[]ssrEnforcementIssue{{Label: "vap.k8s.io reports an error", Message: "K8sNativeValidation engine is missing", Pods: 2}},
+		},
+		{
+			"a state that is not an error still speaks up, in its own words",
+			[]any{pod("audit-0", point("vap.k8s.io", "pending", "waiting for the engine"))},
+			[]ssrEnforcementIssue{{Label: "vap.k8s.io reports pending", Message: "waiting for the engine", Pods: 1}},
+		},
+		{
+			"active points are dropped, failing ones kept",
+			[]any{pod("audit-0",
+				point("webhook.k8s.io", "active", ""),
+				point("vap.k8s.io", "error", "missing"))},
+			[]ssrEnforcementIssue{{Label: "vap.k8s.io reports an error", Message: "missing", Pods: 1}},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := enforcementIssues(map[string]any{"status": map[string]any{"byPod": tt.pods}})
+			if len(got) != len(tt.want) {
+				t.Fatalf("got %d issues, want %d: %+v", len(got), len(tt.want), got)
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Errorf("issue %d = %+v, want %+v", i, got[i], tt.want[i])
+				}
+			}
+		})
+	}
+}
+
+// The card has to show it, and only when there is something to show.
+func TestConstraintCardShowsAFailingEnforcementPoint(t *testing.T) {
+	base := ssrConstraint{Name: "readiness-probe", Kind: "K8sReadinessProbe", EnforcementMode: "deny", Created: "2026-01-14"}
+	failing := base
+	failing.EnforcementIssues = []ssrEnforcementIssue{
+		{Label: "vap.k8s.io reports an error", Message: "K8sNativeValidation engine is missing", Pods: 1},
+	}
+
+	render := func(c ssrConstraint) string {
+		var buf bytes.Buffer
+		data := map[string]any{"Layout": minimalLayout(), "Constraints": []ssrConstraint{c}, "ReportURL": "/r"}
+		if err := newSSRRenderer().pages["constraints"].ExecuteTemplate(&buf, "layout", data); err != nil {
+			t.Fatalf("render: %v", err)
+		}
+		return buf.String()
+	}
+
+	out := render(failing)
+	for _, want := range []string{
+		"vap.k8s.io reports an error",
+		"K8sNativeValidation engine is missing",
+		"reported by 1 pod",
+		`class="foot-error"`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("card missing %q", want)
+		}
+	}
+
+	// and a healthy Constraint says nothing at all
+	if clean := render(base); strings.Contains(clean, "foot-error") {
+		t.Error("a Constraint with no failing enforcement point still rendered the error line")
+	}
+}

@@ -519,6 +519,15 @@ type ssrConstraintViolation struct {
 
 // ssrConstraintPod mirrors one status.byPod entry: which audit pod reported, at what generation,
 // and whether it is enforcing the constraint.
+// ssrEnforcementIssue is one enforcement point that Gatekeeper is not enforcing at. Constraints
+// carry status.byPod[].enforcementPointsStatus per pod; GPM reads none of it today, so a Constraint
+// whose ValidatingAdmissionPolicy engine is missing still reads as fully enforced on every card.
+type ssrEnforcementIssue struct {
+	Label   string // "vap.k8s.io reports an error"
+	Message string // what Gatekeeper said, shown on hover
+	Pods    int    // how many pods report it
+}
+
 type ssrConstraintPod struct {
 	ID                 string
 	ObservedGeneration string
@@ -544,8 +553,71 @@ type ssrConstraint struct {
 
 	AuditTimestamp string
 	Pods           []ssrConstraintPod
+	// Enforcement points reporting anything but "active", collapsed across the pods that report them.
+	EnforcementIssues []ssrEnforcementIssue
 
 	Raw map[string]any
+}
+
+// enforcementIssues reads status.byPod[].enforcementPointsStatus and returns one entry per
+// enforcement point that is not active, with the pods reporting it counted. Gatekeeper writes this
+// per pod and repeats the same point on each, so the pods are folded together: an operator wants to
+// know that vap.k8s.io is failing, not to read the same sentence four times.
+func enforcementIssues(o map[string]any) []ssrEnforcementIssue {
+	pods, found, err := unstructured.NestedSlice(o, "status", "byPod")
+	if !found || err != nil {
+		return nil
+	}
+
+	type agg struct {
+		state, message string
+		pods           int
+	}
+	order := []string{}
+	byPoint := map[string]*agg{}
+	for _, p := range pods {
+		pod, ok := p.(map[string]any)
+		if !ok {
+			continue
+		}
+		points, found, err := unstructured.NestedSlice(pod, "enforcementPointsStatus")
+		if !found || err != nil {
+			continue
+		}
+		for _, e := range points {
+			ep, ok := e.(map[string]any)
+			if !ok {
+				continue
+			}
+			state, _, _ := unstructured.NestedString(ep, "state")
+			if state == "" || strings.EqualFold(state, "active") {
+				continue
+			}
+			name, _, _ := unstructured.NestedString(ep, "enforcementPoint")
+			if name == "" {
+				name = "an enforcement point"
+			}
+			if _, seen := byPoint[name]; !seen {
+				byPoint[name] = &agg{state: state}
+				order = append(order, name)
+			}
+			byPoint[name].pods++
+			if msg, _, _ := unstructured.NestedString(ep, "message"); msg != "" {
+				byPoint[name].message = msg
+			}
+		}
+	}
+
+	issues := make([]ssrEnforcementIssue, 0, len(order))
+	for _, name := range order {
+		a := byPoint[name]
+		label := name + " reports " + a.state
+		if strings.EqualFold(a.state, "error") {
+			label = name + " reports an error"
+		}
+		issues = append(issues, ssrEnforcementIssue{Label: label, Message: a.message, Pods: a.pods})
+	}
+	return issues
 }
 
 // enforcementMode collapses spec.enforcementAction to the three modes the UI shows, matching the
@@ -581,6 +653,7 @@ func ssrConstraintModel(o map[string]any) ssrConstraint {
 		m.ViolationsKnown = true
 		m.TotalViolations = tv
 	}
+	m.EnforcementIssues = enforcementIssues(o)
 	m.AuditTimestamp, _, _ = unstructured.NestedString(o, "status", "auditTimestamp")
 
 	if vs, found, _ := unstructured.NestedSlice(o, "status", "violations"); found {

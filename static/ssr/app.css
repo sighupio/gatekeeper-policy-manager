@@ -350,6 +350,8 @@ details.field[open] > summary { border-bottom-left-radius: 0; border-bottom-righ
 details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
 
 .card-foot { margin: 16px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.02em; }
+/* The footer is muted by default; a failing enforcement point is the exception that speaks up. */
+.card-foot .foot-error { color: var(--danger); font-weight: 500; cursor: help; }
 
 /* --- States -------------------------------------------------------------- */
 

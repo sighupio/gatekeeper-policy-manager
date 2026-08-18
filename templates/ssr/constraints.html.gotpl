@@ -181,6 +181,11 @@ land on the right card.
           {{- with .AuditTimestamp }}Audited on {{ . }}{{ end }}
           {{- if and .AuditTimestamp .Created }} · {{ end }}
           {{- with .Created }}Created on {{ . }}{{ end }}
+          {{- /* Quiet until something is wrong: an enforcement point Gatekeeper is not enforcing at
+                 is the one thing on this card that says the policy is not doing what it claims. */}}
+          {{- range .EnforcementIssues }} ·
+          <span class="foot-error" title="{{ .Message }} (reported by {{ .Pods }} pod{{ if ne .Pods 1 }}s{{ end }})">{{ .Label }}</span>
+          {{- end }}
         </p>
       </section>
       {{- end }}
