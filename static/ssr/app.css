@@ -221,15 +221,16 @@ code { font-family: var(--mono); font-size: 0.9em; }
   border-left: 2px solid transparent;
 }
 .sidebar-nav a:hover { color: var(--text); background: var(--surface-2); text-decoration: none; }
-.sidebar-nav a:target { color: var(--accent); }
 /* Scroll-spy marks the entry whose section is in view (sidebar-spy.js). After :hover so an active
    item keeps its highlight while hovered. The name inherits the accent; the mode and badge keep
    their own colors. */
+/* No font-weight here on purpose: bolding the marked entry reflows the text and nudges the whole
+   list as you scroll, which reads as the layout jittering. The accent border, tint and color carry
+   the cue without changing metrics. */
 .sidebar-nav a.active {
   border-left-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   color: var(--accent);
-  font-weight: 600;
 }
 
 /* Related-item link lists (e.g. "Constraints using this template"). Styled as obvious links -- the
