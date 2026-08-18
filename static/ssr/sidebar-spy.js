@@ -72,11 +72,19 @@
   // screenful and snapped to the last entry at the final pixel, skipping the entries between.
   const ANCHOR = 80;
   const readingLine = () => {
-    const remaining = Math.max(0, doc.scrollHeight - innerHeight - scrollY);
-    // Slide no further than the reader has actually scrolled. On a page that barely scrolls, or one
-    // that fits the window outright, the shortfall alone is most of the window, which would start
-    // the line near the bottom and mark an entry several sections ahead before the reader has moved.
+    const maxScroll = doc.scrollHeight - innerHeight;
+    // A page that cannot scroll has one reading position, its top.
+    if (maxScroll <= 0) return ANCHOR;
+
+    const remaining = Math.max(0, maxScroll - scrollY);
     const shortfall = Math.max(0, innerHeight - ANCHOR - remaining);
+    // At the foot, slide the whole way: there is no scrolling left to bring the last sections up, so
+    // anything less leaves them unmarkable. Reading nothing but the window here also keeps the line
+    // still when a <details> expands and the browser's scroll anchoring moves scrollY under us.
+    if (remaining === 0) return ANCHOR + shortfall;
+
+    // Above the foot, slide no further than the reader has actually scrolled, or the top of a page
+    // that barely scrolls would open with an entry several sections ahead already marked.
     return ANCHOR + Math.min(shortfall, Math.max(0, scrollY));
   };
 

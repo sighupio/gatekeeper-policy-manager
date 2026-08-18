@@ -312,3 +312,79 @@ test.describe("on a short window", () => {
     }
   });
 });
+
+// The reading line is computed from the window and the scroll position, both of which can change
+// without the reader moving: expanding a <details> grows the page, and the browser's scroll
+// anchoring then shifts scrollY to keep the view still. Marking must not react to either. The same
+// rule covers the foot of a page that scrolls only a little, where the line used to stop short and
+// leave the last entries unmarkable.
+test.describe("when the page changes under the reader", () => {
+  test.use({ viewport: { width: 1280, height: 1200 } });
+
+  for (const view of ["constraints", "constrainttemplates"]) {
+    test(`${view}: the foot of the page marks the last entry`, async ({
+      page,
+    }) => {
+      await page.goto(`${view}/`);
+      const entries = await page.$$eval(".sidebar-nav a", (as) =>
+        as.map((a) => a.getAttribute("href") ?? ""),
+      );
+      await page.evaluate(() =>
+        window.scrollTo({
+          top: document.documentElement.scrollHeight,
+          behavior: "instant",
+        }),
+      );
+      await expect
+        .poll(() => active(page), { timeout: 3000 })
+        .toBe(entries[entries.length - 1]);
+    });
+
+    test(`${view}: expanding a card does not move the mark`, async ({
+      page,
+    }) => {
+      await page.goto(`${view}/`);
+      await page.evaluate(() =>
+        window.scrollTo({
+          top: document.documentElement.scrollHeight,
+          behavior: "instant",
+        }),
+      );
+      await page.waitForTimeout(250);
+
+      const moved = await page.evaluate(async () => {
+        const settle = () =>
+          new Promise((r) =>
+            requestAnimationFrame(() => requestAnimationFrame(r)),
+          );
+        const mark = () =>
+          document
+            .querySelector(".sidebar-nav a.active")
+            ?.getAttribute("href") ?? null;
+        const out: string[] = [];
+        for (const card of [...document.querySelectorAll(".card[id]")]) {
+          const details =
+            card.querySelector<HTMLDetailsElement>("details.field");
+          if (!details || details.open) continue;
+          window.scrollTo({
+            top: document.documentElement.scrollHeight,
+            behavior: "instant",
+          });
+          await settle();
+          const before = mark();
+          details.open = true;
+          await settle();
+          const after = mark();
+          details.open = false;
+          await settle();
+          if (before !== after) out.push(`${card.id}: ${before} -> ${after}`);
+        }
+        return out;
+      });
+      expect(
+        moved,
+        "expanding a card moved the mark although the reader did not",
+      ).toEqual([]);
+    });
+  }
+});
