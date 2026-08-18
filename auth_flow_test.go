@@ -197,6 +197,12 @@ func newAuthTestServerOnSubpath(t *testing.T, p *fakeProvider, base string, extr
 	// In production this renders the SSR "signed out" page; the tests only exercise the redirect
 	// behaviour of logout, so a stub stands in for the template layer.
 	auth.renderLoggedOut = func(c echo.Context) error { return c.String(http.StatusOK, "signed out") }
+	// The real one renders the SSR error page; this keeps the assertions readable while still
+	// proving the callback answers with a page and not with JSON.
+	auth.renderError = func(c echo.Context, status int, e ssrErrorView) error {
+		return c.HTML(status, "<h1>Error</h1><p>"+e.Message+"</p><p>"+e.Description+"</p>"+
+			`<a href="`+e.LoginURL+`">Log in</a>`)
+	}
 
 	e := echo.New()
 	e.Use(session.Middleware(newSessionStore()))
@@ -332,12 +338,9 @@ func TestCallbackRejectsWrongNonce(t *testing.T) {
 		t.Errorf("status = %d, want %d for a mismatched nonce", rec.Code, http.StatusUnauthorized)
 	}
 	// Assert why it was rejected, so a broken stub cannot pass as a working nonce check.
-	var answer ErrorAnswer
-	if err := json.Unmarshal(rec.Body.Bytes(), &answer); err != nil {
-		t.Fatalf("decoding the answer failed: %v (%s)", err, rec.Body.String())
-	}
-	if !strings.Contains(answer.Description, "nonce") {
-		t.Errorf("rejection description = %q, want it to mention the nonce", answer.Description)
+	assertAnsweredWithAPage(t, rec)
+	if !strings.Contains(rec.Body.String(), "nonce") {
+		t.Errorf("rejection page = %q, want it to mention the nonce", rec.Body.String())
 	}
 }
 
@@ -365,12 +368,9 @@ func TestCallbackRejectsWrongAudience(t *testing.T) {
 	if rec.Code != http.StatusUnauthorized {
 		t.Errorf("status = %d, want %d for a token minted for another client", rec.Code, http.StatusUnauthorized)
 	}
-	var answer ErrorAnswer
-	if err := json.Unmarshal(rec.Body.Bytes(), &answer); err != nil {
-		t.Fatalf("decoding the answer failed: %v (%s)", err, rec.Body.String())
-	}
-	if !strings.Contains(answer.Description, "audience") {
-		t.Errorf("rejection description = %q, want it to mention the audience", answer.Description)
+	assertAnsweredWithAPage(t, rec)
+	if !strings.Contains(rec.Body.String(), "audience") {
+		t.Errorf("rejection page = %q, want it to mention the audience", rec.Body.String())
 	}
 }
 
@@ -1150,12 +1150,10 @@ func TestTheCallbackRestartsTheLoginAtMostOnce(t *testing.T) {
 	if rec.Code != http.StatusUnauthorized {
 		t.Errorf("status = %d, want 401", rec.Code)
 	}
-	var answer ErrorAnswer
-	if err := json.Unmarshal(rec.Body.Bytes(), &answer); err != nil {
-		t.Fatalf("decoding the answer failed: %v (%s)", err, rec.Body.String())
-	}
-	if answer.LoginURL != browserPath("/login") {
-		t.Errorf("login_url = %q, want %q", answer.LoginURL, browserPath("/login"))
+	// A page again, and it has to offer the way back in rather than dead-ending.
+	assertAnsweredWithAPage(t, rec)
+	if want := `href="` + browserPath("/login") + `"`; !strings.Contains(rec.Body.String(), want) {
+		t.Errorf("rejection page = %q, want a login link %q", rec.Body.String(), want)
 	}
 	// The marker has to go, or the next genuine login cannot use its one restart.
 	var cleared bool
@@ -1193,5 +1191,23 @@ func TestManualEndpointConfigurationCompletesALogin(t *testing.T) {
 	if rec.Code != http.StatusOK || rec.Body.String() != "protected" {
 		t.Fatalf("after a manual-endpoint login, /constraints = %d %q, want 200 \"protected\"",
 			rec.Code, rec.Body.String())
+	}
+}
+
+// The identity provider sends the browser to the callback by top-level navigation, so every failure
+// there has to answer with a page. It used to answer with JSON, which showed up raw in the address
+// bar (issue #389). The /api/* answer is deliberately still JSON and is covered separately.
+//
+// This matches the stub above, not the real error page, so what it proves is that the callback went
+// through renderError rather than c.JSON -- which is exactly the thing that regressed. The real page
+// is covered by the SSR view tests.
+func assertAnsweredWithAPage(t *testing.T, rec *httptest.ResponseRecorder) {
+	t.Helper()
+	body := strings.TrimSpace(rec.Body.String())
+	if strings.HasPrefix(body, "{") {
+		t.Errorf("the callback answered with JSON, not a page: %s", body)
+	}
+	if !strings.Contains(body, "<h1>Error</h1>") {
+		t.Errorf("the callback did not render the error page: %s", body)
 	}
 }

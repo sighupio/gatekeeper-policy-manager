@@ -276,6 +276,7 @@ func main() {
 	if auth != nil {
 		// The local logout path renders the SSR "signed out" page; wire it now that s exists.
 		auth.renderLoggedOut = s.renderLoggedOut
+		auth.renderError = s.renderError
 		e.GET(callbackPath, auth.callback)
 		e.GET("/login", auth.login)
 		e.GET("/logout", auth.logout)

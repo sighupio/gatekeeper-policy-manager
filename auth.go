@@ -55,6 +55,11 @@ type authenticator struct {
 	// Renders the "signed out" page at the end of the local logout path. main wires this to the
 	// SSR renderer; auth.go stays free of the template layer.
 	renderLoggedOut func(echo.Context) error
+	// Renders the error page when a login cannot be completed, wired the same way. The provider
+	// sends the browser to the callback by top-level navigation, so a failure there belongs in a
+	// page: the JSON this used to return landed raw in the address bar (issue #389). The /api/*
+	// answer is deliberately still JSON -- see isAPIPath and the v2.0.0 release notes.
+	renderError func(c echo.Context, status int, e ssrErrorView) error
 }
 
 // Reports whether the operator asked for OIDC. Anything other than "OIDC" (including the Python
@@ -459,10 +464,10 @@ func (a *authenticator) callback(c echo.Context) error {
 	sess, err := session.Get(sessionName, c)
 	if sess == nil {
 		slog.Error("the session store is not available while completing the login", "error", err)
-		return c.JSON(http.StatusInternalServerError, ErrorAnswer{
-			ErrorMessage: "GPM could not read the session during login.",
-			Action:       "Log in again.",
-			Description:  err.Error(),
+		return a.renderError(c, http.StatusInternalServerError, ssrErrorView{
+			Message:     "GPM could not read the session during login.",
+			Action:      "Log in again.",
+			Description: err.Error(),
 		})
 	}
 	if err != nil {
@@ -474,11 +479,11 @@ func (a *authenticator) callback(c echo.Context) error {
 			slog.Warn("the session is still unreadable after restarting the login, giving up",
 				"error", err)
 			a.setRetryMarker(c, -1)
-			return c.JSON(http.StatusUnauthorized, ErrorAnswer{
-				ErrorMessage: "GPM could not read the session during login.",
-				Action:       "Make sure that your browser accepts cookies from this site, then log in again.",
-				Description:  err.Error(),
-				LoginURL:     browserPath("/login"),
+			return a.renderError(c, http.StatusUnauthorized, ssrErrorView{
+				Message:     "GPM could not read the session during login.",
+				Action:      "Make sure that your browser accepts cookies from this site, then log in again.",
+				Description: err.Error(),
+				LoginURL:    browserPath("/login"),
 			})
 		}
 		slog.Debug("the session could not be read on the callback, restarting the login", "error", err)
@@ -494,10 +499,10 @@ func (a *authenticator) callback(c echo.Context) error {
 	if errParam := c.QueryParam("error"); errParam != "" {
 		slog.Error("the identity provider returned an error", "error", errParam,
 			"description", c.QueryParam("error_description"))
-		return c.JSON(http.StatusUnauthorized, ErrorAnswer{
-			ErrorMessage: fmt.Sprintf("OIDC error: %s", errParam),
-			Action:       "Something is wrong with your OIDC session. Log out, then log in again.",
-			Description:  c.QueryParam("error_description"),
+		return a.renderError(c, http.StatusUnauthorized, ssrErrorView{
+			Message:     fmt.Sprintf("OIDC error: %s", errParam),
+			Action:      "Something is wrong with your OIDC session. Log out, then log in again.",
+			Description: c.QueryParam("error_description"),
 		})
 	}
 
@@ -505,10 +510,10 @@ func (a *authenticator) callback(c echo.Context) error {
 	want, _ := sess.Values[sessionKeyState].(string)
 	if want == "" || c.QueryParam("state") != want {
 		slog.Warn("the OIDC state did not match, rejecting the callback")
-		return c.JSON(http.StatusUnauthorized, ErrorAnswer{
-			ErrorMessage: "GPM could not verify the login.",
-			Action:       "Log in again from the start.",
-			Description:  "The OIDC state parameter did not match the one stored in the session.",
+		return a.renderError(c, http.StatusUnauthorized, ssrErrorView{
+			Message:     "GPM could not verify the login.",
+			Action:      "Log in again from the start.",
+			Description: "The OIDC state parameter did not match the one stored in the session.",
 		})
 	}
 
@@ -519,39 +524,39 @@ func (a *authenticator) callback(c echo.Context) error {
 		// flow and replay a bad code to read whatever the token endpoint said back. oauth2's own
 		// error already carries the provider's response body, which is plenty for an operator.
 		slog.Error("exchanging the OIDC authorization code failed", "error", err)
-		return c.JSON(http.StatusUnauthorized, ErrorAnswer{
-			ErrorMessage: "GPM could not complete the login with the identity provider.",
-			Action:       "Log in again. If it still fails, look at GPM's OIDC client configuration and the server logs.",
-			Description:  "The identity provider rejected the authorization code.",
+		return a.renderError(c, http.StatusUnauthorized, ssrErrorView{
+			Message:     "GPM could not complete the login with the identity provider.",
+			Action:      "Log in again. If it still fails, look at GPM's OIDC client configuration and the server logs.",
+			Description: "The identity provider rejected the authorization code.",
 		})
 	}
 
 	rawIDToken, ok := token.Extra("id_token").(string)
 	if !ok {
-		return c.JSON(http.StatusUnauthorized, ErrorAnswer{
-			ErrorMessage: "The identity provider did not return an ID token.",
-			Action:       "Make sure that GPM's client can use the openid scope.",
-			Description:  "No id_token was present in the token response.",
+		return a.renderError(c, http.StatusUnauthorized, ssrErrorView{
+			Message:     "The identity provider did not return an ID token.",
+			Action:      "Make sure that GPM's client can use the openid scope.",
+			Description: "No id_token was present in the token response.",
 		})
 	}
 
 	idToken, err := a.verifier.Verify(ctx, rawIDToken)
 	if err != nil {
 		slog.Error("verifying the OIDC ID token failed", "error", err)
-		return c.JSON(http.StatusUnauthorized, ErrorAnswer{
-			ErrorMessage: "GPM could not verify the ID token from the identity provider.",
-			Action:       "Make sure that GPM's issuer and client ID match the provider's configuration.",
-			Description:  err.Error(),
+		return a.renderError(c, http.StatusUnauthorized, ssrErrorView{
+			Message:     "GPM could not verify the ID token from the identity provider.",
+			Action:      "Make sure that GPM's issuer and client ID match the provider's configuration.",
+			Description: err.Error(),
 		})
 	}
 
 	wantNonce, _ := sess.Values[sessionKeyNonce].(string)
 	if idToken.Nonce != wantNonce {
 		slog.Warn("the OIDC nonce did not match, rejecting the callback")
-		return c.JSON(http.StatusUnauthorized, ErrorAnswer{
-			ErrorMessage: "GPM could not verify the login.",
-			Action:       "Log in again from the start.",
-			Description:  "The OIDC nonce did not match the one stored in the session.",
+		return a.renderError(c, http.StatusUnauthorized, ssrErrorView{
+			Message:     "GPM could not verify the login.",
+			Action:      "Log in again from the start.",
+			Description: "The OIDC nonce did not match the one stored in the session.",
 		})
 	}
 
