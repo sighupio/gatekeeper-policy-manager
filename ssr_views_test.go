@@ -310,3 +310,62 @@ func TestSetViewErrorTLSHint(t *testing.T) {
 		})
 	}
 }
+
+// A Mutation carrying a description used to show less than a Constraint Template carrying one: the
+// views render the same Gatekeeper annotation, but only the Template view read it. Rendering raw API
+// objects is what made this fiddly -- an object with no annotations at all must not abort the page.
+func TestMutationsRenderTheDescription(t *testing.T) {
+	r := newSSRRenderer()
+	mutation := func(name string, annotations map[string]any) map[string]any {
+		meta := map[string]any{"name": name}
+		if annotations != nil {
+			meta["annotations"] = annotations
+		}
+		return map[string]any{"kind": "Assign", "metadata": meta, "spec": map[string]any{"location": "spec"}}
+	}
+
+	var buf bytes.Buffer
+	data := map[string]any{"Layout": minimalLayout(), "Mutations": []map[string]any{
+		mutation("described", map[string]any{"description": "Adds a default runtimeClassName. See https://docs.example.invalid/mutations."}),
+		mutation("bare", nil),
+		mutation("other-annotations-only", map[string]any{"owner": "platform"}),
+	}}
+	if err := r.pages["mutations"].ExecuteTemplate(&buf, "layout", data); err != nil {
+		t.Fatalf("mutations render failed: %v", err)
+	}
+	out := buf.String()
+
+	for _, want := range []string{
+		"Adds a default runtimeClassName.",
+		// linkified the same way the Constraint Template description is
+		`<a href="https://docs.example.invalid/mutations" target="_blank" rel="noopener noreferrer">`,
+		"bare",
+		"other-annotations-only",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("mutations output missing %q", want)
+		}
+	}
+}
+
+// The same accessor guards every raw-object view, so check the shapes it has to survive directly.
+func TestAnnotationSurvivesObjectsWithoutAnnotations(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		obj  any
+		want string
+	}{
+		{"has it", map[string]any{"metadata": map[string]any{"annotations": map[string]any{"description": "hi"}}}, "hi"},
+		{"annotations without that key", map[string]any{"metadata": map[string]any{"annotations": map[string]any{"owner": "x"}}}, ""},
+		{"no annotations", map[string]any{"metadata": map[string]any{"name": "n"}}, ""},
+		{"no metadata", map[string]any{"kind": "Assign"}, ""},
+		{"not an object", "nonsense", ""},
+		{"nil", nil, ""},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := annotation(tt.obj, "description"); got != tt.want {
+				t.Errorf("annotation = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

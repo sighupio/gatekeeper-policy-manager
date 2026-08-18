@@ -73,6 +73,7 @@ func newSSRRenderer() *ssrRenderer {
 		"toJSON":      toJSON,
 		"highlight":   highlight,
 		"linkify":     linkify,
+		"annotation":  annotation,
 	}
 	layout := template.Must(
 		template.New("layout").Funcs(funcs).ParseFS(ssrTemplateFS, "templates/ssr/layout.html.gotpl"),
@@ -163,6 +164,19 @@ func linkify(s string) template.HTML {
 	}
 	b.WriteString(template.HTMLEscapeString(s[last:]))
 	return template.HTML(b.String())
+}
+
+// annotation reads one metadata annotation from a raw API object. The Mutations and Configurations
+// views render the objects directly rather than through a view model, and walking
+// .metadata.annotations.description there aborts the template on any object that carries no
+// annotations at all -- which is most of them.
+func annotation(obj any, name string) string {
+	m, ok := obj.(map[string]any)
+	if !ok {
+		return ""
+	}
+	v, _, _ := unstructured.NestedString(m, "metadata", "annotations", name)
+	return v
 }
 
 // The report renders the raw Constraint objects, so it has to read them as defensively as
