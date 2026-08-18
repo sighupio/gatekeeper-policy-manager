@@ -81,3 +81,16 @@ nav, context switcher and footer data (see ssrLayoutData in ssr.go).
 </body>
 </html>
 {{- end -}}
+
+{{- /* The failure banner for a view whose Kubernetes call failed. Closed by default, so a long
+client-go error does not push the page around; why it carries the detail is in setViewError. */ -}}
+{{- define "viewerror" -}}
+<div class="alert alert-error">{{ .Error }}
+  {{- with .ErrorDetail }}
+  <details class="alert-detail">
+    <summary>Details</summary>
+    <pre>{{ . }}</pre>
+  </details>
+  {{- end }}
+</div>
+{{- end -}}

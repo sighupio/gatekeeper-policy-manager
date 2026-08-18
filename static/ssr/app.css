@@ -357,6 +357,17 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
   border-color: color-mix(in srgb, var(--danger) 40%, transparent);
   --alert-icon: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20fill-rule='evenodd'%20d='M12%202a10%2010%200%20100%2020%2010%2010%200%20000-20Zm-1%205h2v6h-2V7Zm0%208h2v2h-2v-2Z'/%3E%3C/svg%3E");
 }
+/* The API error under the failure banner's closed "Details" toggle (issue #631). A <pre> is already
+   monospace; it only needs to wrap, so a long client-go error does not stretch the banner. */
+.alert-detail { margin-top: 10px; }
+.alert-detail > summary { cursor: pointer; font-size: 12px; font-weight: 600; }
+.alert-detail > pre {
+  margin: 8px 0 0;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .alert-warn {
   color: var(--warn);
   background: var(--warn-bg);

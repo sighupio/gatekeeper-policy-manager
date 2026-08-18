@@ -6,9 +6,14 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
+	"fmt"
 	"html"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"regexp"
 	"strings"
 	"testing"
@@ -217,5 +222,91 @@ func TestFormatTimestamp(t *testing.T) {
 	}
 	if got := formatTimestamp(""); got != "" {
 		t.Errorf("empty timestamp should stay empty, got %q", got)
+	}
+}
+
+// Issue #631: a view whose Kubernetes call failed must show the error underneath the generic
+// sentence, or nobody can tell a 403 from a missing CRD without the pod logs. Checked on every view
+// that renders the shared "viewerror" block, and the detail must be escaped like any other
+// API-supplied string.
+func TestViewsRenderTheErrorDetail(t *testing.T) {
+	r := newSSRRenderer()
+	var buf bytes.Buffer
+
+	for _, page := range []string{"configurations", "mutations", "constrainttemplates", "constraints", "events"} {
+		data := map[string]any{"Layout": minimalLayout()}
+		setViewError(data, "GPM could not reach the cluster.", errors.New(`forbidden: User "gpm" cannot list <resource>`))
+
+		buf.Reset()
+		if err := r.pages[page].ExecuteTemplate(&buf, "layout", data); err != nil {
+			t.Fatalf("%s render failed: %v", page, err)
+		}
+		out := buf.String()
+		for _, want := range []string{"GPM could not reach the cluster.", "Details", `cannot list &lt;resource&gt;`} {
+			if !strings.Contains(out, want) {
+				t.Errorf("%s output missing %q", page, want)
+			}
+		}
+	}
+
+	// No error, no banner: the block must not leave an empty alert on a healthy page.
+	buf.Reset()
+	if err := r.pages["constraints"].ExecuteTemplate(&buf, "layout", map[string]any{"Layout": minimalLayout()}); err != nil {
+		t.Fatalf("constraints render failed: %v", err)
+	}
+	if strings.Contains(buf.String(), "alert-error") {
+		t.Error("constraints rendered the error banner with no error set")
+	}
+}
+
+// The error client-go actually surfaces for an untrusted certificate: an x509 error wrapped by
+// crypto/tls, wrapped again by net/url. If errors.As stops unwrapping anywhere along that chain the
+// hint silently disappears, so the nesting matters more than the leaf type.
+func realWorldTLSError() error {
+	return &url.Error{
+		Op:  "Get",
+		URL: "https://10.0.0.1:443/apis/config.gatekeeper.sh/v1alpha1/configs",
+		Err: &tls.CertificateVerificationError{Err: x509.UnknownAuthorityError{}},
+	}
+}
+
+// A certificate failure must name GPM_SKIP_TLS_VERIFY instead of the caller's generic sentence, and
+// nothing else may be mistaken for one. The JSON API did this until 9c9e27f removed
+// kubeAPIErrorAnswer with it; these cases are that helper's.
+func TestSetViewErrorTLSHint(t *testing.T) {
+	const generic = "GPM could not get the configuration objects from the Kubernetes API."
+
+	for _, tt := range []struct {
+		name     string
+		err      error
+		wantHint bool
+	}{
+		{"unknown authority", x509.UnknownAuthorityError{}, true},
+		// Both of these format themselves from the certificate, so it must not be nil.
+		{"hostname mismatch", x509.HostnameError{Certificate: &x509.Certificate{}, Host: "10.0.0.1"}, true},
+		{"invalid certificate", x509.CertificateInvalidError{Cert: &x509.Certificate{}, Reason: x509.Expired}, true},
+		{"verification failure", &tls.CertificateVerificationError{Err: x509.UnknownAuthorityError{}}, true},
+		{"wrapped as client-go returns it", realWorldTLSError(), true},
+		{"wrapped in fmt.Errorf", fmt.Errorf("listing configs: %w", x509.UnknownAuthorityError{}), true},
+		{"connection refused", errors.New("dial tcp 10.0.0.1:443: connect: connection refused"), false},
+		{"not found", errors.New("the server could not find the requested resource"), false},
+		// Mentions certificates but is not a certificate error: must not be misclassified.
+		{"mentions certificates only in text", errors.New("failed to read certificate file"), false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			data := map[string]any{}
+			setViewError(data, generic, tt.err)
+
+			msg, _ := data["Error"].(string)
+			if got := strings.Contains(msg, "GPM_SKIP_TLS_VERIFY"); got != tt.wantHint {
+				t.Errorf("hint = %v, want %v (message %q)", got, tt.wantHint, msg)
+			}
+			if !tt.wantHint && msg != generic {
+				t.Errorf("message = %q, want the caller's %q", msg, generic)
+			}
+			if data["ErrorDetail"] != tt.err.Error() {
+				t.Errorf("detail = %q, want the original error %q", data["ErrorDetail"], tt.err.Error())
+			}
+		})
 	}
 }

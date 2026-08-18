@@ -9,8 +9,11 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -270,7 +273,7 @@ func (s *server) getConfigurations(c echo.Context) error {
 	clients, err := s.clientsFor(c)
 	if err != nil {
 		slog.Error("SSR configurations: resolving context failed", "error", err)
-		data["Error"] = "GPM could not switch to the requested Kubernetes context. Make sure the kubeconfig defines it correctly."
+		setViewError(data, "GPM could not switch to the requested Kubernetes context. Make sure the kubeconfig defines it correctly.", err)
 		return s.ssr.render(c, "configurations", data)
 	}
 
@@ -278,7 +281,7 @@ func (s *server) getConfigurations(c echo.Context) error {
 		"config.gatekeeper.sh", "v1alpha1", "configs")
 	if err != nil {
 		slog.Error("SSR configurations: getting config resources failed", "error", err)
-		data["Error"] = "GPM could not get the configuration objects from the Kubernetes API. Make sure the API is reachable."
+		setViewError(data, "GPM could not get the configuration objects from the Kubernetes API. Make sure the API is reachable.", err)
 		return s.ssr.render(c, "configurations", data)
 	}
 
@@ -301,7 +304,7 @@ func (s *server) getMutations(c echo.Context) error {
 	clients, err := s.clientsFor(c)
 	if err != nil {
 		slog.Error("SSR mutations: resolving context failed", "error", err)
-		data["Error"] = "GPM could not switch to the requested Kubernetes context. Make sure the kubeconfig defines it correctly."
+		setViewError(data, "GPM could not switch to the requested Kubernetes context. Make sure the kubeconfig defines it correctly.", err)
 		return s.ssr.render(c, "mutations", data)
 	}
 
@@ -403,7 +406,7 @@ func (s *server) getConstraintTemplates(c echo.Context) error {
 	clients, err := s.clientsFor(c)
 	if err != nil {
 		slog.Error("SSR constraint templates: resolving context failed", "error", err)
-		data["Error"] = "GPM could not switch to the requested Kubernetes context. Make sure the kubeconfig defines it correctly."
+		setViewError(data, "GPM could not switch to the requested Kubernetes context. Make sure the kubeconfig defines it correctly.", err)
 		return s.ssr.render(c, "constrainttemplates", data)
 	}
 
@@ -411,7 +414,7 @@ func (s *server) getConstraintTemplates(c echo.Context) error {
 	cts, err := getCustomResources(ctx, *clients.dynamic, "templates.gatekeeper.sh", "v1", "constrainttemplates")
 	if err != nil {
 		slog.Error("SSR constraint templates: getting resources failed", "error", err)
-		data["Error"] = "GPM could not get the Constraint Template objects from the Kubernetes API. Make sure Gatekeeper is installed in the cluster."
+		setViewError(data, "GPM could not get the Constraint Template objects from the Kubernetes API. Make sure Gatekeeper is installed in the cluster.", err)
 		return s.ssr.render(c, "constrainttemplates", data)
 	}
 
@@ -617,7 +620,7 @@ func (s *server) getConstraints(c echo.Context) error {
 	clients, err := s.clientsFor(c)
 	if err != nil {
 		slog.Error("SSR constraints: resolving context failed", "error", err)
-		data["Error"] = "GPM could not switch to the requested Kubernetes context. Make sure the kubeconfig defines it correctly."
+		setViewError(data, "GPM could not switch to the requested Kubernetes context. Make sure the kubeconfig defines it correctly.", err)
 		return s.ssr.render(c, "constraints", data)
 	}
 
@@ -626,7 +629,7 @@ func (s *server) getConstraints(c echo.Context) error {
 	raw, err := listConstraints(ctx, clients)
 	if err != nil {
 		slog.Error("SSR constraints: reading constraints failed", "error", err)
-		data["Error"] = "GPM could not read the Constraints from the Kubernetes API. Make sure Gatekeeper is installed in the cluster."
+		setViewError(data, "GPM could not read the Constraints from the Kubernetes API. Make sure Gatekeeper is installed in the cluster.", err)
 		return s.ssr.render(c, "constraints", data)
 	}
 
@@ -762,7 +765,7 @@ func (s *server) getEvents(c echo.Context) error {
 	clients, err := s.clientsFor(c)
 	if err != nil {
 		slog.Error("SSR events: resolving context failed", "error", err)
-		data["Error"] = "GPM could not switch to the requested Kubernetes context. Make sure the kubeconfig defines it correctly."
+		setViewError(data, "GPM could not switch to the requested Kubernetes context. Make sure the kubeconfig defines it correctly.", err)
 		return s.ssr.render(c, "events", data)
 	}
 
@@ -784,7 +787,7 @@ func (s *server) getEvents(c echo.Context) error {
 	events, err := getKubernetesEvents(c.Request().Context(), *clients.dynamic, namespace, sources)
 	if err != nil {
 		slog.Error("SSR events: getting events failed", "namespace", namespace, "sources", sources, "error", err)
-		data["Error"] = "GPM could not get the events from the Kubernetes API. Make sure the API is reachable."
+		setViewError(data, "GPM could not get the events from the Kubernetes API. Make sure the API is reachable.", err)
 		return s.ssr.render(c, "events", data)
 	}
 
@@ -1145,6 +1148,38 @@ func (s *server) publicLayout(c echo.Context, title string) ssrLayout {
 	l.Contexts = nil
 	l.HasContexts = false
 	return l
+}
+
+// setViewError puts an operator-facing message on the view data together with the error underneath
+// it. Issue #631: the generic sentence alone hides why the call failed, so someone whose Gatekeeper
+// or API server answers unexpectedly cannot tell a 403 from a missing CRD without reading the pod
+// logs. The 1.x UI showed this detail and the rewrite dropped it.
+//
+// The detail goes on the view pages only, never on the session-less error and 404 pages: those are
+// reachable without a session, which is why publicLayout already strips the context names from
+// them.
+//
+// The detail names the API server address, and an RBAC denial names the identity GPM calls with.
+// With OIDC on, only a signed-in operator reads that. With authentication off GPM is already
+// readable by anyone who can reach it (main.go says so at startup) and it renders every constraint,
+// violation and namespace in the cluster, so the address adds little to what is on the page.
+//
+// A certificate failure gets the GPM_SKIP_TLS_VERIFY message the JSON API's kubeAPIErrorAnswer gave
+// until 9c9e27f removed it. Every view routes through here, so it is back everywhere.
+func setViewError(data map[string]any, message string, err error) {
+	var (
+		verificationErr *tls.CertificateVerificationError
+		authorityErr    x509.UnknownAuthorityError
+		hostnameErr     x509.HostnameError
+		invalidCertErr  x509.CertificateInvalidError
+	)
+	if errors.As(err, &verificationErr) || errors.As(err, &authorityErr) ||
+		errors.As(err, &hostnameErr) || errors.As(err, &invalidCertErr) {
+		message = "GPM could not verify the Kubernetes API server's TLS certificate. " +
+			"Set GPM_SKIP_TLS_VERIFY=true if the cluster CA is missing the AKI/SKI extensions, as happens on EKS. Use with caution."
+	}
+	data["Error"] = message
+	data["ErrorDetail"] = err.Error()
 }
 
 // renderError renders the shared error page with the given status. login sensibly defaults BackURL

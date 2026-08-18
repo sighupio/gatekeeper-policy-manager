@@ -13,7 +13,7 @@ Configurations view. Renders the Gatekeeper Config objects the JSON handler getC
   </div>
 
   {{- if .Error }}
-  <div class="alert alert-error">{{ .Error }}</div>
+  {{ template "viewerror" . }}
 
   {{- else if not .Configs }}
   <div class="empty">
