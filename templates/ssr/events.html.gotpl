@@ -58,7 +58,7 @@ row for the fuller detail. No sidebar. Emitting events is a Gatekeeper alpha fea
           </span>
           <span>
             {{- if .ConstraintName }}
-            <a href="{{ browserPath `/constraints` }}#{{ .ConstraintName }}">{{ .ConstraintName }}</a>
+            <a href="{{ browserPath `/constraints` }}#{{ constraintAnchor .ConstraintKind .ConstraintName }}">{{ .ConstraintName }}</a>
             {{- else }}—{{ end }}
           </span>
         </summary>

@@ -32,7 +32,7 @@ land on the right card.
       <p class="sidebar-title">Constraints</p>
       <nav class="sidebar-nav cnav">
         {{- range .Constraints }}
-        <a href="#{{ .Name }}" title="{{ .Name }}">
+        <a href="#{{ constraintAnchor .Kind .Name }}" title="{{ .Name }}">
           {{- if .ViolationsKnown }}
           <span class="badge {{ if gt .TotalViolations 0 }}badge-danger{{ else }}badge-success{{ end }}">{{ .TotalViolations }}</span>
           {{- else }}
@@ -52,7 +52,7 @@ land on the right card.
 
     <div class="stack">
       {{- range .Constraints }}
-      <section class="card" id="{{ .Name }}">
+      <section class="card" id="{{ constraintAnchor .Kind .Name }}">
         <div class="card-head">
           <h2>{{ .Name }}</h2>
           <span class="tag tag-mode tag-{{ .EnforcementMode }}">{{ .EnforcementMode }} mode</span>
@@ -70,8 +70,8 @@ land on the right card.
         <details class="field">
           <summary class="field-label">Violations <span class="badge badge-danger">{{ .TotalViolations }}</span></summary>
 
-          <div class="vtable-wrap" x-data="violationsTable('viol-{{ .Name }}')">
-            <script type="application/json" id="viol-{{ .Name }}">{{ toJSON .Violations }}</script>
+          <div class="vtable-wrap" x-data="violationsTable('viol-{{ constraintAnchor .Kind .Name }}')">
+            <script type="application/json" id="viol-{{ constraintAnchor .Kind .Name }}">{{ toJSON .Violations }}</script>
 
             <div class="vtable-controls" x-show="showControls" x-cloak>
               <span class="muted vcount" x-text="countLabel"></span>

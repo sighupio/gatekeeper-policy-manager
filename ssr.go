@@ -74,6 +74,8 @@ func newSSRRenderer() *ssrRenderer {
 		"highlight":   highlight,
 		"linkify":     linkify,
 		"annotation":  annotation,
+		// constraintAnchor keeps the card id, the sidebar link and every cross-link in step.
+		"constraintAnchor": constraintAnchor,
 	}
 	layout := template.Must(
 		template.New("layout").Funcs(funcs).ParseFS(ssrTemplateFS, "templates/ssr/layout.html.gotpl"),
@@ -1100,7 +1102,7 @@ func aggregateDashboard(results []clusterConstraints) dashboardData {
 			Name:           clusterLabel(r.context),
 			Selected:       r.selected,
 			Reachable:      r.reachable,
-			ConstraintsURL: constraintsURL(r.context, ""),
+			ConstraintsURL: constraintsURL(r.context, "", ""),
 		}
 		if r.err != nil {
 			cluster.Status, cluster.State = "Unreachable", "warn"
@@ -1139,7 +1141,7 @@ func aggregateDashboard(results []clusterConstraints) dashboardData {
 			violating[i].Clusters = append(violating[i].Clusters, dashboardConstraintCluster{
 				Cluster:    cluster.Name,
 				Violations: v,
-				URL:        constraintsURL(r.context, c.Name),
+				URL:        constraintsURL(r.context, c.Kind, c.Name),
 			})
 		}
 		if cluster.Violations > 0 {
@@ -1186,14 +1188,27 @@ func clusterLabel(context string) string {
 	return context
 }
 
+// constraintAnchor is the fragment a Constraint card answers to. The name alone is not unique: two
+// Constraints of different Kinds may share one, and that produced two cards with the same id, so one
+// was unreachable, its sidebar entry could never be marked, and a shared link (issue #1324) landed on
+// the wrong card. Kind plus name is unique for these cluster-scoped objects, and unlike metadata.uid
+// it survives the object being recreated, which is the property a shared link needs. Falls back to
+// the name alone when the Kind is unknown, which only happens for an Event that did not record it.
+func constraintAnchor(kind, name string) string {
+	if kind == "" {
+		return name
+	}
+	return kind + "--" + name
+}
+
 // constraintsURL links to the constraints view for a context, optionally anchored at a Constraint.
-func constraintsURL(kubeContext, constraintName string) string {
+func constraintsURL(kubeContext, kind, name string) string {
 	path := "/constraints"
 	if kubeContext != "" {
 		path += "/" + url.PathEscape(kubeContext)
 	}
-	if constraintName != "" {
-		path += "#" + constraintName
+	if name != "" {
+		path += "#" + constraintAnchor(kind, name)
 	}
 	return browserPath(path)
 }

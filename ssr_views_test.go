@@ -77,7 +77,10 @@ func TestSSRNewViewsRenderWithoutError(t *testing.T) {
 		t.Fatalf("constraints render failed: %v", err)
 	}
 	for _, want := range []string{
-		"must-have-owner", "K8sRequiredLabels", "deny mode", "violationsTable('viol-must-have-owner')",
+		"must-have-owner", "K8sRequiredLabels", "deny mode",
+		// The card id, its sidebar link and its data island are all Kind-prefixed; see constraintAnchor.
+		"violationsTable('viol-K8sRequiredLabels--must-have-owner')",
+		`id="K8sRequiredLabels--must-have-owner"`,
 		"missing owner", "audit limit", "Download violations report", "Filter violations",
 		// The filter + pager are gated to long lists, and the count label replaced "showing X of Y".
 		`x-show="showControls"`, "countLabel",
@@ -367,5 +370,74 @@ func TestAnnotationSurvivesObjectsWithoutAnnotations(t *testing.T) {
 				t.Errorf("annotation = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+// Two Constraints of different Kinds may carry the same name. Anchoring a card on the name alone
+// gave them the same id, so one card was unreachable, its sidebar entry could never be marked, and a
+// shared violation link (issue #1324) landed on the wrong card.
+func TestConstraintCardsAreUniquePerKindAndName(t *testing.T) {
+	same := func(kind string) ssrConstraint {
+		return ssrConstraint{
+			Name: "must-have-owner", Kind: kind, EnforcementMode: "deny",
+			ViolationsKnown: true, TotalViolations: 1, ReturnedCount: 1,
+			Violations: []ssrConstraintViolation{
+				{EnforcementAction: "deny", Kind: "Pod", Namespace: "default", Name: "nginx", Message: "missing owner"},
+			},
+		}
+	}
+	data := map[string]any{
+		"Layout":      minimalLayout(),
+		"Constraints": []ssrConstraint{same("K8sRequiredLabels"), same("K8sRequiredAnnotations")},
+		"ReportURL":   "/constraints?report=html",
+	}
+
+	var buf bytes.Buffer
+	if err := newSSRRenderer().pages["constraints"].ExecuteTemplate(&buf, "layout", data); err != nil {
+		t.Fatalf("constraints render failed: %v", err)
+	}
+	out := buf.String()
+
+	for _, want := range []string{
+		`id="K8sRequiredLabels--must-have-owner"`,
+		`id="K8sRequiredAnnotations--must-have-owner"`,
+		`href="#K8sRequiredLabels--must-have-owner"`,
+		`href="#K8sRequiredAnnotations--must-have-owner"`,
+		// the per-card data islands must not collide either, or one table reads the other's rows
+		`id="viol-K8sRequiredLabels--must-have-owner"`,
+		`id="viol-K8sRequiredAnnotations--must-have-owner"`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("constraints output missing %q", want)
+		}
+	}
+	// And nothing may still anchor on the bare name.
+	for _, unwanted := range []string{`id="must-have-owner"`, `href="#must-have-owner"`, `id="viol-must-have-owner"`} {
+		if strings.Contains(out, unwanted) {
+			t.Errorf("constraints output still uses the ambiguous %q", unwanted)
+		}
+	}
+}
+
+// The Events view cross-links to a Constraint card, so it has to build the same fragment.
+func TestEventsLinkToTheKindPrefixedConstraintCard(t *testing.T) {
+	ev := ssrEvent{
+		Name: "e1", Reason: "FailedAdmission", Message: "denied",
+		ConstraintKind: "K8sRequiredLabels", ConstraintName: "must-have-owner",
+	}
+	var buf bytes.Buffer
+	data := map[string]any{"Layout": minimalLayout(), "Events": []ssrEvent{ev}}
+	if err := newSSRRenderer().pages["events"].ExecuteTemplate(&buf, "layout", data); err != nil {
+		t.Fatalf("events render failed: %v", err)
+	}
+	if !strings.Contains(buf.String(), "/constraints#K8sRequiredLabels--must-have-owner") {
+		t.Errorf("events output does not link to the Kind-prefixed card:\n%s", buf.String())
+	}
+}
+
+// An Event that never recorded the Kind still links somewhere sensible rather than to "--name".
+func TestConstraintAnchorWithoutAKind(t *testing.T) {
+	if got := constraintAnchor("", "must-have-owner"); got != "must-have-owner" {
+		t.Errorf("constraintAnchor = %q, want the bare name", got)
 	}
 }

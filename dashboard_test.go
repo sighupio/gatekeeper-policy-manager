@@ -59,8 +59,11 @@ func TestAggregateDashboard(t *testing.T) {
 	if len(top.Clusters) != 2 || top.ClusterCount != 2 {
 		t.Errorf("liveness-probe clusters = %d / count %d, want 2 (alpha, beta)", len(top.Clusters), top.ClusterCount)
 	}
-	if top.Clusters[0].URL != "/constraints/alpha#liveness-probe" {
-		t.Errorf("deep link = %q, want /constraints/alpha#liveness-probe", top.Clusters[0].URL)
+	// Kind-prefixed, so two Constraints of different Kinds sharing a name land on their own card.
+	// Spelled out rather than built with constraintAnchor: an expectation computed by the function
+	// under test holds whatever that function returns.
+	if top.Clusters[0].URL != "/constraints/alpha#K8sLivenessProbe--liveness-probe" {
+		t.Errorf("deep link = %q, want the Kind-prefixed anchor", top.Clusters[0].URL)
 	}
 
 	// Per-cluster status/state feed the sortable table + the status dot.
@@ -118,11 +121,12 @@ func TestClusterLabelAndURL(t *testing.T) {
 		t.Errorf("clusterLabel(\"prod\") = %q, want \"prod\"", got)
 	}
 	// The default context links to /constraints with no context segment.
-	if got := constraintsURL("", ""); got != "/constraints" {
-		t.Errorf("constraintsURL(\"\",\"\") = %q, want /constraints", got)
+	if got := constraintsURL("", "", ""); got != "/constraints" {
+		t.Errorf("constraintsURL with nothing set = %q, want /constraints", got)
 	}
-	if got := constraintsURL("prod", "must-have-owner"); got != "/constraints/prod#must-have-owner" {
-		t.Errorf("constraintsURL = %q, want /constraints/prod#must-have-owner", got)
+	want := "/constraints/prod#K8sRequiredLabels--must-have-owner"
+	if got := constraintsURL("prod", "K8sRequiredLabels", "must-have-owner"); got != want {
+		t.Errorf("constraintsURL = %q, want %q", got, want)
 	}
 }
 
