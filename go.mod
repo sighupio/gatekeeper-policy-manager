@@ -13,7 +13,7 @@ require (
 	github.com/labstack/echo-contrib v0.50.1
 	github.com/labstack/echo/v4 v4.15.4
 	github.com/spf13/viper v1.21.0
-	github.com/yuin/goldmark v1.6.0
+	github.com/yuin/goldmark v1.8.5
 	golang.org/x/exp v0.0.0-20260727155853-b88d891fe743
 	golang.org/x/oauth2 v0.36.0
 	k8s.io/apimachinery v0.36.3
