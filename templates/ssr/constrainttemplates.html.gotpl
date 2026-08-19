@@ -36,14 +36,13 @@ cross-links from the Events view (#<kind>) land on the right card.
 
     <div class="stack">
       {{- range .Templates }}
+      {{- /* The card used to carry a green "created" badge, which was green on every template in any
+             working cluster. Its one useful state -- Gatekeeper never compiled this into a CRD -- is
+             now a footer line, beside the pods reporting on it. */}}
+      {{- $status := podSummary .Raw (or $.ExpectedPods 0) }}
       <section class="card" id="{{ .Kind }}">
         <div class="card-head">
           <h2>{{ .Kind }}</h2>
-          {{- if .StatusCreated }}
-          <span class="badge badge-success card-head-badge" title="Gatekeeper compiled this template into a CRD">created</span>
-          {{- else }}
-          <span class="badge badge-warn card-head-badge" title="Gatekeeper has not reported this template as created">unknown state</span>
-          {{- end }}
         </div>
 
         {{- with .Description }}
@@ -94,9 +93,12 @@ cross-links from the Events view (#<kind>) land on the right card.
           {{- end }}
         </div>
 
-        {{- with .Created }}
-        <p class="card-foot muted dynamic">Created on {{ . }}</p>
-        {{- end }}
+        {{ template "podtable" $status }}
+
+        <p class="card-foot muted dynamic">
+          {{- with .Created }}Created on {{ . }}{{ end }}
+          {{- template "podline" $status }}
+        </p>
       </section>
       {{- end }}
     </div>

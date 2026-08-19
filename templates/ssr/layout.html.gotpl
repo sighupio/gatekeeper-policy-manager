@@ -108,3 +108,41 @@ client-go error does not push the page around; why it carries the detail is in s
   {{- end }}
 </div>
 {{- end -}}
+
+{{- /*
+What a card says about the pods reporting on it. The footer line is quiet when everything is in sync
+and speaks up otherwise; the table behind the fold is the detail, including what each pod does. Both
+take a podSummary, so the three views that carry status.byPod render them the same way.
+*/ -}}
+{{- define "podline" -}}
+{{- with .Line }} · <span{{ with $.State }} class="foot-{{ . }}"{{ end }} title="{{ $.Title }}">{{ . }}</span>{{ end }}
+{{- end -}}
+
+{{- define "podtable" -}}
+{{- if .Pods }}
+<details class="field">
+  <summary class="field-label">Status by pod <span class="muted">{{ len .Pods }}</span></summary>
+  {{- /* Same table as the violations one, class and all, so the two folds on a Constraint card do
+         not look like they came from different applications. */}}
+  <div class="table-scroll dynamic">
+    <table class="vtable">
+      <thead>
+        <tr><th>Pod</th><th>Operations</th><th>Generation</th></tr>
+      </thead>
+      <tbody>
+        {{- range .Pods }}
+        <tr>
+          <td>{{ .ID }}</td>
+          <td class="muted">{{ with .Operations }}{{ . }}{{ else }}—{{ end }}</td>
+          <td{{ if .Behind }} class="foot-warn"{{ end }}>{{ .Generation }}{{ if .Behind }} · behind{{ end }}</td>
+        </tr>
+        {{- range .Errors }}
+        <tr><td colspan="3" class="foot-error">{{ . }}</td></tr>
+        {{- end }}
+        {{- end }}
+      </tbody>
+    </table>
+  </div>
+</details>
+{{- end }}
+{{- end -}}

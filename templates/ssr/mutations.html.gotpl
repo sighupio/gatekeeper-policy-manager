@@ -35,6 +35,7 @@ Mutations view. Renders the Gatekeeper mutator objects the JSON handler getMutat
 
     <div class="stack">
       {{- range .Mutations }}
+      {{- $status := podSummary . (or $.ExpectedPods 0) }}
       <section class="card" id="{{ .metadata.name }}">
         <div class="card-head">
           <h2>{{ .metadata.name }}</h2>
@@ -64,9 +65,12 @@ Mutations view. Renders the Gatekeeper mutator objects the JSON handler getMutat
           <div class="code">{{ highlight (toYAML .) "yaml" }}</div>
         </details>
 
-        {{- with .metadata.creationTimestamp }}
-        <p class="card-foot muted dynamic">Created on {{ . }}</p>
-        {{- end }}
+        {{ template "podtable" $status }}
+
+        <p class="card-foot muted dynamic">
+          {{- with .metadata.creationTimestamp }}Created on {{ . }}{{ end }}
+          {{- template "podline" $status }}
+        </p>
       </section>
       {{- end }}
     </div>

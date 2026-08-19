@@ -52,6 +52,7 @@ land on the right card.
 
     <div class="stack">
       {{- range .Constraints }}
+      {{- $status := podSummary .Raw (or $.ExpectedPods 0) }}
       <section class="card" id="{{ constraintAnchor .Kind .Name }}">
         <div class="card-head">
           <h2>{{ .Name }}</h2>
@@ -163,19 +164,7 @@ land on the right card.
         {{- end }}
         {{- end }}
 
-        {{- with .Pods }}
-        <div class="field">
-          <p class="field-label">Status by pod</p>
-          <div class="pods dynamic">
-            {{- range . }}
-            <span class="tag pod-tag {{ if .Enforced }}pod-on{{ else }}pod-off{{ end }}"
-                  title="Constraint is {{ if not .Enforced }}NOT {{ end }}being enforced by this pod">
-              {{ if .Enforced }}✓{{ else }}✕{{ end }} {{ .ID }}<span class="muted"> · gen {{ .ObservedGeneration }}</span>
-            </span>
-            {{- end }}
-          </div>
-        </div>
-        {{- end }}
+        {{ template "podtable" $status }}
 
         <p class="card-foot muted dynamic">
           {{- with .AuditTimestamp }}Audited on {{ . }}{{ end }}
@@ -186,6 +175,7 @@ land on the right card.
           {{- range .EnforcementIssues }} ·
           <span class="foot-error" title="{{ .Message }} (reported by {{ .Pods }} pod{{ if ne .Pods 1 }}s{{ end }})">{{ .Label }}</span>
           {{- end }}
+          {{- template "podline" $status }}
         </p>
       </section>
       {{- end }}

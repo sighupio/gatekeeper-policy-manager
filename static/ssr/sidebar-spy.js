@@ -20,11 +20,13 @@
   };
 
   const linkFor = new Map(); // section element -> nav link
+  const sectionFor = new Map(); // and back, to place the current mark in the list
   const sections = []; // in DOM order, which mirrors the sidebar order
   for (const a of links) {
     const el = document.getElementById(decodeHash(a.getAttribute("href").slice(1)));
     if (el) {
       linkFor.set(el, a);
+      sectionFor.set(a, el);
       sections.push(el);
     }
   }
@@ -94,6 +96,12 @@
   let pinned = null;
 
   // Sections are in DOM order, so the last one whose top has passed the line is the current one.
+  //
+  // The mark never moves backwards unless the reader scrolled back. Expanding a <details> grows the
+  // page underneath them, which takes it off the foot and slides the line up; the browser's scroll
+  // anchoring then fires a scroll event, and the mark would jump to a card above the one being read.
+  // Nothing they can see moved, so neither should the mark.
+  let lastScroll = scrollY;
   const update = () => {
     if (pinned) return;
     const line = readingLine();
@@ -102,6 +110,10 @@
       if (el.getBoundingClientRect().top - 1 > line) break;
       found = el;
     }
+    const wentBack = sections.indexOf(found) < sections.indexOf(active ? sectionFor.get(active) : found);
+    const scrolledUp = scrollY < lastScroll;
+    lastScroll = scrollY;
+    if (wentBack && !scrolledUp) return;
     setActive(linkFor.get(found));
   };
 

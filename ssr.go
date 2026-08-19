@@ -74,6 +74,7 @@ func newSSRRenderer() *ssrRenderer {
 		"highlight":   highlight,
 		"linkify":     linkify,
 		"annotation":  annotation,
+		"podSummary":  podSummary,
 		// constraintAnchor keeps the card id, the sidebar link and every cross-link in step.
 		"constraintAnchor": constraintAnchor,
 	}
@@ -395,6 +396,7 @@ func (s *server) getMutations(c echo.Context) error {
 		}
 	}
 	data["Mutations"] = items
+	data["ExpectedPods"] = maxPodCount(items)
 	return s.ssr.render(c, "mutations", data)
 }
 
@@ -490,7 +492,9 @@ func (s *server) getConstraintTemplates(c echo.Context) error {
 	}
 
 	templates := make([]ssrConstraintTemplate, 0, len(cts.Items))
+	objects := make([]map[string]any, 0, len(cts.Items))
 	for i := range cts.Items {
+		objects = append(objects, cts.Items[i].Object)
 		name := cts.Items[i].GetName()
 		// A missing constraint kind just means the template has no constraints yet, so we log and
 		// continue with an empty list rather than failing the whole page.
@@ -502,6 +506,7 @@ func (s *server) getConstraintTemplates(c echo.Context) error {
 		templates = append(templates, ssrConstraintTemplateModel(cts.Items[i].Object, constraints.Items))
 	}
 	data["Templates"] = templates
+	data["ExpectedPods"] = maxPodCount(objects)
 	return s.ssr.render(c, "constrainttemplates", data)
 }
 
@@ -557,6 +562,136 @@ type ssrConstraint struct {
 	EnforcementIssues []ssrEnforcementIssue
 
 	Raw map[string]any
+}
+
+// Constraint Templates, Constraints and mutators all carry status.byPod, and the parts that matter
+// are the same in each: which pod reported, at which generation of the object, and what that pod
+// does. Only the extras differ -- templates carry compile errors and no "enforced", the other two
+// carry "enforced".
+type ssrPodStatus struct {
+	ID         string
+	Operations string // "audit, status", as the pod reports them
+	Generation int64
+	Behind     bool // reporting an older generation than the object currently has
+	Enforced   bool
+	Enforces   bool // whether this kind reports "enforced" at all
+	Errors     []string
+}
+
+// ssrPodSummary is what a card shows about its pods: one line for the footer, quiet unless something
+// is wrong, and the full table behind a fold.
+type ssrPodSummary struct {
+	Pods  []ssrPodStatus
+	Line  string
+	State string // "" reads as muted, "warn" and "error" colour the line
+	Title string // the pods and their operations, for hover
+}
+
+// podSummary reads status.byPod for any of the three kinds. expected is the highest pod count seen
+// across the objects in the same view: GPM cannot list pods (its ServiceAccount has no permission
+// for that), so the other objects on the page are the only available answer to "how many pods should
+// be reporting". Anything short of that, or a pod reporting an older generation, is worth saying.
+func podSummary(obj any, expected int) ssrPodSummary {
+	o, ok := obj.(map[string]any)
+	if !ok {
+		return ssrPodSummary{}
+	}
+	generation, _, _ := unstructured.NestedInt64(o, "metadata", "generation")
+	// Both a missing field and a malformed one come back nil, and ranging nil is fine.
+	raw, _, _ := unstructured.NestedSlice(o, "status", "byPod")
+
+	var summary ssrPodSummary
+	inSync, notEnforced, withErrors := 0, 0, 0
+	var lines []string
+	for _, entry := range raw {
+		e, ok := entry.(map[string]any)
+		if !ok {
+			continue
+		}
+		pod := ssrPodStatus{}
+		pod.ID, _, _ = unstructured.NestedString(e, "id")
+		pod.Generation, _, _ = unstructured.NestedInt64(e, "observedGeneration")
+		pod.Behind = generation != 0 && pod.Generation != generation
+		pod.Enforced, pod.Enforces, _ = unstructured.NestedBool(e, "enforced")
+		if ops, _, _ := unstructured.NestedStringSlice(e, "operations"); len(ops) > 0 {
+			pod.Operations = strings.Join(ops, ", ")
+		}
+		pod.Errors = podErrors(e)
+
+		if !pod.Behind {
+			inSync++
+		}
+		if pod.Enforces && !pod.Enforced {
+			notEnforced++
+		}
+		if len(pod.Errors) > 0 {
+			withErrors++
+		}
+		summary.Pods = append(summary.Pods, pod)
+		lines = append(lines, strings.TrimSuffix(pod.ID+": "+pod.Operations, ": "))
+	}
+	summary.Title = strings.Join(lines, "\n")
+
+	total := len(summary.Pods)
+	if expected < total {
+		expected = total
+	}
+	// Only Constraint Templates carry status.created, so an absent field means the question does not
+	// apply to this kind; a present false one means Gatekeeper never compiled the template.
+	created, hasCreated, _ := unstructured.NestedBool(o, "status", "created")
+
+	switch {
+	// Without a CRD no Constraint of that kind can exist, so nothing else about the card matters.
+	case hasCreated && !created:
+		summary.Line, summary.State = "not compiled into a CRD", "error"
+	case withErrors > 0:
+		summary.Line, summary.State = plural(withErrors, "pod reports", "pods report")+" an error", "error"
+	case total == 0:
+		summary.Line, summary.State = "no pod has reported on it yet", "warn"
+	case notEnforced > 0:
+		summary.Line, summary.State = "not enforced on "+plural(notEnforced, "pod", "pods"), "warn"
+	case inSync < expected:
+		summary.Line, summary.State = fmt.Sprintf("in sync on %d of %d pods", inSync, expected), "warn"
+	default:
+		summary.Line = "in sync on " + plural(total, "pod", "pods")
+	}
+	return summary
+}
+
+// podErrors reads the compile errors a Constraint Template's pods report. The other kinds do not use
+// this field, and read as an empty list.
+func podErrors(pod map[string]any) []string {
+	raw, _, _ := unstructured.NestedSlice(pod, "errors")
+	var out []string
+	for _, e := range raw {
+		m, ok := e.(map[string]any)
+		if !ok {
+			continue
+		}
+		if msg, _, _ := unstructured.NestedString(m, "message"); msg != "" {
+			out = append(out, msg)
+		}
+	}
+	return out
+}
+
+func plural(n int, one, many string) string {
+	if n == 1 {
+		return "1 " + one
+	}
+	return fmt.Sprintf("%d %s", n, many)
+}
+
+// maxPodCount is the denominator podSummary needs: the most pods any object in this view is reported
+// by. An object short of it is behind the rest of the page.
+func maxPodCount(objs []map[string]any) int {
+	most := 0
+	for _, o := range objs {
+		if pods, _, _ := unstructured.NestedSlice(o, "status", "byPod"); len(pods) > most {
+			most = len(pods)
+		}
+	}
+	return most
 }
 
 // enforcementIssues reads status.byPod[].enforcementPointsStatus and returns one entry per
@@ -794,6 +929,7 @@ func (s *server) getConstraints(c echo.Context) error {
 		models = append(models, ssrConstraintModel(o))
 	}
 	data["Constraints"] = models
+	data["ExpectedPods"] = maxPodCount(raw)
 
 	// The printable report is this same view with ?report set.
 	if selected != "" {

@@ -42,7 +42,11 @@ func TestSSRNewViewsRenderWithoutError(t *testing.T) {
 	if err := r.pages["constrainttemplates"].ExecuteTemplate(&buf, "layout", ctData); err != nil {
 		t.Fatalf("constrainttemplates render failed: %v", err)
 	}
-	for _, want := range []string{"K8sRequiredLabels", "must-have-owner", "Parameters schema", "created"} {
+	// No "created" badge: it was green on every template in any working cluster. The card says
+	// something about its pods instead, and this fixture has none reporting.
+	for _, want := range []string{
+		"K8sRequiredLabels", "must-have-owner", "Parameters schema", "no pod has reported on it yet",
+	} {
 		if !strings.Contains(buf.String(), want) {
 			t.Errorf("constrainttemplates output missing %q", want)
 		}

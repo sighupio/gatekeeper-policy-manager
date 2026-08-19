@@ -122,7 +122,10 @@ for (const view of ["constraints", "constrainttemplates"]) {
 // back. It only shows on a tall window, where the line is far down the page, so pin the height and
 // assert the geometry rather than hoping for it.
 test.describe("on a tall window", () => {
-  test.use({ viewport: { width: 1280, height: 1200 } });
+  // 1400, not 1200: the Constraints cards lost their per-pod chips to a fold, and at 1200 the
+  // reading line no longer reaches past the next section on Constraint Templates, so the geometry
+  // guard below refuses the run. Measured at 1400 both views still exhibit it.
+  test.use({ viewport: { width: 1280, height: 1400 } });
 
   for (const view of ["constraints", "constrainttemplates"]) {
     test(`${view}: clicking the marked entry again does not flick`, async ({
