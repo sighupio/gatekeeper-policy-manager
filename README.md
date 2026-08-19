@@ -62,7 +62,7 @@ First create a values file, for example `my-values.yaml`, with your custom value
 From `v2.0.0` the chart is published as an OCI artifact on `quay.io`, next to the container image. There is no `helm repo add` step any more. You need Helm 3.8 or later, which supports OCI registries. Then execute:
 
 ```bash
-helm upgrade --install --namespace gatekeeper-system --set image.tag=v2.0.0-rc.1 --values my-values.yaml gatekeeper-policy-manager oci://quay.io/sighup/charts/gatekeeper-policy-manager --version 0.18.0
+helm upgrade --install --namespace gatekeeper-system --set image.tag=v2.0.0-rc.2 --values my-values.yaml gatekeeper-policy-manager oci://quay.io/sighup/charts/gatekeeper-policy-manager --version 0.18.0
 ```
 
 > [!IMPORTANT]
@@ -73,7 +73,7 @@ helm upgrade --install --namespace gatekeeper-system --set image.tag=v2.0.0-rc.1
 You can also run GPM locally with Docker (or another container runtime) and a `kubeconfig`. If the `kubeconfig` file is at `~/.kube/config`, run this command:
 
 ```bash
-docker run -v ~/.kube/config:/home/nonroot/.kube/config -p 8080:8080 quay.io/sighup/gatekeeper-policy-manager:v2.0.0-rc.1
+docker run -v ~/.kube/config:/home/nonroot/.kube/config -p 8080:8080 quay.io/sighup/gatekeeper-policy-manager:v2.0.0-rc.2
 ```
 
 Then open [http://127.0.0.1:8080](http://127.0.0.1:8080) in your browser.
@@ -227,7 +227,7 @@ FROM curlimages/curl:7.81.0 as downloader
 RUN curl https://github.com/kubernetes-sigs/aws-iam-authenticator/releases/download/v0.5.5/aws-iam-authenticator_0.5.5_linux_amd64 --output /tmp/aws-iam-authenticator
 RUN chmod +x /tmp/aws-iam-authenticator
 
-FROM quay.io/sighup/gatekeeper-policy-manager:v2.0.0-rc.1
+FROM quay.io/sighup/gatekeeper-policy-manager:v2.0.0-rc.2
 COPY --from=downloader --chown=root:root /tmp/aws-iam-authenticator /usr/local/bin/
 ```
 
