@@ -204,6 +204,17 @@ code { font-family: var(--mono); font-size: 0.9em; }
 
 /* --- Page ---------------------------------------------------------------- */
 
+/* The 1360px cap is inherited from the 1.x UI, which set a width per page through EUI. The toggle in
+   the topbar (width.js) lifts it for people on wide screens who would rather have the tables than the
+   margins. */
+:root[data-full-width] .page { max-width: none; }
+
+/* Width goes to the tables and the cards, never to the sentences. This holds in both layouts: even
+   capped at 1360px a lede ran to about 186 characters a line, which is roughly twice what anyone
+   reads comfortably. */
+.view-head p,
+.card > p.muted { max-width: 90ch; }
+
 .page {
   flex: 1;
   width: 100%;

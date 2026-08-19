@@ -19,6 +19,7 @@ nav, context switcher and footer data (see ssrLayoutData in ssr.go).
   {{- /* Apply the saved theme before first paint so there is no light/dark flash. External and
          synchronous so it runs before Alpine and needs no script-src 'unsafe-inline' under the CSP. */}}
   <script src="{{ .Layout.AssetBase }}/theme.js"></script>
+  <script src="{{ .Layout.AssetBase }}/width.js"></script>
   <script defer src="{{ .Layout.AssetBase }}/alpine.min.js"></script>
   <script defer src="{{ .Layout.AssetBase }}/sidebar-spy.js"></script>
 </head>
@@ -52,6 +53,17 @@ nav, context switcher and footer data (see ssrLayoutData in ssr.go).
         </select>
       </label>
       {{- end }}
+
+      <button type="button" class="icon-btn" title="Layout width"
+              x-data="widthToggle()" x-on:click="toggle()" x-bind:title="title"
+              aria-label="Layout width">
+        {{- /* The icon shows the layout in force: content between margins, or filling the window. The
+               static geometry is the centred one, so it draws correctly before Alpine boots. */}}
+        <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
+          <rect x="4.5" y="3.5" width="7" height="9" rx="1" x-bind:x="full ? 1.5 : 4.5" x-bind:width="full ? 13 : 7"/>
+          <path x-show="!full" d="M1.5 3.5v9M14.5 3.5v9"/>
+        </svg>
+      </button>
 
       <button type="button" class="icon-btn" title="Theme"
               x-data="themeToggle()" x-on:click="cycle()" x-bind:title="title">
