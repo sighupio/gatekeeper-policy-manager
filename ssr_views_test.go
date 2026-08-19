@@ -746,6 +746,14 @@ func TestMarkdownRendersDescriptionsSafely(t *testing.T) {
 			[]string{"data:text/html"},
 		},
 		{
+			// goldmark 1.8.4 empties SVG data: URLs, which can carry script, while leaving
+			// harmless raster ones alone. Pinned so a downgrade cannot quietly bring it back.
+			"an SVG data: image is emptied, a PNG one is not",
+			"![a](data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=) ![b](data:image/png;base64,iVBORw0KGgo=)",
+			[]string{`src=""`, "data:image/png;base64,iVBORw0KGgo="},
+			[]string{"data:image/svg+xml"},
+		},
+		{
 			"raw HTML in the description never reaches the page",
 			`Fine <script>alert(1)</script> and <img src=x onerror=alert(1)>`,
 			nil,
