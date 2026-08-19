@@ -39,10 +39,11 @@ test("the layout is capped until asked otherwise, and then it fills the window",
       document.querySelector(".view-head p")!.getBoundingClientRect().width,
     ),
   );
+  const full = await pageWidth(page);
   expect(
     lede,
     "the lede should stay readable, not span the window",
-  ).toBeLessThan(900);
+  ).toBeLessThan(full / 2);
 
   await page.click('button[aria-label="Layout width"]');
   await expect.poll(() => pageWidth(page), { timeout: 3000 }).toBe(capped);

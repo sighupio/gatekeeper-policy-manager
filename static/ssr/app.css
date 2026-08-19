@@ -210,10 +210,11 @@ code { font-family: var(--mono); font-size: 0.9em; }
 :root[data-full-width] .page { max-width: none; }
 
 /* Width goes to the tables and the cards, never to the sentences. This holds in both layouts: even
-   capped at 1360px a lede ran to about 186 characters a line, which is roughly twice what anyone
-   reads comfortably. */
+   capped at 1360px a lede ran to about 186 characters a line. 120ch rather than the typographic 90:
+   these are one-line ledes and short descriptions in a dense UI, not body copy, and 90 left the
+   capped layout looking starved next to the full-width tables beside it. */
 .view-head p,
-.card > p.muted { max-width: 90ch; }
+.card > p.muted { max-width: 120ch; }
 
 .page {
   flex: 1;
