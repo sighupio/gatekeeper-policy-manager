@@ -12,12 +12,13 @@ import { test, expect } from "@playwright/test";
 //
 // The lede carries a ticking "updated Ns ago" hint whose width changes as it counts, so masking the
 // hint span alone leaves a moving edge; mask the whole lede <p> instead -- a block, so its box is
-// full-width and stable regardless of the hint text.
+// full-width and stable regardless of the hint text. The other snapshots mask .dynamic and get the
+// footer with it; this one masks both, since the footer's version string moves on every release.
 test("page home snapshot", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveScreenshot({
     maxDiffPixels: 100,
     fullPage: true,
-    mask: [page.locator(".dash-head p")],
+    mask: [page.locator(".dash-head p"), page.locator(".dynamic")],
   });
 });

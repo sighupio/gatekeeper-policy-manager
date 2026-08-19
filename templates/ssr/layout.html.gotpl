@@ -80,7 +80,10 @@ nav, context switcher and footer data (see ssrLayoutData in ssr.go).
     {{- block "content" . }}{{ end }}
   </main>
 
-  <footer class="footer">
+  {{- /* "dynamic" masks the whole footer in the pixel baselines: it carries the version string, which
+         changes on every release and otherwise diffs every snapshot. A full-width block, so the mask
+         box is stable whatever the version reads. */}}
+  <footer class="footer dynamic">
     <div>
       <strong>Gatekeeper Policy Manager {{ .Layout.Version }}</strong>
       <span class="muted">A simple web UI for OPA Gatekeeper</span>
