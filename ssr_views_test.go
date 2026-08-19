@@ -554,3 +554,140 @@ func TestConstraintCardShowsAFailingEnforcementPoint(t *testing.T) {
 		t.Error("a Constraint with no failing enforcement point still rendered the error line")
 	}
 }
+
+// The three views share one reader over status.byPod, so the line each card shows is decided here.
+// Quiet when everything is in sync, and specific when it is not.
+func TestPodSummaryLine(t *testing.T) {
+	pod := func(gen int64, ops []string, extra map[string]any) map[string]any {
+		p := map[string]any{"id": "gatekeeper-audit-0", "observedGeneration": gen}
+		if ops != nil {
+			anyOps := make([]any, 0, len(ops))
+			for _, o := range ops {
+				anyOps = append(anyOps, o)
+			}
+			p["operations"] = anyOps
+		}
+		for k, v := range extra {
+			p[k] = v
+		}
+		return p
+	}
+	obj := func(generation int64, status map[string]any, pods ...map[string]any) map[string]any {
+		if pods != nil {
+			byPod := make([]any, 0, len(pods))
+			for _, p := range pods {
+				byPod = append(byPod, p)
+			}
+			status["byPod"] = byPod
+		}
+		return map[string]any{
+			"metadata": map[string]any{"generation": generation},
+			"status":   status,
+		}
+	}
+
+	for _, tt := range []struct {
+		name     string
+		obj      map[string]any
+		expected int
+		line     string
+		state    string
+	}{
+		{
+			"every pod at the current generation says so once",
+			obj(1, map[string]any{}, pod(1, []string{"audit"}, nil), pod(1, nil, nil)),
+			2, "in sync on 2 pods", "",
+		},
+		{
+			"a pod on an older generation is named against the view's count",
+			obj(2, map[string]any{}, pod(2, nil, nil), pod(1, nil, nil)),
+			2, "in sync on 1 of 2 pods", "warn",
+		},
+		{
+			"fewer pods reporting than the rest of the page has",
+			obj(1, map[string]any{}, pod(1, nil, nil)),
+			4, "in sync on 1 of 4 pods", "warn",
+		},
+		{
+			"not enforcing outranks being out of sync",
+			obj(1, map[string]any{}, pod(1, nil, map[string]any{"enforced": false})),
+			1, "not enforced on 1 pod", "warn",
+		},
+		{
+			"a compile error outranks everything else",
+			obj(1, map[string]any{}, pod(1, nil, map[string]any{
+				"errors": []any{map[string]any{"message": "rego does not compile"}},
+			})),
+			1, "1 pod reports an error", "error",
+		},
+		{
+			"a template Gatekeeper never compiled",
+			obj(1, map[string]any{"created": false}, pod(1, nil, nil)),
+			1, "not compiled into a CRD", "error",
+		},
+		{
+			// Only templates carry status.created, so its absence is not a failure for the others.
+			"nothing reporting yet",
+			obj(1, map[string]any{}),
+			2, "no pod has reported on it yet", "warn",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := podSummary(tt.obj, tt.expected)
+			if got.Line != tt.line {
+				t.Errorf("line = %q, want %q", got.Line, tt.line)
+			}
+			if got.State != tt.state {
+				t.Errorf("state = %q, want %q", got.State, tt.state)
+			}
+		})
+	}
+}
+
+// The denominator comes from the page, because GPM may not list pods.
+func TestMaxPodCountIsTheBusiestObjectOnThePage(t *testing.T) {
+	with := func(n int) map[string]any {
+		pods := make([]any, n)
+		for i := range pods {
+			pods[i] = map[string]any{"id": "p"}
+		}
+		return map[string]any{"status": map[string]any{"byPod": pods}}
+	}
+	if got := maxPodCount([]map[string]any{with(1), with(4), with(3)}); got != 4 {
+		t.Errorf("maxPodCount = %d, want 4", got)
+	}
+	if got := maxPodCount([]map[string]any{{"status": map[string]any{}}}); got != 0 {
+		t.Errorf("maxPodCount with nothing reporting = %d, want 0", got)
+	}
+}
+
+// The Constraint Templates card links out to each Constraint built from the template, and those
+// cards are anchored on Kind and name together. This link was missed when the anchors changed, so it
+// pointed at a fragment nothing answered to and the Constraint was not highlighted on arrival. The
+// earlier "no bare-name anchors" check only looked at the Constraints view, which is why it slipped.
+func TestTemplateCardLinksToTheKindPrefixedConstraintCard(t *testing.T) {
+	ct := ssrConstraintTemplate{
+		Name: "k8srequiredlabels", Kind: "K8sRequiredLabels",
+		Constraints: []string{"must-have-owner", "must-have-team"},
+	}
+	var buf bytes.Buffer
+	data := map[string]any{"Layout": minimalLayout(), "Templates": []ssrConstraintTemplate{ct}}
+	if err := newSSRRenderer().pages["constrainttemplates"].ExecuteTemplate(&buf, "layout", data); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	out := buf.String()
+
+	for _, want := range []string{
+		"/constraints#K8sRequiredLabels--must-have-owner",
+		"/constraints#K8sRequiredLabels--must-have-team",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("template card missing the link %q", want)
+		}
+	}
+	for _, unwanted := range []string{`"/constraints#must-have-owner"`, `"/constraints#must-have-team"`} {
+		if strings.Contains(out, unwanted) {
+			t.Errorf("template card still links to the bare name %s, which no card answers to", unwanted)
+		}
+	}
+}

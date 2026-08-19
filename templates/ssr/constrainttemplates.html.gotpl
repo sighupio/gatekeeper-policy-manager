@@ -49,6 +49,23 @@ cross-links from the Events view (#<kind>) land on the right card.
         <p class="muted">{{ linkify . }}</p>
         {{- end }}
 
+        {{- /* The Constraint cards are anchored on Kind and name together, because two Constraints
+               of different Kinds can share a name. A Constraint built from this template carries
+               this template's Kind, so that is the Kind half of the link. */}}
+        {{- $kind := .Kind }}
+        <div class="field">
+          <p class="field-label">Constraints using this template</p>
+          {{- if .Constraints }}
+          <nav class="linklist">
+            {{- range .Constraints }}
+            <a href="{{ browserPath `/constraints` }}#{{ constraintAnchor $kind . }}">{{ . }}</a>
+            {{- end }}
+          </nav>
+          {{- else }}
+          <p class="muted no-spec">No Constraint uses this Constraint Template.</p>
+          {{- end }}
+        </div>
+
         {{- if .Rego }}
         <details class="field">
           <summary class="field-label">Rego definition{{ with .Target }} · target {{ . }}{{ end }}</summary>
@@ -79,19 +96,6 @@ cross-links from the Events view (#<kind>) land on the right card.
           <summary class="field-label">Full YAML definition</summary>
           <div class="code">{{ highlight (toYAML .Raw) "yaml" }}</div>
         </details>
-
-        <div class="field">
-          <p class="field-label">Constraints using this template</p>
-          {{- if .Constraints }}
-          <nav class="linklist">
-            {{- range .Constraints }}
-            <a href="{{ browserPath `/constraints` }}#{{ . }}">{{ . }}</a>
-            {{- end }}
-          </nav>
-          {{- else }}
-          <p class="muted no-spec">No Constraint uses this Constraint Template.</p>
-          {{- end }}
-        </div>
 
         {{ template "podtable" $status }}
 
