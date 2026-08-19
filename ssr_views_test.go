@@ -483,6 +483,18 @@ func TestEnforcementIssuesFoldPodsTogether(t *testing.T) {
 			[]ssrEnforcementIssue{{Label: "vap.k8s.io reports pending", Message: "waiting for the engine", Pods: 1}},
 		},
 		{
+			// The explicit ordering slice is gone: order now rides on append. Lock it, or a later
+			// refactor can start answering points in map order, which is random per run.
+			"two failing points keep the order Gatekeeper reported them in",
+			[]any{pod("audit-0",
+				point("vap.k8s.io", "error", "engine missing"),
+				point("webhook.k8s.io", "pending", "not ready"))},
+			[]ssrEnforcementIssue{
+				{Label: "vap.k8s.io reports an error", Message: "engine missing", Pods: 1},
+				{Label: "webhook.k8s.io reports pending", Message: "not ready", Pods: 1},
+			},
+		},
+		{
 			"active points are dropped, failing ones kept",
 			[]any{pod("audit-0",
 				point("webhook.k8s.io", "active", ""),

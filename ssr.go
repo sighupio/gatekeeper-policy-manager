@@ -519,19 +519,19 @@ type ssrConstraintViolation struct {
 
 // ssrConstraintPod mirrors one status.byPod entry: which audit pod reported, at what generation,
 // and whether it is enforcing the constraint.
-// ssrEnforcementIssue is one enforcement point that Gatekeeper is not enforcing at. Constraints
-// carry status.byPod[].enforcementPointsStatus per pod; GPM reads none of it today, so a Constraint
-// whose ValidatingAdmissionPolicy engine is missing still reads as fully enforced on every card.
-type ssrEnforcementIssue struct {
-	Label   string // "vap.k8s.io reports an error"
-	Message string // what Gatekeeper said, shown on hover
-	Pods    int    // how many pods report it
-}
-
 type ssrConstraintPod struct {
 	ID                 string
 	ObservedGeneration string
 	Enforced           bool
+}
+
+// ssrEnforcementIssue is one enforcement point that Gatekeeper is not enforcing at. Constraints
+// carry status.byPod[].enforcementPointsStatus per pod; GPM read none of it, so a Constraint whose
+// ValidatingAdmissionPolicy engine is missing still read as fully enforced on every card.
+type ssrEnforcementIssue struct {
+	Label   string // "vap.k8s.io reports an error"
+	Message string // what Gatekeeper said, shown on hover
+	Pods    int    // how many pods report it
 }
 
 // ssrConstraint is the flat shape the template renders per constraint.
@@ -569,12 +569,8 @@ func enforcementIssues(o map[string]any) []ssrEnforcementIssue {
 		return nil
 	}
 
-	type agg struct {
-		state, message string
-		pods           int
-	}
-	order := []string{}
-	byPoint := map[string]*agg{}
+	var issues []ssrEnforcementIssue
+	index := map[string]int{} // point name -> its place in issues, so append keeps first-seen order
 	for _, p := range pods {
 		pod, ok := p.(map[string]any)
 		if !ok {
@@ -597,25 +593,21 @@ func enforcementIssues(o map[string]any) []ssrEnforcementIssue {
 			if name == "" {
 				name = "an enforcement point"
 			}
-			if _, seen := byPoint[name]; !seen {
-				byPoint[name] = &agg{state: state}
-				order = append(order, name)
+			i, seen := index[name]
+			if !seen {
+				i = len(issues)
+				index[name] = i
+				what := "reports " + state
+				if strings.EqualFold(state, "error") {
+					what = "reports an error"
+				}
+				issues = append(issues, ssrEnforcementIssue{Label: name + " " + what})
 			}
-			byPoint[name].pods++
+			issues[i].Pods++
 			if msg, _, _ := unstructured.NestedString(ep, "message"); msg != "" {
-				byPoint[name].message = msg
+				issues[i].Message = msg
 			}
 		}
-	}
-
-	issues := make([]ssrEnforcementIssue, 0, len(order))
-	for _, name := range order {
-		a := byPoint[name]
-		label := name + " reports " + a.state
-		if strings.EqualFold(a.state, "error") {
-			label = name + " reports an error"
-		}
-		issues = append(issues, ssrEnforcementIssue{Label: label, Message: a.message, Pods: a.pods})
 	}
 	return issues
 }
