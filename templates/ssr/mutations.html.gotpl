@@ -47,9 +47,7 @@ Mutations view. Renders the Gatekeeper mutator objects the JSON handler getMutat
         {{- /* Same treatment as a Constraint Template's description: Gatekeeper documents the same
                annotation for mutators, and a Mutation carrying one used to show less than a
                Template carrying one. */}}
-        {{- with annotation . "description" }}
-        <p class="muted">{{ linkify . }}</p>
-        {{- end }}
+        {{ template "description" (annotation . "description") }}
 
         {{- with .spec }}
         <div class="field">

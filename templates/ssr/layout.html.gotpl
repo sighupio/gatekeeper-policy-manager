@@ -146,3 +146,9 @@ take a podSummary, so the three views that carry status.byPod render them the sa
 </details>
 {{- end }}
 {{- end -}}
+
+{{- /* A description annotation, rendered as markdown. Four views carry one, and they differ only in
+       where the string comes from, so the markup lives here. */ -}}
+{{- define "description" -}}
+{{- with . }}<div class="muted prose">{{ markdown . }}</div>{{ end }}
+{{- end -}}

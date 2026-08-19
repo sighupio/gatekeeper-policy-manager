@@ -42,6 +42,8 @@ Configurations view. Renders the Gatekeeper Config objects the JSON handler getC
           {{- end }}
         </div>
 
+        {{ template "description" (annotation . "description") }}
+
         {{- with .spec }}
         <div class="field">
           <p class="field-label">Spec</p>

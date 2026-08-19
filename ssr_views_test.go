@@ -691,3 +691,113 @@ func TestTemplateCardLinksToTheKindPrefixedConstraintCard(t *testing.T) {
 		}
 	}
 }
+
+// Descriptions come from an annotation on a cluster object, and are now rendered as markdown rather
+// than printed as text. That widens what the page will build from cluster content, so the escaping
+// and the link handling are asserted here rather than assumed from goldmark's defaults.
+func TestMarkdownRendersDescriptionsSafely(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		in     string
+		want   []string
+		unwant []string
+	}{
+		{
+			"code spans and lists, which is what the community templates use",
+			"Disallow `HorizontalPodAutoscalers` with:\n\n1. no `scaleTargetRef`\n2. a bad spread",
+			[]string{"<code>HorizontalPodAutoscalers</code>", "<ol>", "<li>no <code>scaleTargetRef</code></li>"},
+			nil,
+		},
+		{
+			"a bare URL still becomes a link, as it did before markdown",
+			"See https://docs.example.invalid/policy for more.",
+			[]string{`href="https://docs.example.invalid/policy"`, `target="_blank"`, `rel="noopener noreferrer"`},
+			nil,
+		},
+		{
+			// The helper this replaced matched https? -- plain http keeps working.
+			"plain http is a link too, and so is a bare www host",
+			"see http://example.invalid/docs and www.example.invalid/more",
+			[]string{`href="http://example.invalid/docs"`, `href="http://www.example.invalid/more"`},
+			nil,
+		},
+		{
+			// goldmark's own autolinker wants a dotted host with a letter suffix and drops all three
+			// of these. They are exactly the URLs a description written inside a cluster contains.
+			"a host without a dot, and a bare IP, are still links",
+			"try http://localhost:8082/constraints#viol-x and http://wiki/page and http://10.0.0.5:9090/x",
+			[]string{
+				`href="http://localhost:8082/constraints#viol-x"`,
+				`href="http://wiki/page"`,
+				`href="http://10.0.0.5:9090/x"`,
+			},
+			nil,
+		},
+		{
+			"a URL ending a sentence does not swallow the full stop",
+			"read https://example.invalid/docs. Then stop.",
+			[]string{`href="https://example.invalid/docs"`},
+			[]string{`href="https://example.invalid/docs."`},
+		},
+		{
+			"a data: link is emptied like javascript:",
+			"[x](data:text/html;base64,PHN2Zz4=)",
+			[]string{`href=""`},
+			[]string{"data:text/html"},
+		},
+		{
+			"raw HTML in the description never reaches the page",
+			`Fine <script>alert(1)</script> and <img src=x onerror=alert(1)>`,
+			nil,
+			[]string{"<script>", "<img src=x", "onerror="},
+		},
+		{
+			"a link with a dangerous scheme is not a working link",
+			"[click me](javascript:alert(1))",
+			[]string{"click me"},
+			[]string{"javascript:alert"},
+		},
+		{
+			"plain prose is simply a paragraph, which is the fallback",
+			"Requires containers to have a Liveness Probe defined.",
+			[]string{"<p>Requires containers to have a Liveness Probe defined."},
+			[]string{"<code>", "<ul>"},
+		},
+		{
+			"markdown special characters in ordinary text do not break the page",
+			"Rejecting 'foo' * 2 < 3 & \"bar\"",
+			[]string{"&lt; 3 &amp;"},
+			[]string{"<script"},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := string(markdown(tt.in))
+			for _, want := range tt.want {
+				if !strings.Contains(got, want) {
+					t.Errorf("output missing %q\n got: %s", want, got)
+				}
+			}
+			for _, unwanted := range tt.unwant {
+				if strings.Contains(got, unwanted) {
+					t.Errorf("output still contains %q\n got: %s", unwanted, got)
+				}
+			}
+		})
+	}
+}
+
+// And the card actually uses it.
+func TestTemplateCardRendersItsDescriptionAsMarkdown(t *testing.T) {
+	ct := ssrConstraintTemplate{
+		Name: "k8shpa", Kind: "K8sHorizontalPodAutoscaler",
+		Description: "Disallow `HorizontalPodAutoscalers` without a `scaleTargetRef`.",
+	}
+	var buf bytes.Buffer
+	data := map[string]any{"Layout": minimalLayout(), "Templates": []ssrConstraintTemplate{ct}}
+	if err := newSSRRenderer().pages["constrainttemplates"].ExecuteTemplate(&buf, "layout", data); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	if !strings.Contains(buf.String(), "<code>HorizontalPodAutoscalers</code>") {
+		t.Errorf("the template card printed the markdown instead of rendering it:\n%s", buf.String())
+	}
+}

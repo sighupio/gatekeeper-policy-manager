@@ -32,6 +32,12 @@ import (
 	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/labstack/echo/v4"
 	"github.com/spf13/viper"
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/text"
+	"github.com/yuin/goldmark/util"
 	"golang.org/x/exp/slog"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
@@ -73,6 +79,7 @@ func newSSRRenderer() *ssrRenderer {
 		"toJSON":      toJSON,
 		"highlight":   highlight,
 		"linkify":     linkify,
+		"markdown":    markdown,
 		"annotation":  annotation,
 		"podSummary":  podSummary,
 		// constraintAnchor keeps the card id, the sidebar link and every cross-link in step.
@@ -235,6 +242,59 @@ func reportViolations(c any) []any {
 		return nil
 	}
 	return vs
+}
+
+// autolinkURL is the pattern for a bare URL in a description. goldmark's own autolinker only accepts
+// a dotted host with a letter suffix, so it drops http://localhost:8080/x, http://wiki/page and
+// http://10.0.0.5/x -- all of which the helper this replaced linked, and all of which turn up in a
+// description written inside a cluster. This is that helper's pattern, minus trailing sentence
+// punctuation, so a URL ending a sentence does not swallow the full stop. Scheme-less www hosts and
+// email keep goldmark's own patterns, which the old helper never handled at all.
+var autolinkURL = regexp.MustCompile(`https?://[^\s<>"]*[^\s<>"'.,;:!?)\]}]`)
+
+// markdownRenderer renders the description annotation. Those descriptions are written as markdown --
+// the community templates are full of `code spans`, numbered lists and links -- and GPM used to print
+// the syntax raw.
+//
+// Safe on cluster-controlled text, and the tests check it rather than trusting the defaults: raw HTML
+// in the source is dropped instead of passed through (no WithUnsafe), and goldmark empties a
+// destination whose scheme is not safe, so [x](javascript:...) renders as a dead anchor. Text that is
+// not markdown comes out as a paragraph, which is the fallback.
+var markdownRenderer = goldmark.New(
+	goldmark.WithExtensions(extension.NewLinkify(
+		extension.WithLinkifyURLRegexp(autolinkURL),
+	)),
+	goldmark.WithParserOptions(parser.WithASTTransformers(
+		util.Prioritized(externalLinks{}, 100),
+	)),
+)
+
+// externalLinks sends every link in a description to a new tab, which is what the descriptions point
+// at: upstream documentation, never somewhere inside GPM.
+type externalLinks struct{}
+
+func (externalLinks) Transform(doc *ast.Document, _ text.Reader, _ parser.Context) {
+	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		switch n.(type) {
+		case *ast.Link, *ast.AutoLink:
+			n.SetAttributeString("target", []byte("_blank"))
+			n.SetAttributeString("rel", []byte("noopener noreferrer"))
+		}
+		return ast.WalkContinue, nil
+	})
+}
+
+// markdown renders a description. On any parse failure it falls back to the escaped text, so a
+// description can never cost the page.
+func markdown(s string) template.HTML {
+	var buf bytes.Buffer
+	if err := markdownRenderer.Convert([]byte(s), &buf); err != nil {
+		return template.HTML(template.HTMLEscapeString(s))
+	}
+	return template.HTML(buf.String())
 }
 
 // toJSON marshals a value for a <script type="application/json"> data island. encoding/json escapes
@@ -542,6 +602,7 @@ type ssrEnforcementIssue struct {
 // ssrConstraint is the flat shape the template renders per constraint.
 type ssrConstraint struct {
 	Name              string
+	Description       string // metadata.annotations.description, rendered as markdown like the others
 	Kind              string
 	Created           string
 	HasSpec           bool
@@ -780,6 +841,7 @@ func ssrConstraintModel(o map[string]any) ssrConstraint {
 		m.ViolationsKnown = true
 		m.TotalViolations = tv
 	}
+	m.Description, _, _ = unstructured.NestedString(o, "metadata", "annotations", "description")
 	m.EnforcementIssues = enforcementIssues(o)
 	m.AuditTimestamp, _, _ = unstructured.NestedString(o, "status", "auditTimestamp")
 

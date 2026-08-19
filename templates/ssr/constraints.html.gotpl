@@ -60,6 +60,9 @@ land on the right card.
           <a class="card-head-link" href="{{ browserPath `/constrainttemplates` }}#{{ .Kind }}"><span class="tag-key">template</span> {{ .Kind }}</a>
         </div>
 
+        {{- /* Constraints carry the same description annotation as templates and mutators. */}}
+        {{ template "description" .Description }}
+
         {{- /* Violations: unknown (not audited yet), none, or the searchable/sortable table. */}}
         {{- if not .ViolationsKnown }}
         <div class="alert alert-warn">Violations for this Constraint are unknown. Gatekeeper has probably not audited it yet. Try refreshing the page.</div>

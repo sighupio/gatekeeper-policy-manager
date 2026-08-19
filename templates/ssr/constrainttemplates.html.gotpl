@@ -45,9 +45,8 @@ cross-links from the Events view (#<kind>) land on the right card.
           <h2>{{ .Kind }}</h2>
         </div>
 
-        {{- with .Description }}
-        <p class="muted">{{ linkify . }}</p>
-        {{- end }}
+        {{- /* Written as markdown by the community templates, so rendered as markdown. */}}
+        {{ template "description" .Description }}
 
         {{- /* The Constraint cards are anchored on Kind and name together, because two Constraints
                of different Kinds can share a name. A Constraint built from this template carries
