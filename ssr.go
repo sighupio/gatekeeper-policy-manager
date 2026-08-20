@@ -58,6 +58,7 @@ var ssrPages = map[string]string{
 	"mutations":           "templates/ssr/mutations.html.gotpl",
 	"constrainttemplates": "templates/ssr/constrainttemplates.html.gotpl",
 	"constraints":         "templates/ssr/constraints.html.gotpl",
+	"resources":           "templates/ssr/resources.html.gotpl",
 	"events":              "templates/ssr/events.html.gotpl",
 	"error":               "templates/ssr/error.html.gotpl",
 	"notfound":            "templates/ssr/notfound.html.gotpl",
@@ -340,8 +341,11 @@ var ssrNavRoutes = []struct {
 	Name string
 	Path string
 }{
-	{"constrainttemplates", "Constraint Templates", "/constrainttemplates"},
+	// "Templates" rather than the full kind: the nav is the only place the name is shortened, and
+	// it buys back most of the width the Resources entry costs (the page heading stays in full).
+	{"constrainttemplates", "Templates", "/constrainttemplates"},
 	{"constraints", "Constraints", "/constraints"},
+	{"resources", "Resources", "/resources"},
 	{"mutations", "Mutations", "/mutations"},
 	{"events", "Events", "/events"},
 	{"configurations", "Configurations", "/configurations"},
@@ -576,10 +580,14 @@ func (s *server) getConstraintTemplates(c echo.Context) error {
 // this shape is serialized into the page's data island and read back by the Alpine table.
 type ssrConstraintViolation struct {
 	EnforcementAction string `json:"enforcementAction"`
-	Kind              string `json:"kind"`
-	Namespace         string `json:"namespace"`
-	Name              string `json:"name"`
-	Message           string `json:"message"`
+	// Gatekeeper writes the full GVK (verified on v3.22.2): the core group is "", not absent. The
+	// group is what keeps two same-named Kinds from different API groups apart in the Resources view.
+	Group     string `json:"group"`
+	Version   string `json:"version"`
+	Kind      string `json:"kind"`
+	Namespace string `json:"namespace"`
+	Name      string `json:"name"`
+	Message   string `json:"message"`
 }
 
 // ssrConstraintPod mirrors one status.byPod entry: which audit pod reported, at what generation,
@@ -808,6 +816,172 @@ func enforcementIssues(o map[string]any) []ssrEnforcementIssue {
 	return issues
 }
 
+// --- Resources view -------------------------------------------------------------------------
+//
+// The same audit data as the Constraints view, pivoted: a namespace-scoped reader cares about their
+// own objects, not about the policy catalogue. Nothing new is fetched -- these models are built from
+// the constraints already in hand.
+
+// One policy an object breaks. The constraint is named so the row can link back to its card.
+type ssrResourceViolation struct {
+	Constraint string
+	Kind       string // the constraint's kind, i.e. the template
+	Mode       string // deny | warn | dryrun
+	Message    string
+}
+
+// One object that breaks at least one policy. Identity is group, kind, namespace and name, so two
+// same-named Kinds from different API groups stay apart. Gatekeeper also reports the version; it is
+// left out on purpose, or one object seen at two API versions would split into two rows.
+type ssrResource struct {
+	Group, Kind, Name  string
+	Deny, DryRun, Warn int
+	Violations         []ssrResourceViolation
+}
+
+func (r ssrResource) Total() int { return r.Deny + r.DryRun + r.Warn }
+
+// A namespace and everything broken inside it. Cluster-scoped objects land in the bucket with an
+// empty Name, rendered under a heading of its own.
+type ssrResourceNamespace struct {
+	Name               string
+	Anchor             string
+	Deny, DryRun, Warn int
+	Resources          []ssrResource
+}
+
+func (n ssrResourceNamespace) Total() int { return n.Deny + n.DryRun + n.Warn }
+
+// Title is what the card and the sidebar show. Cluster-scoped violations carry no namespace.
+func (n ssrResourceNamespace) Title() string {
+	if n.Name == "" {
+		return "cluster-scoped"
+	}
+	return n.Name
+}
+
+// One mode's tally. Mode is the CSS suffix, Label is what a reader sees, so neither the bar nor the
+// card head has to translate "dryrun" itself.
+type ssrModeCount struct {
+	Mode  string
+	Label string
+	Count int
+}
+
+// Segments feeds the sidebar severity bar and the card head: the three counts in a fixed order, so
+// the colours always mean the same thing and position carries part of the meaning on its own.
+func (n ssrResourceNamespace) Segments() []ssrModeCount {
+	return []ssrModeCount{
+		{"deny", "deny", n.Deny},
+		{"dryrun", "dry-run", n.DryRun},
+		{"warn", "warn", n.Warn},
+	}
+}
+
+// Summary spells the counts out for a tooltip, where colour cannot be relied on.
+func (n ssrResourceNamespace) Summary() string {
+	parts := make([]string, 0, 3)
+	for _, s := range n.Segments() {
+		if s.Count > 0 {
+			parts = append(parts, fmt.Sprintf("%d %s", s.Count, s.Label))
+		}
+	}
+	if len(parts) == 0 {
+		return "no violations"
+	}
+	return strings.Join(parts, " \u00b7 ")
+}
+
+// resourceModel pivots constraints into namespaces of objects. Sorting is deliberate and matches the
+// Constraints view's "worst first": within a namespace by blocking violations then by total, and the
+// namespaces the same way, with the cluster-scoped bucket last because it is a different kind of
+// thing rather than a worse one. Ties break on name so the page is stable between audits.
+func resourceModel(constraints []ssrConstraint) []ssrResourceNamespace {
+	type key struct{ ns, group, kind, name string }
+
+	byNS := map[string]*ssrResourceNamespace{}
+	byRes := map[key]*ssrResource{}
+
+	for _, c := range constraints {
+		for _, v := range c.Violations {
+			mode := enforcementMode(v.EnforcementAction)
+			ns, ok := byNS[v.Namespace]
+			if !ok {
+				// The card id and the sidebar link have to agree; cluster-scoped violations have no
+				// namespace to name the anchor after.
+				anchor := "cluster-scoped"
+				if v.Namespace != "" {
+					anchor = "ns-" + v.Namespace
+				}
+				ns = &ssrResourceNamespace{Name: v.Namespace, Anchor: anchor}
+				byNS[v.Namespace] = ns
+			}
+			k := key{v.Namespace, v.Group, v.Kind, v.Name}
+			res, ok := byRes[k]
+			if !ok {
+				res = &ssrResource{Group: v.Group, Kind: v.Kind, Name: v.Name}
+				byRes[k] = res
+			}
+			res.Violations = append(res.Violations, ssrResourceViolation{
+				Constraint: c.Name, Kind: c.Kind, Mode: mode, Message: v.Message,
+			})
+			switch mode {
+			case "deny":
+				res.Deny++
+				ns.Deny++
+			case "warn":
+				res.Warn++
+				ns.Warn++
+			default:
+				res.DryRun++
+				ns.DryRun++
+			}
+		}
+	}
+
+	// Fill each namespace once, in sorted order, now that the counts are final.
+	keys := make([]key, 0, len(byRes))
+	for k := range byRes {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		a, b := byRes[keys[i]], byRes[keys[j]]
+		if a.Deny != b.Deny {
+			return a.Deny > b.Deny
+		}
+		if a.Total() != b.Total() {
+			return a.Total() > b.Total()
+		}
+		if keys[i].name != keys[j].name {
+			return keys[i].name < keys[j].name
+		}
+		return keys[i].kind < keys[j].kind
+	})
+	for _, k := range keys {
+		ns := byNS[k.ns]
+		ns.Resources = append(ns.Resources, *byRes[k])
+	}
+
+	out := make([]ssrResourceNamespace, 0, len(byNS))
+	for _, ns := range byNS {
+		out = append(out, *ns)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		// The cluster-scoped bucket is not "worse", it is different: keep it at the bottom.
+		if (out[i].Name == "") != (out[j].Name == "") {
+			return out[j].Name == ""
+		}
+		if out[i].Deny != out[j].Deny {
+			return out[i].Deny > out[j].Deny
+		}
+		if out[i].Total() != out[j].Total() {
+			return out[i].Total() > out[j].Total()
+		}
+		return out[i].Name < out[j].Name
+	})
+	return out
+}
+
 // enforcementMode collapses spec.enforcementAction to the three modes the UI shows, matching the
 // React getEnforcementActionRenderData default (anything but dryrun/warn is "deny").
 func enforcementMode(action string) string {
@@ -853,6 +1027,8 @@ func ssrConstraintModel(o map[string]any) ssrConstraint {
 			}
 			viol := ssrConstraintViolation{}
 			viol.EnforcementAction, _, _ = unstructured.NestedString(vm, "enforcementAction")
+			viol.Group, _, _ = unstructured.NestedString(vm, "group")
+			viol.Version, _, _ = unstructured.NestedString(vm, "version")
 			viol.Kind, _, _ = unstructured.NestedString(vm, "kind")
 			viol.Namespace, _, _ = unstructured.NestedString(vm, "namespace")
 			viol.Name, _, _ = unstructured.NestedString(vm, "name")
@@ -945,6 +1121,50 @@ func listConstraints(ctx context.Context, clients *kubeClients) ([]map[string]in
 // getConstraints: discover the constraint Kinds under constraints.gatekeeper.sh/v1beta1, list each,
 // then sortConstraints (most violations first, then by name). The report link in the sidebar points
 // at the existing HTML report the JSON handler serves with ?report=html.
+// The Resources view: the audit, pivoted onto the objects that break policies. It reads the same
+// Constraints as the Constraints view and does the grouping in memory -- no extra API calls.
+func (s *server) getResources(c echo.Context) error {
+	layout := s.ssrLayoutData(c, "resources", "/resources", "Resources")
+
+	data := map[string]any{"Layout": layout}
+
+	clients, err := s.clientsFor(c)
+	if err != nil {
+		slog.Error("SSR resources: resolving context failed", "error", err)
+		setViewError(data, "GPM could not switch to the requested Kubernetes context. Make sure the kubeconfig defines it correctly.", err)
+		return s.ssr.render(c, "resources", data)
+	}
+
+	raw, err := listConstraints(c.Request().Context(), clients)
+	if err != nil {
+		slog.Error("SSR resources: reading constraints failed", "error", err)
+		setViewError(data, "GPM could not read the Constraints from the Kubernetes API. Make sure Gatekeeper is installed in the cluster.", err)
+		return s.ssr.render(c, "resources", data)
+	}
+
+	models := make([]ssrConstraint, 0, len(raw))
+	audited, limited := false, false
+	for _, o := range raw {
+		m := ssrConstraintModel(o)
+		if m.ViolationsKnown {
+			audited = true
+		}
+		if m.AuditLimited {
+			limited = true
+		}
+		models = append(models, m)
+	}
+
+	data["Namespaces"] = resourceModel(models)
+	// Two different empty states: nothing broken, or nothing audited yet. Saying "no violations"
+	// before the first audit would be a lie.
+	data["Audited"] = audited
+	// Gatekeeper caps the violations it reports per constraint, so the pivot can be short too.
+	data["AuditLimited"] = limited
+
+	return s.ssr.render(c, "resources", data)
+}
+
 func (s *server) getConstraints(c echo.Context) error {
 	layout := s.ssrLayoutData(c, "constraints", "/constraints", "Constraints")
 
@@ -1574,6 +1794,9 @@ func registerViews(e *echo.Echo, s *server) {
 
 	e.GET("/constraints", s.getConstraints)
 	e.GET("/constraints/:context", s.getConstraints)
+
+	e.GET("/resources", s.getResources)
+	e.GET("/resources/:context", s.getResources)
 
 	e.GET("/events", s.getEvents)
 	e.GET("/events/:context", s.getEvents)

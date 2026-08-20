@@ -298,6 +298,8 @@ code { font-family: var(--mono); font-size: 0.9em; }
   padding: 2px 10px;
 }
 .tag-key { font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+/* A pill inside a heading scales with it, the same rule the violation lines follow. */
+.view-head h1 .tag { font-size: 0.7em; }
 
 .field { margin-top: 14px; }
 .field-label { margin: 0 0 6px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-muted); }
@@ -513,10 +515,6 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 .badge-danger { color: var(--danger); background: var(--danger-bg); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
 .badge-success { color: var(--success); background: var(--success-bg); border-color: color-mix(in srgb, var(--success) 40%, transparent); }
 .badge-neutral { color: var(--text-muted); background: var(--surface-2); border-color: var(--border); }
-.badge-warn { color: var(--warn); background: var(--warn-bg); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
-/* The Constraint Template status pill sits at the right end of the card head. */
-.card-head-badge { margin-left: auto; text-transform: uppercase; letter-spacing: 0.03em; }
-
 /* Sidebar entries carry a badge + name + mode on one row, unlike the plain nav. */
 .cnav a { display: flex; align-items: center; gap: 8px; }
 /* break-word (not anywhere) so the name's full width still counts toward the sidebar's fit-content
@@ -544,8 +542,21 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
    dashboard's "Constraints by enforcement" donut -- indigo / amber / grey. The 1.x React badge used
    danger / warning / primary; that is the drift this replaces. */
 .tag-mode { font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
-.tag-deny { color: var(--indigo); border-color: color-mix(in srgb, var(--indigo) 40%, transparent); }
-.tag-warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+/* The mode pills carry their colour in the fill, not just the text. Amber cannot be a text colour
+   here -- #f59e0b on the pill measures 1.95:1 in the light theme, and the darkest amber that still
+   reads as amber only reaches 4.04:1, both short of AA at this size. Tinting the fill lets the pill
+   read amber at a glance while the label keeps the semantic --warn at 5.4:1. This is the same
+   treatment .badge-warn already uses. dryrun stays neutral: nothing is being enforced. */
+.tag-deny {
+  color: var(--indigo);
+  background: color-mix(in srgb, var(--indigo) 10%, transparent);
+  border-color: color-mix(in srgb, var(--indigo) 40%, transparent);
+}
+.tag-warn {
+  color: var(--warn);
+  background: var(--warn-bg);
+  border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+}
 .tag-dryrun { color: var(--text-muted); }
 
 .status-ok { margin: 4px 0 0; color: var(--success); font-weight: 600; }
@@ -553,30 +564,32 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 .status-bad { margin: 14px 0 0; color: var(--danger); font-weight: 600; }
 
 .pods { display: flex; flex-wrap: wrap; gap: 6px; }
-.pod-tag.pod-on { color: var(--success); border-color: color-mix(in srgb, var(--success) 40%, transparent); }
-.pod-tag.pod-off { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
-.pod-tag .muted { text-transform: uppercase; letter-spacing: 0.02em; }
-
 /* --- Violations table (Alpine) ------------------------------------------- */
 
 .vtable-wrap { margin-top: 6px; }
 
 .vtable-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
-.vsearch {
+/* The filter inputs on the Constraints and Resources views. A funnel, not a magnifier: these narrow
+   a list that is already on the page rather than searching for something absent. */
+.vfilter {
   font: inherit;
   color: var(--text);
-  background: var(--surface-2);
+  background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 6px 10px 6px 32px;
-  width: 240px;
+  padding: 7px 10px 7px 34px;
+  width: 340px;
   max-width: 100%;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M21 21l-4.2-4.2'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 5h16l-6 7v6l-4 2v-8z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: left 9px center;
+  background-position: left 10px center;
   background-size: 15px;
 }
-.vsearch:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* On a page it sits on the page background, so the card colour makes it stand out. Inside a card
+   that would be the same fill as its parent, so it steps down a shade and the border stops being
+   the only thing holding it together. */
+.card .vfilter { background-color: var(--surface-2); }
+.vfilter:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .vcount { white-space: nowrap; font-size: 12px; }
 
 .vtable { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 13px; }
@@ -613,6 +626,8 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 .vlink:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 /* A shared link lands here: flash the row so the reader sees which one was meant. */
 .viol-flash td { animation: violFlash 2.2s ease-out; }
+/* Same flash for a Resources row, which is a <details> rather than a table row. */
+.res-flash > summary { animation: violFlash 2.2s ease-out; }
 @keyframes violFlash {
   0%, 15% { background: color-mix(in srgb, var(--accent) 22%, transparent); }
   100% { background: transparent; }
@@ -785,6 +800,95 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
   font-size: 13px;
 }
 .footer strong { margin-right: 8px; }
+
+/* --- Resources view ------------------------------------------------------- */
+
+/* One namespace means no sidebar, so the content simply takes the width. */
+/* The Resources table is the Events grid with different columns: reuse it rather than keeping a
+   second copy of the same furniture in step. Only the tracks and the detail differ -- the detail
+   here is one line per violation, not the Events view's auto-fit field groups. */
+.nscard .events-head,
+.nscard .event-row > summary { grid-template-columns: 18px minmax(0, 1fr) 140px 74px 78px 74px 28px; }
+.nscard .event-detail { grid-template-columns: 1fr; gap: 0; padding: 2px 14px 12px 44px; }
+
+.rnote { font-size: 13px; }
+
+.vline > summary {
+  display: grid;
+  /* 320px fits the long constraint names the policy library ships (the longest in the SD rules
+     measures 305px) without cropping while there is room to spare. Fixed, not content-sized: each
+     line is its own grid, so a content track would leave the pills ragged down the list. */
+  grid-template-columns: 320px auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+  padding: 6px 0;
+  cursor: pointer;
+  list-style: none;
+  border-bottom: 1px solid var(--border);
+}
+.vline > summary::-webkit-details-marker { display: none; }
+/* A grid item stretches to its track, which would pad the pill out to the column width and leave
+   the word sitting left of a gap. Pills hug their text everywhere else in the UI. */
+.vline > summary { font-size: 13px; }
+/* A pill takes its scale from the text it annotates. In a card title 12px reads as the smaller
+   element; on a 13px line it is nearly the same size and a third taller, so it outweighs the words
+   it is meant to qualify. em, not px, so it stays proportional if the line size ever changes. */
+.vline > summary .tag-mode { justify-self: start; font-size: 0.78em; padding: 1px 8px; }
+.vline:last-child > summary { border-bottom: none; }
+.vl-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vl-msg { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vline[open] .vl-msg { display: none; }
+.vl-full { margin: 0; padding: 0 0 10px; font-size: 13px; max-width: 110ch; }
+
+/* Counts. Tabular figures so the columns line up; an absent mode renders as nothing rather than a
+   zero, which keeps the eye on the numbers that exist. */
+.cnum { text-align: right; font-variant-numeric: tabular-nums; }
+.n { font-weight: 700; font-size: 13px; }
+.n-deny { color: var(--indigo); }
+.n-dryrun { color: var(--text); }
+.n-warn { color: var(--warn); }
+.nscounts { display: flex; gap: 5px; align-items: baseline; font-size: 12px; }
+.nscounts .lbl {
+  color: var(--text-muted);
+  margin-right: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 11px;
+}
+
+/* Sidebar: name, the mix as a bar, the size as a number. The name is capped so one long namespace
+   cannot widen the fit-content column and squeeze the table. */
+.nsnav a { display: flex; align-items: center; gap: 10px; }
+.nsnav .side-name {
+  flex: 1;
+  min-width: 0;
+  max-width: 168px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sevbar {
+  display: flex;
+  width: 38px;
+  height: 5px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--border);
+  flex: none;
+}
+/* The bar is a chart, not text: use the chart fills, the same ones the dashboard donut uses. The
+   semantic --warn/--indigo are tuned for text contrast and go muddy as filled areas (see the token
+   block). The numbers beside the bar stay semantic, because they are text. */
+.seg-deny { background: var(--chart-indigo); }
+.seg-dryrun { background: var(--chart-grey); }
+.seg-warn { background: var(--chart-amber); }
+.sevtotal {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  min-width: 18px;
+  text-align: right;
+}
 
 /* --- Responsive ---------------------------------------------------------- */
 

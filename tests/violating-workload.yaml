@@ -1,0 +1,38 @@
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+#
+# A second namespace with violations, so the e2e cluster exercises what one namespace cannot: the
+# Resources sidebar, the order of the namespace cards, and the severity bars. The Deployment carries
+# a livenessProbe on purpose -- that constraint denies, and the object has to reach the cluster. It
+# still breaks the warn and dryrun constraints (no readinessProbe, no limits, runs as root).
+#
+# replicas: 0 keeps this deterministic. A running Pod would add a row whose name carries a generated
+# suffix, and the pixel baselines would then differ on every fresh cluster.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gpm-e2e-apps
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout-api
+  namespace: gpm-e2e-apps
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: checkout-api
+  template:
+    metadata:
+      labels:
+        app: checkout-api
+    spec:
+      containers:
+        - name: api
+          image: registry.sighup.io/fury/nginx:latest
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80

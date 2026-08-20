@@ -9,7 +9,9 @@ Releasing a new version of GPM is done automatically with our CI, to trigger the
 1. Be sure that the current state of the `main` branch is ready to be released.
 2. Be sure that you don't have any local modifications to the files.
 3. [Bump the chart version](#releasing-a-new-helm-chart-version).
-4. Create the release notes.
+4. Create the release notes. Write them in `docs/releases/unreleased.md` as the changes land, then
+   rename that file to `docs/releases/v<version>.md` before you tag. The release plugin resolves the
+   notes by tag name, with any `-rc.N` suffix removed, so a forgotten rename fails the publish step.
 5. Commit all changes.
 6. Run [`bumpversion`](https://github.com/c4urself/bump2version/#installation) to update the version strings automatically everywhere.
 

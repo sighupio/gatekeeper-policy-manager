@@ -1,0 +1,135 @@
+{{- /*
+Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+
+Resources view. The same audit data as the Constraints view, pivoted onto the objects that break
+policies: one card per namespace, one row per object, the violations behind the row. Rows carry a
+data-search attribute so the filter can hide them without re-rendering the page (resources-filter.js).
+*/ -}}
+{{- define "content" -}}
+<div class="view">
+  <div class="view-head">
+    <h1>Resources</h1>
+    <p class="muted">The objects in this cluster that break a policy, grouped by namespace. Gatekeeper
+      reports these from its audit cycle, so the list is only as fresh as the last audit.</p>
+  </div>
+
+  {{- if .Error }}
+  {{ template "viewerror" . }}
+
+  {{- else if not .Audited }}
+  <div class="empty">
+    <h2>Not audited yet</h2>
+    <p class="muted">Gatekeeper has not reported an audit for any Constraint. Try refreshing the page in a minute.</p>
+  </div>
+
+  {{- else if not .Namespaces }}
+  <div class="empty">
+    <h2>Nothing is breaking a policy</h2>
+    <p class="muted">The last Gatekeeper audit found no violations in this cluster.</p>
+  </div>
+
+  {{- else }}
+  {{- /* One namespace needs no navigator: the sidebar would be a single entry restating the card. */}}
+  {{- $many := gt (len .Namespaces) 1 }}
+  <div{{ if $many }} class="layout-sidebar"{{ end }} x-data="resourcesFilter()">
+    {{- if $many }}
+    <aside class="sidebar">
+      <p class="sidebar-title">Namespaces</p>
+      <nav class="sidebar-nav cnav nsnav">
+        {{- range .Namespaces }}
+        <a href="#{{ .Anchor }}" data-ns="{{ .Anchor }}">
+          <span class="side-name" title="{{ .Title }}">{{ .Title }}</span>
+          {{- /* Colour carries the mix, the number carries the size; the title spells both out for
+                 anyone the colours do not reach. */}}
+          <span class="sevbar" title="{{ .Summary }}">
+            {{- range .Segments }}{{ if .Count }}<span class="seg seg-{{ .Mode }}" style="flex:{{ .Count }}"></span>{{ end }}{{ end -}}
+          </span>
+          <span class="sevtotal">{{ .Total }}</span>
+        </a>
+        {{- end }}
+      </nav>
+    </aside>
+    {{- end }}
+
+    <div class="stack">
+      {{- /* The same control as the violations table: one filter style in the app, funnel and all. */}}
+      <div class="vtable-controls">
+        <input type="search" class="vfilter" placeholder="Filter by resource, kind or policy…"
+               aria-label="Filter resources" x-model="q" x-on:input="apply()">
+        <span class="vcount muted" x-show="q" x-text="`${total - hidden} of ${total} resources`"></span>
+      </div>
+
+      {{- if .AuditLimited }}
+      <div class="alert alert-warn">Not every violation is listed. Gatekeeper's audit limit caps how many
+        it reports per Constraint. See the <code>--constraint-violations-limit</code> audit flag.</div>
+      {{- end }}
+
+      {{- range .Namespaces }}
+      {{- $nsAnchor := .Anchor }}
+      <section class="card nscard" id="{{ .Anchor }}" data-ns="{{ .Anchor }}">
+        <div class="card-head">
+          <h2>{{ .Title }}</h2>
+          <span class="nscounts" title="{{ .Summary }}">
+            {{- range .Segments }}{{ if .Count }}<span class="n n-{{ .Mode }}">{{ .Count }}</span><span class="lbl">{{ .Label }}</span>{{ end }}{{ end -}}
+          </span>
+        </div>
+
+        <div class="table-scroll">
+          <div class="events">
+            <div class="events-head">
+              <span></span><span>Resource</span><span>Kind</span>
+              <span class="cnum">Deny</span><span class="cnum">Dry-run</span><span class="cnum">Warn</span>
+              <span></span>
+            </div>
+            {{- range .Resources }}
+            {{- /* Readable on purpose: someone pasting this link into a channel can see what it
+                   points at. The rows are server-rendered and already unique, so unlike the
+                   violations table this needs no hash. */}}
+            {{- $rowId := printf "%s--%s--%s" $nsAnchor .Kind .Name }}
+            <details class="event-row" id="{{ $rowId }}" data-search="{{ .Name }} {{ .Kind }} {{ .Group }}{{ range .Violations }} {{ .Constraint }} {{ .Kind }}{{ end }}">
+              <summary>
+                <span class="rname" title="{{ .Name }}"><strong>{{ .Name }}</strong></span>
+                <span class="muted" title="{{ .Kind }}{{ with .Group }}.{{ . }}{{ end }}">{{ .Kind }}</span>
+                <span class="cnum">{{ if .Deny }}<span class="n n-deny">{{ .Deny }}</span>{{ end }}</span>
+                <span class="cnum">{{ if .DryRun }}<span class="n n-dryrun">{{ .DryRun }}</span>{{ end }}</span>
+                <span class="cnum">{{ if .Warn }}<span class="n n-warn">{{ .Warn }}</span>{{ end }}</span>
+                <span class="vlink-cell">
+                  {{- /* click.stop.prevent: the button lives inside the summary, and without it the
+                         click would toggle the row open as well. */}}
+                  {{- template "copybutton" (printf "'%s'" $rowId) }}
+                </span>
+              </summary>
+              <div class="event-detail">
+                {{- range .Violations }}
+                {{- /* One line per violation: policy, action, message. The message is truncated to
+                       keep the row short, and the line opens to the full text. */}}
+                <details class="vline">
+                  <summary>
+                    <span class="vl-name"><a href="{{ browserPath `/constraints` }}#{{ constraintAnchor .Kind .Constraint }}" title="{{ .Constraint }}">{{ .Constraint }}</a></span>
+                    <span class="tag tag-mode tag-{{ .Mode }}">{{ .Mode }}</span>
+                    <span class="vl-msg muted" title="{{ .Message }}">{{ .Message }}</span>
+                  </summary>
+                  <p class="muted vl-full">{{ linkify .Message }}</p>
+                </details>
+                {{- end }}
+              </div>
+            </details>
+            {{- end }}
+          </div>
+        </div>
+
+        <p class="card-foot muted">{{ len .Resources }} resource{{ if ne (len .Resources) 1 }}s{{ end }} · {{ .Total }} violation{{ if ne .Total 1 }}s{{ end }}</p>
+      </section>
+      {{- end }}
+
+      <p class="muted rnote" x-show="!q">A namespace with no violations does not appear here: the audit
+        reports what fails, not what passes.</p>
+    </div>
+  </div>
+  <script src="{{ .Layout.AssetBase }}/share-link.js"></script>
+  <script src="{{ .Layout.AssetBase }}/resources-filter.js"></script>
+  {{- end }}
+</div>
+{{- end -}}

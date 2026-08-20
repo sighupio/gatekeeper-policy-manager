@@ -79,7 +79,7 @@ land on the right card.
 
             <div class="vtable-controls" x-show="showControls" x-cloak>
               <span class="muted vcount" x-text="countLabel"></span>
-              <input class="vsearch" type="text" placeholder="Filter violations..."
+              <input class="vfilter" type="text" placeholder="Filter violations..."
                      x-model="q" x-on:input="page = 0" aria-label="Filter violations">
             </div>
 
@@ -102,12 +102,7 @@ land on the right card.
                   <template x-for="row in paged" x-bind:key="row._id">
                     <tr x-bind:id="row._id">
                       <td class="vlink-cell">
-                        <button type="button" class="vlink" x-on:click="copyLink(row)"
-                                x-bind:title="copiedId === row._id ? 'Link copied' : 'Copy link to this violation'"
-                                aria-label="Copy link to this violation">
-                          <svg x-show="copiedId !== row._id" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 9.5a2.5 2.5 0 0 0 3.5 0l2-2a2.5 2.5 0 0 0-3.5-3.5l-1 1"/><path d="M9.5 6.5a2.5 2.5 0 0 0-3.5 0l-2 2a2.5 2.5 0 0 0 3.5 3.5l1-1"/></svg>
-                          <svg x-show="copiedId === row._id" x-cloak viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3.5 3.5L13 5"/></svg>
-                        </button>
+                        {{- template "copybutton" "row._id" }}
                       </td>
                       <td x-text="row.enforcementAction"></td>
                       <td x-text="row.namespace"></td>
@@ -190,5 +185,6 @@ land on the right card.
 {{- /* The per-constraint violations table component (x-data="violationsTable(id)"). External, so
        the page needs no script-src 'unsafe-inline'; loaded here in the body, before the deferred
        Alpine bundle, so the global function exists when Alpine initializes the components. */}}
-<script src="{{ .Layout.AssetBase }}/violations-table.js"></script>
+<script src="{{ .Layout.AssetBase }}/share-link.js"></script>
+  <script src="{{ .Layout.AssetBase }}/violations-table.js"></script>
 {{- end -}}

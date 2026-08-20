@@ -31,6 +31,27 @@ patches:
         path: /spec/template/spec/containers/0/args/-
         value: --emit-admission-events=true
 
+  # One constraint per enforcement mode, so the views actually render deny, dryrun and warn instead
+  # of a page of identical pills. `add`, not `replace`: the upstream rules may not set the field.
+  # unique-ingress-host deliberately stays deny -- the admission-event test needs the webhook to
+  # reject something, and liveness-probe stays deny so the report keeps a blocking violation.
+  - target:
+      group: constraints.gatekeeper.sh
+      kind: K8sReadinessProbe
+      name: readiness-probe
+    patch: |-
+      - op: add
+        path: /spec/enforcementAction
+        value: warn
+  - target:
+      group: constraints.gatekeeper.sh
+      kind: SecurityControls
+      name: enforce-deployment-and-pod-security-controls
+    patch: |-
+      - op: add
+        path: /spec/enforcementAction
+        value: dryrun
+
 images:
   - name: quay.io/sighup/gatekeeper-policy-manager
     newName: gatekeeper-policy-manager

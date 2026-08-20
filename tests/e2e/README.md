@@ -38,3 +38,35 @@ yarn gen:snapshot
 ```console
 yarn test
 ```
+
+## Before you regenerate a baseline
+
+Two things about the e2e cluster decide whether a new baseline is correct anywhere but your machine.
+
+### The Pod row's name is masked, and must stay masked
+
+`local-path-provisioner` is the one fixture object with a generated name, for example
+`local-path-provisioner-855c7b7774-nth6s`. The ReplicaSet hash and the suffix differ on every fresh
+cluster, so a baseline that contains that name passes for you and fails in CI. `resources.spec.ts`
+masks `[id*="--Pod--"] .rname`. It masks the name cell only, not the row: the row is a fixed-height
+grid, and everything else in the fixture is a named object that belongs in the pixels.
+
+### Do not delete the local-path-provisioner Pod
+
+That Pod runs only because it started **before** the constraints did. `liveness-probe` denies, and
+the Pod has no `livenessProbe`, so the replacement that the ReplicaSet creates after a delete is
+rejected by the webhook. The Pod does not come back on its own. The namespace then shows one row
+instead of two, and a baseline made in that state is wrong for CI, where a fresh cluster always has
+the Pod.
+
+To bring it back, move the constraint out of the way for one rollout:
+
+```console
+kubectl patch k8slivenessprobe liveness-probe --type merge -p '{"spec":{"enforcementAction":"dryrun"}}'
+kubectl -n local-path-storage rollout restart deploy/local-path-provisioner
+kubectl -n local-path-storage rollout status deploy/local-path-provisioner
+kubectl patch k8slivenessprobe liveness-probe --type merge -p '{"spec":{"enforcementAction":"deny"}}'
+```
+
+The Pod returns with a new name. That is expected, and the mask above covers it.
+

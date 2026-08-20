@@ -10,16 +10,6 @@
 // A stable, content-derived id for one violation, so a shared deep link keeps pointing at the same
 // violation across audits even as others come and go (issue #1324). Two identical violations hash
 // the same, which is fine -- they are interchangeable. djb2 over the fields, base36.
-// decodeURIComponent throws on a malformed percent sequence; a bad URL fragment must degrade to
-// "no match", never throw out of the caller.
-function decodeHash(s) {
-  try {
-    return decodeURIComponent(s);
-  } catch (e) {
-    return s;
-  }
-}
-
 function violationId(dataId, r) {
   const s = `${r.enforcementAction}|${r.kind}|${r.namespace}|${r.name}|${r.message}`;
   let h = 5381;
@@ -77,15 +67,9 @@ function violationsTable(dataId) {
       } catch (e) {
         this.rows = [];
       }
-      // Deep link: if the URL hash names one of our violations, reveal it. Runs on load and on
-      // later hashchange (e.g. someone pastes a link while the page is open). decodeURIComponent
-      // throws on a malformed fragment (e.g. "#%"), so guard it -- a bad hash must not kill init.
-      const reveal = () => {
-        const id = decodeHash(location.hash.slice(1));
+      onShareLink((id) => {
         if (id && this.rows.some((r) => r._id === id)) this.focusViolation(id);
-      };
-      reveal();
-      window.addEventListener("hashchange", reveal);
+      });
     },
     // Clears any filter/sort so the row sits at its natural index, jumps to its page, expands the
     // collapsed Violations section, then scrolls to it and flashes it.
@@ -104,22 +88,6 @@ function violationsTable(dataId) {
         void el.offsetWidth; // reflow so the animation restarts if the row was already flashed
         el.classList.add("viol-flash");
       });
-    },
-    copyLink(row) {
-      const url = location.origin + location.pathname + location.search + "#" + row._id;
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(url).then(
-          () => {
-            this.copiedId = row._id;
-            setTimeout(() => {
-              if (this.copiedId === row._id) this.copiedId = "";
-            }, 1500);
-          },
-          () => (location.hash = row._id),
-        );
-      } else {
-        location.hash = row._id; // insecure context: no clipboard, put it in the address bar instead
-      }
     },
     // ponytail: re-filters/re-sorts on every read; fine at Gatekeeper's audit limit (~20 rows).
     // If someone raises --constraint-violations-limit into the thousands, memoize on q/sort.

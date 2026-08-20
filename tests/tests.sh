@@ -25,6 +25,9 @@ load ./helper
     info
     deploy(){
         kustomize build --load-restrictor LoadRestrictionsNone tests/ | kubectl apply -f -
+        # Applied outside the kustomization on purpose: it sets `namespace: gatekeeper-system`, and
+        # that transformer renames a Namespace object rather than leaving it alone.
+        kubectl apply -f tests/violating-workload.yaml
     }
     loop_it deploy 10 5
     status=${loop_it_result}
