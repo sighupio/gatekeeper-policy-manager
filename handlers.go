@@ -11,9 +11,9 @@ import (
 	"net/http"
 	"slices"
 	"sort"
+	"log/slog"
 
 	"github.com/labstack/echo/v4"
-	"golang.org/x/exp/slog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"

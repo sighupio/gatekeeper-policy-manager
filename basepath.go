@@ -7,9 +7,9 @@ package main
 import (
 	"path"
 	"strings"
+	"log/slog"
 
 	"github.com/spf13/viper"
-	"golang.org/x/exp/slog"
 )
 
 // The subpath GPM is served from, as the browser sees it: "" for the domain root, or something

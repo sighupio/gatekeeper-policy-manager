@@ -19,13 +19,13 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"log/slog"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/spf13/viper"
-	"golang.org/x/exp/slog"
 	"golang.org/x/oauth2"
 )
 

@@ -25,6 +25,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"log/slog"
 
 	"github.com/alecthomas/chroma/v2"
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
@@ -38,7 +39,6 @@ import (
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
-	"golang.org/x/exp/slog"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 )
