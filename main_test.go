@@ -6,12 +6,12 @@ package main
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
-	"log/slog"
 
 	"github.com/labstack/echo/v4"
 	"github.com/spf13/viper"

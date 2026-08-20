@@ -8,10 +8,10 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"slices"
 	"sort"
-	"log/slog"
 
 	"github.com/labstack/echo/v4"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

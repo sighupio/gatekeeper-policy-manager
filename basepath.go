@@ -5,9 +5,9 @@
 package main
 
 import (
+	"log/slog"
 	"path"
 	"strings"
-	"log/slog"
 
 	"github.com/spf13/viper"
 )
