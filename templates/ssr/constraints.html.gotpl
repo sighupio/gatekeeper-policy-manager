@@ -79,7 +79,7 @@ land on the right card.
 
             <div class="vtable-controls" x-show="showControls" x-cloak>
               <span class="muted vcount" x-text="countLabel"></span>
-              <input class="vsearch" type="text" placeholder="Filter violations..."
+              <input class="vfilter" type="text" placeholder="Filter violations..."
                      x-model="q" x-on:input="page = 0" aria-label="Filter violations">
             </div>
 

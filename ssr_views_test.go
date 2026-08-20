@@ -809,3 +809,144 @@ func TestTemplateCardRendersItsDescriptionAsMarkdown(t *testing.T) {
 		t.Errorf("the template card printed the markdown instead of rendering it:\n%s", buf.String())
 	}
 }
+
+// --- Resources view -------------------------------------------------------------------------
+
+// renderSSR renders one page the way the server does, and returns the HTML.
+func renderSSR(t *testing.T, page string, data map[string]any) string {
+	t.Helper()
+	if _, ok := data["Layout"]; !ok {
+		data["Layout"] = minimalLayout()
+	}
+	var buf bytes.Buffer
+	if err := newSSRRenderer().pages[page].ExecuteTemplate(&buf, "layout", data); err != nil {
+		t.Fatalf("render %s: %v", page, err)
+	}
+	return buf.String()
+}
+
+// viol builds one violation as ssrConstraintModel would have parsed it.
+func viol(group, kind, ns, name, action string) ssrConstraintViolation {
+	return ssrConstraintViolation{
+		Group: group, Version: "v1", Kind: kind, Namespace: ns, Name: name,
+		EnforcementAction: action, Message: kind + "/" + name + " breaks " + action,
+	}
+}
+
+func TestResourceModelPivotsViolationsOntoObjects(t *testing.T) {
+	constraints := []ssrConstraint{
+		{Name: "liveness-probe", Kind: "K8sLivenessProbe", Violations: []ssrConstraintViolation{
+			viol("apps", "Deployment", "apps-prod", "checkout-api", "deny"),
+			viol("apps", "Deployment", "apps-prod", "legacy-monolith", "deny"),
+			viol("", "Pod", "team-payments", "ledger-0", "warn"),
+		}},
+		{Name: "pod-must-have-owner", Kind: "K8sRequiredLabels", Violations: []ssrConstraintViolation{
+			// the same object as above, a second policy: it must land on one row, not two
+			viol("apps", "Deployment", "apps-prod", "checkout-api", "dryrun"),
+			viol("", "Namespace", "", "apps-legacy", "dryrun"),
+		}},
+	}
+
+	got := resourceModel(constraints)
+
+	if len(got) != 3 {
+		t.Fatalf("expected three namespaces (apps-prod, team-payments, cluster-scoped), got %d", len(got))
+	}
+
+	// apps-prod has the most blocking violations, so it leads; the cluster-scoped bucket is last
+	// however bad it is, because it is a different kind of thing.
+	if order := []string{got[0].Title(), got[1].Title(), got[2].Title()}; order[0] != "apps-prod" ||
+		order[2] != "cluster-scoped" {
+		t.Errorf("namespaces out of order: %v", order)
+	}
+
+	prod := got[0]
+	if prod.Deny != 2 || prod.DryRun != 1 || prod.Warn != 0 || prod.Total() != 3 {
+		t.Errorf("apps-prod counts wrong: deny=%d dryrun=%d warn=%d total=%d",
+			prod.Deny, prod.DryRun, prod.Warn, prod.Total())
+	}
+	if len(prod.Resources) != 2 {
+		t.Fatalf("checkout-api broke two policies but should be one row; got %d rows", len(prod.Resources))
+	}
+	// Within a namespace the worst object comes first: checkout-api has a deny and a dryrun, so it
+	// outranks legacy-monolith's single deny on total.
+	if first := prod.Resources[0]; first.Name != "checkout-api" || first.Deny != 1 || first.DryRun != 1 ||
+		first.Total() != 2 || len(first.Violations) != 2 {
+		t.Errorf("first row wrong: %+v", first)
+	}
+	if got[2].Anchor != "cluster-scoped" || got[2].Name != "" {
+		t.Errorf("cluster-scoped bucket wrong: name=%q anchor=%q", got[2].Name, got[2].Anchor)
+	}
+	if prod.Anchor != "ns-apps-prod" {
+		t.Errorf("namespace anchor should be prefixed, got %q", prod.Anchor)
+	}
+}
+
+func TestResourceModelKeepsSameNamedKindsFromDifferentGroupsApart(t *testing.T) {
+	// The reason ssrConstraintViolation captures the group at all: two CRDs can share a Kind.
+	constraints := []ssrConstraint{{Name: "c", Kind: "K", Violations: []ssrConstraintViolation{
+		viol("acme.example.com", "Widget", "shop", "thing", "deny"),
+		viol("other.example.com", "Widget", "shop", "thing", "warn"),
+	}}}
+
+	rows := resourceModel(constraints)[0].Resources
+	if len(rows) != 2 {
+		t.Fatalf("same Kind and name from different groups must stay apart; got %d row(s)", len(rows))
+	}
+	seen := map[string]bool{rows[0].Group: true, rows[1].Group: true}
+	if !seen["acme.example.com"] || !seen["other.example.com"] {
+		t.Errorf("groups lost: %q and %q", rows[0].Group, rows[1].Group)
+	}
+}
+
+func TestResourceNamespaceSummaryAndSegments(t *testing.T) {
+	ns := ssrResourceNamespace{Deny: 2, DryRun: 0, Warn: 3}
+	if got, want := ns.Summary(), "2 deny · 3 warn"; got != want {
+		t.Errorf("summary = %q, want %q (absent modes are left out)", got, want)
+	}
+	if got := ns.Segments(); len(got) != 3 || got[0].Mode != "deny" || got[1].Mode != "dryrun" || got[2].Mode != "warn" {
+		t.Errorf("segments must stay in a fixed order so the colours mean one thing: %+v", got)
+	}
+	if empty := (ssrResourceNamespace{}).Summary(); empty != "no violations" {
+		t.Errorf("empty summary = %q", empty)
+	}
+}
+
+func TestResourcesViewRendersRowsAndCounts(t *testing.T) {
+	page := renderSSR(t, "resources", map[string]any{
+		"Layout":  minimalLayout(),
+		"Audited": true,
+		"Namespaces": resourceModel([]ssrConstraint{
+			{Name: "liveness-probe", Kind: "K8sLivenessProbe", Violations: []ssrConstraintViolation{
+				viol("apps", "Deployment", "apps-prod", "checkout-api", "deny"),
+			}},
+		}),
+	})
+
+	for _, want := range []string{
+		`id="ns-apps-prod"`, // the card anchor the sidebar links to
+		`data-search="checkout-api Deployment apps liveness-probe K8sLivenessProbe"`, // the filter reads this
+		`class="n n-deny">1<`, // the count column
+		`href="/constraints#K8sLivenessProbe--liveness-probe"`, // back to the policy
+		"resources-filter.js",
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("rendered page is missing %q", want)
+		}
+	}
+	// One namespace needs no navigator.
+	if strings.Contains(page, "layout-sidebar") {
+		t.Error("a single namespace should render without the sidebar")
+	}
+}
+
+func TestResourcesViewDistinguishesEmptyFromUnaudited(t *testing.T) {
+	unaudited := renderSSR(t, "resources", map[string]any{"Audited": false})
+	if !strings.Contains(unaudited, "Not audited yet") {
+		t.Error("before the first audit the page must not claim there are no violations")
+	}
+	clean := renderSSR(t, "resources", map[string]any{"Audited": true})
+	if !strings.Contains(clean, "Nothing is breaking a policy") {
+		t.Error("an audited cluster with no violations should say so")
+	}
+}
