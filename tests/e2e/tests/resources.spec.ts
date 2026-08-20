@@ -20,7 +20,10 @@ test("page resources snapshot", async ({ page }) => {
   await expect(page).toHaveScreenshot({
     maxDiffPixels: 100,
     fullPage: true,
-    mask: [page.locator(".dynamic")],
+    // The Pod row is the local-path-provisioner Pod, whose name carries a ReplicaSet hash and a
+    // generated suffix -- different on every fresh cluster, so its name cell cannot be compared.
+    // The fixture's own objects are named, and stay in the pixels.
+    mask: [page.locator(".dynamic"), page.locator('[id*="--Pod--"] .rname')],
   });
 });
 
@@ -57,8 +60,16 @@ test("the view pivots the audit onto resources, and the filter narrows it", asyn
     .getAttribute("href");
   expect(href).toMatch(/\/constraints#.+--.+/);
 
-  // One namespace, so the sidebar is suppressed rather than rendered with a single entry.
-  await expect(page.locator("aside.sidebar")).toHaveCount(0);
+  // Two namespaces in the fixture, so the sidebar is rendered: one entry per namespace, each with a
+  // severity bar and a total. The suppressed single-namespace case is covered by the Go tests.
+  const entries = page.locator(".nsnav a");
+  await expect(entries).toHaveCount(await page.locator(".nscard").count());
+  await expect(entries.first().locator(".sevbar")).toBeVisible();
+  // Worst first: the namespace with blocking violations leads.
+  const denies = await page
+    .locator(".nscard .card-head .n-deny")
+    .allTextContents();
+  expect(Number(denies[0] ?? 0)).toBeGreaterThan(0);
 
   // The filter hides non-matching rows and takes their namespace card with them.
   const name = (await first.locator(".rname").textContent())?.trim() ?? "";

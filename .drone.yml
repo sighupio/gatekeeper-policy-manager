@@ -230,10 +230,12 @@ depends_on:
 
 trigger:
   ref:
+    # Every branch, like the build pipeline it depends on: the pixel baselines are the only check
+    # that catches a UI regression, and running them just on main meant a pull request went green
+    # without them and broke main after the merge.
     include:
       - refs/tags/**
-      - refs/heads/main
-      - refs/heads/dependabot/**
+      - refs/heads/**
     exclude:
       - refs/tags/gatekeeper-policy-manager-*
 
