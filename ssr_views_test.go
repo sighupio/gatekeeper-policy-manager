@@ -91,7 +91,7 @@ func TestSSRNewViewsRenderWithoutError(t *testing.T) {
 		// Sidebar scroll-spy is wired via the shared layout script on every page.
 		"sidebar-spy.js",
 		// Per-violation shareable links (issue #1324): each row has a stable id and a copy control.
-		"copyLink(row)", `class="vlink"`, `x-bind:id="row._id"`,
+		"copyShareLink($data, row._id)", `class="vlink"`, `x-bind:id="row._id"`,
 	} {
 		if !strings.Contains(buf.String(), want) {
 			t.Errorf("constraints output missing %q", want)
@@ -929,6 +929,11 @@ func TestResourcesViewRendersRowsAndCounts(t *testing.T) {
 		`class="n n-deny">1<`, // the count column
 		`href="/constraints#K8sLivenessProbe--liveness-probe"`, // back to the policy
 		"resources-filter.js",
+		// the share link: a readable row id, and the copy button the violations table established
+		`id="ns-apps-prod--Deployment--checkout-api"`,
+		`copyShareLink($data, &#39;ns-apps-prod--Deployment--checkout-api&#39;)`,
+		"share-link.js",
+		`class="vlink"`,
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("rendered page is missing %q", want)

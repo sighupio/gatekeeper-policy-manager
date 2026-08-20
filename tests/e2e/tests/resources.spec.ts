@@ -6,6 +6,12 @@
 
 import { test, expect } from "@playwright/test";
 
+declare global {
+  interface Window {
+    __copied: string[];
+  }
+}
+
 // The Resources view is the same audit data as Constraints, pivoted onto the objects that break
 // policies. Like the constraints page it is server-rendered from an audit that has already settled
 // by this stage of the pipeline, so no reload loop is needed here either.
@@ -63,4 +69,47 @@ test("the view pivots the audit onto resources, and the filter narrows it", asyn
   await page.fill(".vfilter", name);
   await expect(rows.first()).toBeVisible();
   await expect(page.locator(".nscard").first()).toBeVisible();
+});
+
+// The share link. Not a snapshot: the interesting parts are the clipboard call, the fragment and
+// the row state it produces. The clipboard is stubbed rather than read back, because the suite
+// reaches GPM over host.docker.internal -- not a secure context, so navigator.clipboard does not
+// exist there at all. That is also true of any GPM served over plain HTTP on a hostname, which is
+// why copyLink falls back to putting the link in the address bar.
+test("a resource row can be linked to, and the link reopens it", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    window.__copied = [];
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: (t: string) => {
+          window.__copied.push(t);
+          return Promise.resolve();
+        },
+      },
+    });
+  });
+  await page.goto("resources/");
+
+  const row = page.locator(".nscard .event-row").first();
+  const id = await row.getAttribute("id");
+  // Readable by design, so a link pasted into a channel says what it points at.
+  expect(id).toMatch(/^(ns-.+|cluster-scoped)--[A-Za-z]+--.+$/);
+
+  await row.locator(".vlink").click();
+  const copied = await page.evaluate(() => window.__copied);
+  expect(copied).toEqual([`${page.url().split("#")[0]}#${id}`]);
+  // The button reports success in place, and must not have toggled the row it sits in.
+  await expect(row.locator(".copy-tick")).toBeVisible();
+  await expect(row).not.toHaveAttribute("open", "");
+
+  // Arriving on the link opens that row, even when a filter is hiding it.
+  await page.fill(".vfilter", "definitely-not-a-resource-name");
+  await expect(row).toBeHidden();
+  await page.goto(`resources/#${id}`);
+  const linked = page.locator(`[id="${id}"]`);
+  await expect(linked).toHaveAttribute("open", "");
+  await expect(linked).toBeVisible();
 });

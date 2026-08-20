@@ -67,6 +67,7 @@ data-search attribute so the filter can hide them without re-rendering the page 
       {{- end }}
 
       {{- range .Namespaces }}
+      {{- $nsAnchor := .Anchor }}
       <section class="card nscard" id="{{ .Anchor }}" data-ns="{{ .Anchor }}">
         <div class="card-head">
           <h2>{{ .Title }}</h2>
@@ -80,15 +81,25 @@ data-search attribute so the filter can hide them without re-rendering the page 
             <div class="events-head">
               <span></span><span>Resource</span><span>Kind</span>
               <span class="cnum">Deny</span><span class="cnum">Dry-run</span><span class="cnum">Warn</span>
+              <span></span>
             </div>
             {{- range .Resources }}
-            <details class="event-row" data-search="{{ .Name }} {{ .Kind }} {{ .Group }}{{ range .Violations }} {{ .Constraint }} {{ .Kind }}{{ end }}">
+            {{- /* Readable on purpose: someone pasting this link into a channel can see what it
+                   points at. The rows are server-rendered and already unique, so unlike the
+                   violations table this needs no hash. */}}
+            {{- $rowId := printf "%s--%s--%s" $nsAnchor .Kind .Name }}
+            <details class="event-row" id="{{ $rowId }}" data-search="{{ .Name }} {{ .Kind }} {{ .Group }}{{ range .Violations }} {{ .Constraint }} {{ .Kind }}{{ end }}">
               <summary>
                 <span class="rname" title="{{ .Name }}"><strong>{{ .Name }}</strong></span>
                 <span class="muted" title="{{ .Kind }}{{ with .Group }}.{{ . }}{{ end }}">{{ .Kind }}</span>
                 <span class="cnum">{{ if .Deny }}<span class="n n-deny">{{ .Deny }}</span>{{ end }}</span>
                 <span class="cnum">{{ if .DryRun }}<span class="n n-dryrun">{{ .DryRun }}</span>{{ end }}</span>
                 <span class="cnum">{{ if .Warn }}<span class="n n-warn">{{ .Warn }}</span>{{ end }}</span>
+                <span class="vlink-cell">
+                  {{- /* click.stop.prevent: the button lives inside the summary, and without it the
+                         click would toggle the row open as well. */}}
+                  {{- template "copybutton" (printf "'%s'" $rowId) }}
+                </span>
               </summary>
               <div class="event-detail">
                 {{- range .Violations }}
@@ -117,6 +128,7 @@ data-search attribute so the filter can hide them without re-rendering the page 
         reports what fails, not what passes.</p>
     </div>
   </div>
+  <script src="{{ .Layout.AssetBase }}/share-link.js"></script>
   <script src="{{ .Layout.AssetBase }}/resources-filter.js"></script>
   {{- end }}
 </div>

@@ -626,6 +626,8 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 .vlink:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 /* A shared link lands here: flash the row so the reader sees which one was meant. */
 .viol-flash td { animation: violFlash 2.2s ease-out; }
+/* Same flash for a Resources row, which is a <details> rather than a table row. */
+.res-flash > summary { animation: violFlash 2.2s ease-out; }
 @keyframes violFlash {
   0%, 15% { background: color-mix(in srgb, var(--accent) 22%, transparent); }
   100% { background: transparent; }
@@ -806,7 +808,7 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
    second copy of the same furniture in step. Only the tracks and the detail differ -- the detail
    here is one line per violation, not the Events view's auto-fit field groups. */
 .nscard .events-head,
-.nscard .event-row > summary { grid-template-columns: 18px minmax(0, 1fr) 140px 74px 78px 74px; }
+.nscard .event-row > summary { grid-template-columns: 18px minmax(0, 1fr) 140px 74px 78px 74px 28px; }
 .nscard .event-detail { grid-template-columns: 1fr; gap: 0; padding: 2px 14px 12px 44px; }
 
 .rnote { font-size: 13px; }

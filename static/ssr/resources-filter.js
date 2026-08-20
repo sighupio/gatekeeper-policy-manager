@@ -10,6 +10,27 @@ function resourcesFilter() {
     q: "",
     hidden: 0,
     total: 0,
+    copiedId: "",
+    init() {
+      onShareLink((id) => {
+        const row = id && document.getElementById(id);
+        // Only a row: the namespace cards carry ids too, and the sidebar links to them. Revealing
+        // one of those would clear the filter for what is really just in-page navigation.
+        if (row && row.classList.contains("event-row")) this.focusRow(row);
+      });
+    },
+    // Clears the filter first: a link can arrive while a filter is hiding the row it names.
+    focusRow(row) {
+      this.q = "";
+      this.apply();
+      row.open = true;
+      this.$nextTick(() => {
+        row.scrollIntoView({ block: "center", behavior: "smooth" });
+        row.classList.remove("res-flash");
+        void row.offsetWidth; // reflow, so the flash restarts on a repeat visit to the same link
+        row.classList.add("res-flash");
+      });
+    },
     apply() {
       const needle = this.q.trim().toLowerCase();
       this.total = 0;
