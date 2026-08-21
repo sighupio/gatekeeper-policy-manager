@@ -28,8 +28,18 @@ load ./helper
         # Applied outside the kustomization on purpose: it sets `namespace: gatekeeper-system`, and
         # that transformer renames a Namespace object rather than leaving it alone.
         kubectl apply -f tests/violating-workload.yaml
+        # The apply can report success and leave no Constraints behind: Gatekeeper creates the CRD
+        # behind each ConstraintTemplate asynchronously, and recreating one drops the objects that
+        # CRD held. Assert here, so a deploy that produced nothing retries and then says so, instead
+        # of passing and failing three tests later as a timeout with no obvious cause.
+        local constraints
+        constraints=$(kubectl get constraints -o name 2>/dev/null | wc -l | tr -d ' ')
+        echo "deployed ${constraints} constraints"
+        [ "${constraints:-0}" -gt 0 ]
     }
-    loop_it deploy 10 5
+    # A longer budget than the apply alone needed: this now waits for the Constraints to survive,
+    # not just for the CRDs to accept them.
+    loop_it deploy 20 5
     status=${loop_it_result}
     [ "$status" -eq 0 ]
 }
