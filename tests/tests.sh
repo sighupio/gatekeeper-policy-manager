@@ -151,13 +151,18 @@ ING
 @test "[AUDIT] check violations are present" {
   info
   wait_violations(){
-    kubectl get k8slivenessprobe.constraints.gatekeeper.sh liveness-probe -o go-template="{{.status.totalViolations}}"
-    echo "number of violations for liveness-probe constraint is: ${output}"
-    echo "command status is: ${status}"
-    [[ "$output" -eq 2 ]]
-    [[ "$status" -eq 0 ]]
+    # Read the count into a variable of our own. loop_it invokes this through bats' `run`, so $output
+    # and $status inside here belong to the *previous* attempt, and are empty on the first one. The
+    # old last line, `[[ "$status" -eq 0 ]]`, then compared an empty string to 0 -- true in [[ ]]
+    # arithmetic -- so this test passed against a cluster that had no constraints at all.
+    local violations
+    violations=$(kubectl get k8slivenessprobe.constraints.gatekeeper.sh liveness-probe \
+      -o jsonpath='{.status.totalViolations}' 2>/dev/null)
+    echo "liveness-probe reports ${violations:-no} violations"
+    [ "${violations:-0}" -eq 2 ]
   }
   loop_it wait_violations 10 5
+  [ "$loop_it_result" -eq 0 ]
 }
 
 # Test chart installation, `helm template` is not enough to test the chart actually works.
