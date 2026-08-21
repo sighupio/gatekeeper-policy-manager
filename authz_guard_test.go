@@ -399,6 +399,34 @@ func TestResolveAccessKeepsTheWorkerBound(t *testing.T) {
 	}
 }
 
+// The page must not ship what the scoping removed. The model test above proves scopeToReader drops
+// the rows; this one proves the rendered HTML carries no trace of them, and that the page has no
+// data island -- the natural way to reintroduce the whole set is to add one for a client-side
+// filter and fill it from the unscoped model.
+func TestTheResourcesPageShipsNothingItFilteredOut(t *testing.T) {
+	s, clients := scopedServer(t, func(namespace, _ string) bool { return namespace == "mine" })
+	kept, unverified := s.scopeToReader(requestWithIdentity(t), s.checkerFor(clients), twoNamespaces())
+
+	page := renderSSR(t, "resources", map[string]any{
+		"Audited": true, "Namespaces": kept, "Unverified": unverified,
+		"Layout": ssrLayout{Title: "t", Version: appVersion, AssetBase: "/static", Scoped: true},
+	})
+
+	if !strings.Contains(page, "checkout-api") {
+		t.Fatal("the permitted object is missing from the page, so this test proves nothing")
+	}
+	// Everything in the "theirs" namespace was denied: not the objects, not the namespace itself,
+	// and not a count that adds up to them.
+	for _, hidden := range []string{"ledger", "theirs"} {
+		if strings.Contains(page, hidden) {
+			t.Errorf("the page ships %q, which this reader may not see", hidden)
+		}
+	}
+	if strings.Contains(page, "application/json") {
+		t.Error("the Resources page now ships a data island: decide what belongs in it before adding one")
+	}
+}
+
 // The reader closed the tab. Whatever was still queued stays unanswered, and an unanswered question
 // hides its row rather than showing it.
 func TestAGoneReaderLeavesTheRestUnanswered(t *testing.T) {
