@@ -1,4 +1,4 @@
-# Gatekeeper Policy Manager Helm Chart - v0.18.0
+# Gatekeeper Policy Manager Helm Chart - v0.19.0
 
 A Helm chart for Gatekeeper Policy Manager, a simple to use, read-only web UI for viewing OPA Gatekeeper policies' status in a Kubernetes Cluster.
 
@@ -11,7 +11,7 @@ The following table lists the configurable parameters of the Gatekeeper Policy M
 | `replicaCount` |  | 1 |
 | `image.repository` |  | "quay.io/sighup/gatekeeper-policy-manager" |
 | `image.pullPolicy` |  | "IfNotPresent" |
-| `image.tag` |  | "v2.0.0-rc.0" |
+| `image.tag` |  | "v2.0.0" |
 | `command` |  | null |
 | `args` |  | null |
 | `imagePullSecrets` |  | [] |
@@ -50,11 +50,11 @@ The following table lists the configurable parameters of the Gatekeeper Policy M
 | `config.eventsNamespace` |  | null |
 | `config.secretKey` |  | null |
 | `config.secretRef` |  | null |
-| `config.rbacFiltering.enabled` | Scope every view to what the logged-in user's Kubernetes account can read. Needs OIDC and a single cluster; GPM refuses to start otherwise. Adds `create subjectaccessreviews` to GPM's ClusterRole, or to one of its own when `clusterRole.create` is false. | false |
-| `config.rbacFiltering.usernameClaim` | ID-token claim holding the username the API server knows, when it differs from the one GPM displays. | null |
-| `config.rbacFiltering.usernamePrefix` | Prefix the API server's `--oidc-username-prefix` adds, for example `oidc:`. | null |
-| `config.rbacFiltering.groupsClaim` | ID-token claim listing the user's groups. | null |
-| `config.rbacFiltering.groupsPrefix` | Prefix the API server's `--oidc-groups-prefix` adds. | null |
+| `config.rbacFiltering.enabled` |  | false |
+| `config.rbacFiltering.usernameClaim` |  | null |
+| `config.rbacFiltering.usernamePrefix` |  | null |
+| `config.rbacFiltering.groupsClaim` |  | null |
+| `config.rbacFiltering.groupsPrefix` |  | null |
 | `config.multiCluster.enabled` |  | false |
 | `config.multiCluster.kubeconfig` |  | "apiVersion: v1\nclusters:\n- cluster:\n    certificate-authority-data: REDACTED\n    server: https://127.0.0.1:54216\n  name: kind-kind\ncontexts:\n- context:\n    cluster: kind-kind\n    user: kind-kind\n  name: kind-kind\ncurrent-context: kind-kind\nkind: Config\npreferences: {}\nusers:\n- name: kind-kind\n  user:\n    client-certificate-data: REDACTED\n    client-key-data: REDACTED\n" |
 | `config.oidc.enabled` |  | false |
@@ -62,7 +62,7 @@ The following table lists the configurable parameters of the Gatekeeper Policy M
 | `config.oidc.redirectDomain` |  | null |
 | `config.oidc.clientID` |  | null |
 | `config.oidc.clientSecret` |  | null |
-| `config.oidc.scopes` | Extra scopes for the login request, separated by spaces or commas. openid, profile and email are always requested. | null |
+| `config.oidc.scopes` |  | null |
 | `config.oidc.authorizationEndpoint` |  | null |
 | `config.oidc.jwksURI` |  | null |
 | `config.oidc.tokenEndpoint` |  | null |
