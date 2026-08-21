@@ -129,6 +129,24 @@ func TestEveryRegisteredRouteResolvesToAView(t *testing.T) {
 	}
 }
 
+// The violations report is not a route of its own: it is /constraints with a query parameter. The
+// guard reads the path, so it covers the report as well -- and it must keep doing so, or a reader
+// refused the Constraints view could download the same violations from the same handler.
+func TestTheViolationsReportIsBehindTheSameGuard(t *testing.T) {
+	refused := guardedServer(t, nothing)
+	for _, p := range []string{"/constraints", "/constraints?report=html", "/constraints/cluster-0?report=html"} {
+		if rec := get(refused, p); rec.Code != http.StatusForbidden {
+			t.Errorf("%s: want 403 for a reader who may not list constraints, got %d", p, rec.Code)
+		}
+	}
+
+	// And it stays reachable for a reader who may.
+	allowed := guardedServer(t, everything)
+	if rec := get(allowed, "/constraints?report=html"); rec.Code != http.StatusOK {
+		t.Errorf("the report should render for a reader who may list constraints, got %d", rec.Code)
+	}
+}
+
 // The dashboard answers on three paths. All of them are the front door: a reader who may not have
 // it is sent where they can be, and none of them is served unchecked.
 func TestEveryNameOfTheDashboardIsGuarded(t *testing.T) {
