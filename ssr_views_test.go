@@ -996,7 +996,7 @@ func TestResourcesViewDistinguishesEmptyFromUnaudited(t *testing.T) {
 		t.Error("before the first audit the page must not claim there are no violations")
 	}
 	clean := renderSSR(t, "resources", map[string]any{"Audited": true})
-	if !strings.Contains(clean, "Nothing is breaking a policy") {
+	if !strings.Contains(clean, "No object breaks a policy") {
 		t.Error("an audited cluster with no violations should say so")
 	}
 }

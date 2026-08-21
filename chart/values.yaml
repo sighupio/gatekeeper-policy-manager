@@ -124,6 +124,23 @@ config:
   # Name of an existing secret holding the secret key, as an alternative to setting it in plain
   # text above. If set, config.secretKey must be null. Expected field in the secret: secretKey
   secretRef: null
+  # RBAC-aligned views: each person sees the views and the objects their own Kubernetes account can
+  # read (issue #261). Needs OIDC authentication and a single cluster -- GPM refuses to start with
+  # this on and either missing. Turning it on adds `create subjectaccessreviews` to GPM's
+  # ClusterRole, which is how it asks the API server what a user may see. It never impersonates.
+  rbacFiltering:
+    # Needs `create subjectaccessreviews`. The chart adds the rule to the ClusterRole it creates, or
+    # creates a small ClusterRole of its own when clusterRole.create is false. With rbac.create
+    # false the chart creates no RBAC, so add the rule to your own ClusterRole.
+    enabled: false
+    # Set these when the API server's --oidc-username-claim differs from the claim GPM displays, or
+    # when it adds --oidc-username-prefix / --oidc-groups-prefix. A mismatch denies everything: the
+    # user sees an empty page, and the chip on it shows the name GPM asked about.
+    usernameClaim: null
+    usernamePrefix: null
+    groupsClaim: null
+    groupsPrefix: null
+
   multiCluster:
     enabled: false
     kubeconfig: |

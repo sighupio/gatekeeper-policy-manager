@@ -812,6 +812,19 @@ details.field > .code { border-top: none; border-radius: 0 0 var(--radius-sm) va
 .nscard .event-detail { grid-template-columns: 1fr; gap: 0; padding: 2px 14px 12px 44px; }
 
 .rnote { font-size: 13px; }
+/* Beside the heading of a restricted reader's only view. */
+.scopechip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 0.6em;
+  font-weight: 500;
+  color: var(--text-muted);
+  vertical-align: middle;
+}
 
 .vline > summary {
   display: grid;

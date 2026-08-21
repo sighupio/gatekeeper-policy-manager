@@ -9,7 +9,11 @@ the error details, an optional "Log in" button when a session expired, and a "Go
 {{- define "content" -}}
 <div class="view centered">
   <div class="centered-box">
-    <h1 class="error-title"><span class="error-mark" aria-hidden="true">&#9888;</span> Error</h1>
+    {{- /* A refusal is not a malfunction: it keeps the heading it was given and drops the warning
+           mark, so a permission boundary does not read as something to report. */}}
+    <h1 class="error-title">
+      {{- if .Err.Fault }}<span class="error-mark" aria-hidden="true">&#9888;</span> {{ end }}
+      {{- .Err.Title }}</h1>
 
     {{- with .Err.Message }}
     <h2>{{ . }}</h2>
@@ -20,7 +24,13 @@ the error details, an optional "Log in" button when a session expired, and a "Go
     {{- end }}
 
     {{- with .Err.Description }}
+    {{- /* A fault gets the red box, because something needs fixing. A refusal gets plain text: the
+           boundary is working, and there is no third alert style worth inventing for it. */}}
+    {{- if $.Err.Fault }}
     <div class="alert alert-error">{{ . }}</div>
+    {{- else }}
+    <p class="muted">{{ . }}</p>
+    {{- end }}
     {{- end }}
 
     <div class="centered-actions">

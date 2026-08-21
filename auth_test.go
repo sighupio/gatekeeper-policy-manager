@@ -15,6 +15,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+
+
 func TestAuthEnabled(t *testing.T) {
 	tests := []struct {
 		value string

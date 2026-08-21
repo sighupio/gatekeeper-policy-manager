@@ -50,6 +50,11 @@ The following table lists the configurable parameters of the Gatekeeper Policy M
 | `config.eventsNamespace` |  | null |
 | `config.secretKey` |  | null |
 | `config.secretRef` |  | null |
+| `config.rbacFiltering.enabled` | Scope every view to what the logged-in user's Kubernetes account can read. Needs OIDC and a single cluster; GPM refuses to start otherwise. Adds `create subjectaccessreviews` to GPM's ClusterRole, or to one of its own when `clusterRole.create` is false. | false |
+| `config.rbacFiltering.usernameClaim` | ID-token claim holding the username the API server knows, when it differs from the one GPM displays. | null |
+| `config.rbacFiltering.usernamePrefix` | Prefix the API server's `--oidc-username-prefix` adds, for example `oidc:`. | null |
+| `config.rbacFiltering.groupsClaim` | ID-token claim listing the user's groups. | null |
+| `config.rbacFiltering.groupsPrefix` | Prefix the API server's `--oidc-groups-prefix` adds. | null |
 | `config.multiCluster.enabled` |  | false |
 | `config.multiCluster.kubeconfig` |  | "apiVersion: v1\nclusters:\n- cluster:\n    certificate-authority-data: REDACTED\n    server: https://127.0.0.1:54216\n  name: kind-kind\ncontexts:\n- context:\n    cluster: kind-kind\n    user: kind-kind\n  name: kind-kind\ncurrent-context: kind-kind\nkind: Config\npreferences: {}\nusers:\n- name: kind-kind\n  user:\n    client-certificate-data: REDACTED\n    client-key-data: REDACTED\n" |
 | `config.oidc.enabled` |  | false |
