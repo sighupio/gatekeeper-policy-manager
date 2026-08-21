@@ -144,6 +144,7 @@ func bindSettings() {
 		"oidc_redirect_domain",
 		"oidc_client_id",
 		"oidc_client_secret",
+		"oidc_scopes",
 		"oidc_issuer",
 		"oidc_authorization_endpoint",
 		"oidc_token_endpoint",

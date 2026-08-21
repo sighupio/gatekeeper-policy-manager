@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"slices"
 	"sort"
 	"strings"
 
@@ -163,7 +164,8 @@ func newAuthenticator(ctx context.Context) (*authenticator, error) {
 		}
 	}
 
-	slog.Info("OIDC authentication enabled", "client_id", clientID, "redirect_url", redirectURL)
+	scopes := oidcScopes()
+	slog.Info("OIDC authentication enabled", "client_id", clientID, "redirect_url", redirectURL, "scopes", scopes)
 
 	return &authenticator{
 		oauth2: oauth2.Config{
@@ -171,14 +173,41 @@ func newAuthenticator(ctx context.Context) (*authenticator, error) {
 			ClientSecret: viper.GetString("oidc_client_secret"),
 			Endpoint:     endpoint,
 			RedirectURL:  redirectURL,
-			Scopes:       []string{oidc.ScopeOpenID, "profile", "email"},
+			Scopes:       scopes,
 		},
 		verifier:           verifier,
 		endSessionEndpoint: endSessionEndpoint,
 	}, nil
 }
 
+// oidcScopes lists what the login request asks the provider for. openid, profile and email are
+// always in it: GPM needs them for the display name. GPM_OIDC_SCOPES adds to that list, because a
+// provider can keep group membership behind a scope the client has to name, and without it the
+// groups claim never arrives and every group-based RoleBinding misses (#261). Separated by spaces
+// or commas; a scope already in the list is not repeated.
+func oidcScopes() []string {
+	scopes := []string{oidc.ScopeOpenID, "profile", "email"}
+	for _, s := range strings.Fields(strings.ReplaceAll(viper.GetString("oidc_scopes"), ",", " ")) {
+		if !slices.Contains(scopes, s) {
+			scopes = append(scopes, s)
+		}
+	}
+	return scopes
+}
 
+// loginErrorAction turns the provider's error code into advice that can work. Telling someone to
+// log in again is right for a stale session and useless for a misconfigured client: the same error
+// comes back every time, which reads as a broken GPM rather than a setting nobody has changed.
+func loginErrorAction(code string) string {
+	switch code {
+	case "invalid_scope":
+		return "The provider does not know one of the scopes that GPM asks for. Make sure that the provider knows every scope in `GPM_OIDC_SCOPES`. A new login does not correct this error."
+	case "invalid_client", "unauthorized_client", "invalid_request", "unsupported_response_type":
+		return "GPM's OIDC client configuration and the provider do not agree. Contact a cluster administrator. A new login does not correct this error."
+	default:
+		return "Something is wrong with your OIDC session. Log out, then log in again."
+	}
+}
 
 // Derives the pair of keys the cookie store needs from GPM_SECRET_KEY: one to sign the cookie, one
 // to encrypt it. They must differ, and GPM_SECRET_KEY is a single string of whatever length the
@@ -509,7 +538,7 @@ func (a *authenticator) callback(c echo.Context) error {
 			"description", c.QueryParam("error_description"))
 		return a.renderError(c, http.StatusUnauthorized, ssrErrorView{
 			Message:     fmt.Sprintf("OIDC error: %s", errParam),
-			Action:      "Something is wrong with your OIDC session. Log out, then log in again.",
+			Action:      loginErrorAction(errParam),
 			Description: c.QueryParam("error_description"),
 		})
 	}
