@@ -14,12 +14,13 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"path"
+	"slices"
 	"sort"
 	"strings"
-	"log/slog"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/gorilla/sessions"
@@ -35,7 +36,13 @@ const (
 	// existing client registration keeps working.
 	callbackPath = "/oidc-auth"
 
-	sessionKeyUser        = "user"
+	sessionKeyUser = "user"
+	// The identity the API server knows this person by, kept apart from the display name above:
+	// the two can be different claims. Stored raw, without the configured prefixes -- see
+	// rbacIdentityFrom, which applies them on read so a corrected prefix takes effect on restart
+	// rather than on everyone's next login.
+	sessionKeyRBACUser    = "rbac_user"
+	sessionKeyRBACGroups  = "rbac_groups"
 	sessionKeyState       = "state"
 	sessionKeyNonce       = "nonce"
 	sessionKeyDestination = "destination"
@@ -157,7 +164,8 @@ func newAuthenticator(ctx context.Context) (*authenticator, error) {
 		}
 	}
 
-	slog.Info("OIDC authentication enabled", "client_id", clientID, "redirect_url", redirectURL)
+	scopes := oidcScopes()
+	slog.Info("OIDC authentication enabled", "client_id", clientID, "redirect_url", redirectURL, "scopes", scopes)
 
 	return &authenticator{
 		oauth2: oauth2.Config{
@@ -165,11 +173,40 @@ func newAuthenticator(ctx context.Context) (*authenticator, error) {
 			ClientSecret: viper.GetString("oidc_client_secret"),
 			Endpoint:     endpoint,
 			RedirectURL:  redirectURL,
-			Scopes:       []string{oidc.ScopeOpenID, "profile", "email"},
+			Scopes:       scopes,
 		},
 		verifier:           verifier,
 		endSessionEndpoint: endSessionEndpoint,
 	}, nil
+}
+
+// oidcScopes lists what the login request asks the provider for. openid, profile and email are
+// always in it: GPM needs them for the display name. GPM_OIDC_SCOPES adds to that list, because a
+// provider can keep group membership behind a scope the client has to name, and without it the
+// groups claim never arrives and every group-based RoleBinding misses (#261). Separated by spaces
+// or commas; a scope already in the list is not repeated.
+func oidcScopes() []string {
+	scopes := []string{oidc.ScopeOpenID, "profile", "email"}
+	for _, s := range strings.Fields(strings.ReplaceAll(viper.GetString("oidc_scopes"), ",", " ")) {
+		if !slices.Contains(scopes, s) {
+			scopes = append(scopes, s)
+		}
+	}
+	return scopes
+}
+
+// loginErrorAction turns the provider's error code into advice that can work. Telling someone to
+// log in again is right for a stale session and useless for a misconfigured client: the same error
+// comes back every time, which reads as a broken GPM rather than a setting nobody has changed.
+func loginErrorAction(code string) string {
+	switch code {
+	case "invalid_scope":
+		return "The provider does not know one of the scopes that GPM asks for. Make sure that the provider knows every scope in `GPM_OIDC_SCOPES`. A new login does not correct this error."
+	case "invalid_client", "unauthorized_client", "invalid_request", "unsupported_response_type":
+		return "GPM's OIDC client configuration and the provider do not agree. Contact a cluster administrator. A new login does not correct this error."
+	default:
+		return "Something is wrong with your OIDC session. Log out, then log in again."
+	}
 }
 
 // Derives the pair of keys the cookie store needs from GPM_SECRET_KEY: one to sign the cookie, one
@@ -501,7 +538,7 @@ func (a *authenticator) callback(c echo.Context) error {
 			"description", c.QueryParam("error_description"))
 		return a.renderError(c, http.StatusUnauthorized, ssrErrorView{
 			Message:     fmt.Sprintf("OIDC error: %s", errParam),
-			Action:      "Something is wrong with your OIDC session. Log out, then log in again.",
+			Action:      loginErrorAction(errParam),
 			Description: c.QueryParam("error_description"),
 		})
 	}
@@ -570,6 +607,11 @@ func (a *authenticator) callback(c echo.Context) error {
 	}
 
 	user := firstNonEmpty(claims.PreferredUsername, claims.Email, claims.Name, idToken.Subject)
+
+	// The RBAC identity, for the SubjectAccessReviews the restricted views issue (#261). Decoded
+	// separately because the operator names the claims: the display name above is GPM's choice, and
+	// the API server's idea of this person can be a different claim entirely.
+	rbacUser, rbacGroups := rbacClaims(idToken, user)
 	destination := "/"
 	if d, ok := sess.Values[sessionKeyDestination].(string); ok {
 		destination = safeRedirectTarget(d)
@@ -580,6 +622,8 @@ func (a *authenticator) callback(c echo.Context) error {
 	delete(sess.Values, sessionKeyDestination)
 	delete(sess.Values, sessionKeyVerifier)
 	sess.Values[sessionKeyUser] = user
+	sess.Values[sessionKeyRBACUser] = rbacUser
+	sess.Values[sessionKeyRBACGroups] = rbacGroups
 	if err := sess.Save(c.Request(), c.Response()); err != nil {
 		return fmt.Errorf("saving the OIDC session failed: %w", err)
 	}

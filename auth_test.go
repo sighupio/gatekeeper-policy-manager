@@ -15,6 +15,63 @@ import (
 	"github.com/spf13/viper"
 )
 
+// "Log in again" is the wrong advice for a provider that rejects GPM's client: the same error
+// returns every time, and the person retrying cannot fix it from a browser.
+func TestALoginErrorTellsTheReaderSomethingTheyCanAct(t *testing.T) {
+	for code, want := range map[string]string{
+		"invalid_scope":       "GPM_OIDC_SCOPES",
+		"invalid_client":      "Contact a cluster administrator",
+		"unauthorized_client": "Contact a cluster administrator",
+		"login_required":      "log in again",
+		"access_denied":       "log in again",
+	} {
+		t.Run(code, func(t *testing.T) {
+			got := loginErrorAction(code)
+			if !strings.Contains(got, want) {
+				t.Errorf("advice for %s = %q, want it to mention %q", code, got, want)
+			}
+			if code == "invalid_scope" || strings.HasSuffix(code, "_client") {
+				if strings.Contains(got, "Log out") {
+					t.Errorf("advice for %s sends the reader round the loop again: %q", code, got)
+				}
+			}
+		})
+	}
+}
+
+// A provider can keep group membership behind a scope the client has to name. Without a way to add
+// one, the groups claim never arrives and every group-based RoleBinding misses -- and the operator
+// has nothing to change. openid, profile and email stay whatever the operator writes.
+func TestExtraScopesJoinTheLoginRequest(t *testing.T) {
+	for name, tt := range map[string]struct {
+		configured string
+		want       []string
+	}{
+		"unset":                  {"", []string{"openid", "profile", "email"}},
+		"one scope":              {"groups", []string{"openid", "profile", "email", "groups"}},
+		"comma separated":        {"groups,offline_access", []string{"openid", "profile", "email", "groups", "offline_access"}},
+		"space separated":        {"groups offline_access", []string{"openid", "profile", "email", "groups", "offline_access"}},
+		"messy spacing":          {" groups ,  offline_access ", []string{"openid", "profile", "email", "groups", "offline_access"}},
+		"repeating a default":    {"email groups", []string{"openid", "profile", "email", "groups"}},
+		"repeating itself":       {"groups groups", []string{"openid", "profile", "email", "groups"}},
+		"cannot drop the openid": {"groups", []string{"openid", "profile", "email", "groups"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Cleanup(viper.Reset)
+			viper.Set("oidc_scopes", tt.configured)
+			got := oidcScopes()
+			if len(got) != len(tt.want) {
+				t.Fatalf("scopes = %v, want %v", got, tt.want)
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Fatalf("scopes = %v, want %v", got, tt.want)
+				}
+			}
+		})
+	}
+}
+
 func TestAuthEnabled(t *testing.T) {
 	tests := []struct {
 		value string

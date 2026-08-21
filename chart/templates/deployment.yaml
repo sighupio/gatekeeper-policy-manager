@@ -76,6 +76,26 @@ spec:
               value: {{ .Values.config.logLevel | upper | quote }}
             - name: GPM_PREFERRED_URL_SCHEME
               value: {{ .Values.config.preferredURLScheme | quote }}
+            {{- if .Values.config.rbacFiltering.enabled }}
+            - name: GPM_RBAC_FILTERING
+              value: "true"
+            {{- with .Values.config.rbacFiltering.usernameClaim }}
+            - name: GPM_RBAC_USERNAME_CLAIM
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.config.rbacFiltering.usernamePrefix }}
+            - name: GPM_RBAC_USERNAME_PREFIX
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.config.rbacFiltering.groupsClaim }}
+            - name: GPM_RBAC_GROUPS_CLAIM
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.config.rbacFiltering.groupsPrefix }}
+            - name: GPM_RBAC_GROUPS_PREFIX
+              value: {{ . | quote }}
+            {{- end }}
+            {{- end }}
             {{- with .Values.config.eventsSource }}
             - name: GPM_EVENTS_SOURCE
               value: {{ . | quote }}
@@ -118,6 +138,10 @@ spec:
                 secretKeyRef:
                   name: {{ include "gatekeeper-policy-manager.fullname" . }}-oidc
                   key: clientSecret
+            {{- end }}
+            {{- if .Values.config.oidc.scopes }}
+            - name: GPM_OIDC_SCOPES
+              value: {{ .Values.config.oidc.scopes | quote }}
             {{- end }}
             {{- if .Values.config.oidc.issuer }}
             - name: GPM_OIDC_ISSUER
