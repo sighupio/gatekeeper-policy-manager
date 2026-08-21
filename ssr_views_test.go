@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/labstack/echo/v4"
+	"github.com/spf13/viper"
 )
 
 // Guards the new SSR views: newSSRRenderer parses every registered page (it panics on a parse
@@ -196,6 +197,50 @@ func TestPublicPagesHideTheContextSwitcher(t *testing.T) {
 		if out := render(fn); strings.Contains(out, "ctx-select") {
 			t.Errorf("the %s page rendered the context switcher; it must not expose context names", name)
 		}
+	}
+}
+
+// The same session-less pages must not draw the main navigation. The navbar is built from the table
+// of every view, so a visitor who has just logged out was offered a menu of links that bounce back
+// to the IdP -- and with RBAC-aligned views on, a menu that says nothing about what that person may
+// read. The signed-out page drops the logout button with it: the session it would end is gone.
+func TestPublicPagesHideTheNavigation(t *testing.T) {
+	useTestKubeconfig(t, twoClusterKubeconfig)
+	t.Cleanup(viper.Reset)
+	viper.Set("auth_enabled", "OIDC")
+
+	registry, err := newClientRegistry()
+	if err != nil {
+		t.Fatalf("building the registry failed: %v", err)
+	}
+	s := &server{k8s: registry, ssr: newSSRRenderer()}
+
+	// A view page does render the navbar, so the assertions below are about suppression rather than
+	// about a template that never draws one.
+	layoutCtx := echo.New().NewContext(httptest.NewRequest(http.MethodGet, "/", nil), httptest.NewRecorder())
+	if len(s.ssrLayoutData(layoutCtx, "constraints", "/constraints", "Constraints").Nav) < 2 {
+		t.Fatal("expected a view page to have a navbar to suppress")
+	}
+
+	render := func(fn func(echo.Context) error) string {
+		rec := httptest.NewRecorder()
+		if err := fn(echo.New().NewContext(httptest.NewRequest(http.MethodGet, "/", nil), rec)); err != nil {
+			t.Fatalf("render failed: %v", err)
+		}
+		return rec.Body.String()
+	}
+
+	for name, fn := range map[string]func(echo.Context) error{
+		"signed-out": s.renderLoggedOut,
+		"not-found":  s.renderNotFound,
+	} {
+		if out := render(fn); strings.Contains(out, `class="nav-link`) {
+			t.Errorf("the %s page rendered the navbar; a page reachable without a session must not offer one", name)
+		}
+	}
+
+	if out := render(s.renderLoggedOut); strings.Contains(out, "Log out") {
+		t.Error("the signed-out page offered a logout button")
 	}
 }
 

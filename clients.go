@@ -7,9 +7,9 @@ package main
 import (
 	"fmt"
 	"sync"
+	"log/slog"
 
 	"github.com/spf13/viper"
-	"golang.org/x/exp/slog"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"

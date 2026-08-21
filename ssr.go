@@ -25,6 +25,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"log/slog"
 
 	"github.com/alecthomas/chroma/v2"
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
@@ -38,7 +39,6 @@ import (
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
-	"golang.org/x/exp/slog"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 )
@@ -1714,6 +1714,9 @@ func (s *server) publicLayout(c echo.Context, title string) ssrLayout {
 	l := s.ssrLayoutData(c, "", "/home", title)
 	l.Contexts = nil
 	l.HasContexts = false
+	// No navigation either: these pages are reachable without a session, and a menu of views that
+	// bounce the reader to the IdP is not navigation. The brand logo still goes home.
+	l.Nav = nil
 	return l
 }
 
@@ -1806,6 +1809,8 @@ func registerViews(e *echo.Echo, s *server) {
 // on (see auth.go): a public page, so it does not bounce a just-logged-out user back to the IdP.
 func (s *server) renderLoggedOut(c echo.Context) error {
 	layout := s.publicLayout(c, "Signed out")
+	// The page offers "Log in"; a "Log out" button next to it would act on a session that is gone.
+	layout.AuthEnabled = false
 	return s.ssr.renderStatus(c, http.StatusOK, "loggedout",
 		map[string]any{"Layout": layout, "LoginURL": browserPath("/login")})
 }

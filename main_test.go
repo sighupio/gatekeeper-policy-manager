@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -14,7 +15,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/spf13/viper"
-	"golang.org/x/exp/slog"
 )
 
 // Gives the test the configuration a freshly started GPM has, and takes back anything it changes.

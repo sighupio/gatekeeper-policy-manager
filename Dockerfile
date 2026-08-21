@@ -24,7 +24,9 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /bin/gpm
 
 
-FROM gcr.io/distroless/static-debian11:nonroot AS target
+# Floating tag on purpose: it follows the current Debian base, so the root store stays current.
+# The pinned debian11 bundle stopped at 129 roots and carried no ISRG Root X2.
+FROM gcr.io/distroless/static:nonroot AS target
 # GPM hands the browser paths under this subpath (redirects, asset URLs, the login URL). Set it at
 # build time with --build-arg PUBLIC_URL=/gpm, or at run time with GPM_BASE_PATH.
 ARG PUBLIC_URL=""
