@@ -169,6 +169,11 @@ config:
     redirectDomain:
     clientID:
     clientSecret:
+    # Extra scopes for the login request, separated by spaces or commas. openid, profile and email
+    # are always requested. Add the scope that carries group membership when your provider keeps it
+    # behind one (an Optional client scope in Keycloak, for example), or the groups claim never
+    # arrives and rbacFiltering sees no groups.
+    scopes:
     authorizationEndpoint:
     jwksURI:
     tokenEndpoint:

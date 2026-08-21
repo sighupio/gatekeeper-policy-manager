@@ -139,6 +139,10 @@ spec:
                   name: {{ include "gatekeeper-policy-manager.fullname" . }}-oidc
                   key: clientSecret
             {{- end }}
+            {{- if .Values.config.oidc.scopes }}
+            - name: GPM_OIDC_SCOPES
+              value: {{ .Values.config.oidc.scopes | quote }}
+            {{- end }}
             {{- if .Values.config.oidc.issuer }}
             - name: GPM_OIDC_ISSUER
               value: {{ .Values.config.oidc.issuer | quote }}

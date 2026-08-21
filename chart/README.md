@@ -62,6 +62,7 @@ The following table lists the configurable parameters of the Gatekeeper Policy M
 | `config.oidc.redirectDomain` |  | null |
 | `config.oidc.clientID` |  | null |
 | `config.oidc.clientSecret` |  | null |
+| `config.oidc.scopes` | Extra scopes for the login request, separated by spaces or commas. openid, profile and email are always requested. | null |
 | `config.oidc.authorizationEndpoint` |  | null |
 | `config.oidc.jwksURI` |  | null |
 | `config.oidc.tokenEndpoint` |  | null |
