@@ -28,8 +28,18 @@ load ./helper
         # Applied outside the kustomization on purpose: it sets `namespace: gatekeeper-system`, and
         # that transformer renames a Namespace object rather than leaving it alone.
         kubectl apply -f tests/violating-workload.yaml
+        # The apply can report success and leave no Constraints behind: Gatekeeper creates the CRD
+        # behind each ConstraintTemplate asynchronously, and recreating one drops the objects that
+        # CRD held. Assert here, so a deploy that produced nothing retries and then says so, instead
+        # of passing and failing three tests later as a timeout with no obvious cause.
+        local constraints
+        constraints=$(kubectl get constraints -o name 2>/dev/null | wc -l | tr -d ' ')
+        echo "deployed ${constraints} constraints"
+        [ "${constraints:-0}" -gt 0 ]
     }
-    loop_it deploy 10 5
+    # A longer budget than the apply alone needed: this now waits for the Constraints to survive,
+    # not just for the CRDs to accept them.
+    loop_it deploy 20 5
     status=${loop_it_result}
     [ "$status" -eq 0 ]
 }
@@ -151,13 +161,18 @@ ING
 @test "[AUDIT] check violations are present" {
   info
   wait_violations(){
-    kubectl get k8slivenessprobe.constraints.gatekeeper.sh liveness-probe -o go-template="{{.status.totalViolations}}"
-    echo "number of violations for liveness-probe constraint is: ${output}"
-    echo "command status is: ${status}"
-    [[ "$output" -eq 2 ]]
-    [[ "$status" -eq 0 ]]
+    # Read the count into a variable of our own. loop_it invokes this through bats' `run`, so $output
+    # and $status inside here belong to the *previous* attempt, and are empty on the first one. The
+    # old last line, `[[ "$status" -eq 0 ]]`, then compared an empty string to 0 -- true in [[ ]]
+    # arithmetic -- so this test passed against a cluster that had no constraints at all.
+    local violations
+    violations=$(kubectl get k8slivenessprobe.constraints.gatekeeper.sh liveness-probe \
+      -o jsonpath='{.status.totalViolations}' 2>/dev/null)
+    echo "liveness-probe reports ${violations:-no} violations"
+    [ "${violations:-0}" -eq 2 ]
   }
   loop_it wait_violations 10 5
+  [ "$loop_it_result" -eq 0 ]
 }
 
 # Test chart installation, `helm template` is not enough to test the chart actually works.
