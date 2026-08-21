@@ -10,7 +10,14 @@ data-search attribute so the filter can hide them without re-rendering the page 
 {{- define "content" -}}
 <div class="view">
   <div class="view-head">
-    <h1>Resources</h1>
+    <h1>Resources
+      {{- if .Layout.Scoped }}
+      {{- /* Shown whenever GPM is filtering, not only when something was hidden: an operator who
+             can read everything already knows it, so the chip is not a lie for them, and everyone
+             else is spared guessing why their page is smaller. The identity is the one the reviews
+             used, so "GPM shows me nothing" is answered by a hover. */}}
+      <span class="scopechip" title="filtered as {{ .Layout.RBACIdentity }}">scoped to your access</span>
+      {{- end }}</h1>
     <p class="muted">The objects in this cluster that break a policy, grouped by namespace. Gatekeeper
       reports these from its audit cycle, so the list is only as fresh as the last audit.</p>
   </div>
@@ -21,12 +28,39 @@ data-search attribute so the filter can hide them without re-rendering the page 
   {{- else if not .Audited }}
   <div class="empty">
     <h2>Not audited yet</h2>
-    <p class="muted">Gatekeeper has not reported an audit for any Constraint. Try refreshing the page in a minute.</p>
+    <p class="muted">Gatekeeper has not reported an audit for any Constraint. Refresh the page in a minute.</p>
+  </div>
+
+  {{- else if and (not .Namespaces) .Misconfigured }}
+  {{- /* Reviews failed, so the page is empty because GPM could not ask, not because the answer was
+         no. Saying "nothing here for you" would blame the reader for the operator's missing grant. */}}
+  <div class="empty">
+    <h2>GPM cannot confirm what you are allowed to see</h2>
+    <p class="muted">The GPM ServiceAccount needs <code>create subjectaccessreviews</code>. Contact a
+      cluster administrator.</p>
+  </div>
+
+  {{- else if and (not .Namespaces) .Unverified }}
+  {{- /* Nothing was verified, so nothing can be said about this reader's access. A session GPM
+         cannot read, or one carrying no name to ask about, lands here rather than on the message
+         below, which would report a denial that was never asked for. */}}
+  <div class="empty">
+    <h2>GPM could not confirm your access</h2>
+    <p class="muted">Log out, then log in again. If this continues, contact a cluster administrator.</p>
+  </div>
+
+  {{- else if and (not .Namespaces) .Layout.Scoped }}
+  {{- /* Scoped and empty. Whether the cluster has violations elsewhere is not this reader's to know,
+         so the page reports what they can read and nothing about the rest of the cluster. */}}
+  <div class="empty">
+    <h2>Nothing here for you</h2>
+    <p class="muted">No policy violation is on an object that your Kubernetes account can read. If you
+      expected your namespace here, contact a cluster administrator for read access to it.</p>
   </div>
 
   {{- else if not .Namespaces }}
   <div class="empty">
-    <h2>Nothing is breaking a policy</h2>
+    <h2>No object breaks a policy</h2>
     <p class="muted">The last Gatekeeper audit found no violations in this cluster.</p>
   </div>
 
@@ -60,6 +94,16 @@ data-search attribute so the filter can hide them without re-rendering the page 
                aria-label="Filter resources" x-model="q" x-on:input="apply()">
         <span class="vcount muted" x-show="q" x-text="`${total - hidden} of ${total} resources`"></span>
       </div>
+
+      {{- if .Misconfigured }}
+      <div class="alert alert-error">GPM cannot confirm what you are allowed to see, so this page can be
+        incomplete. The GPM ServiceAccount needs <code>create subjectaccessreviews</code>. Contact a cluster
+        administrator.</div>
+      {{- else if .Unverified }}
+      {{- /* No count: how many objects are missing is itself a fact about what this reader may not
+             read. The number goes to the log, where the operator who can act on it will see it. */}}
+      <div class="alert alert-warn">Some resources are not listed: GPM could not confirm your access to them.</div>
+      {{- end }}
 
       {{- if .AuditLimited }}
       <div class="alert alert-warn">Not every violation is listed. Gatekeeper's audit limit caps how many

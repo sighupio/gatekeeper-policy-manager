@@ -6,12 +6,14 @@ package main
 
 import (
 	"fmt"
-	"sync"
 	"log/slog"
+	"sync"
+	"time"
 
 	"github.com/spf13/viper"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
+	authorizationv1client "k8s.io/client-go/kubernetes/typed/authorization/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -26,14 +28,22 @@ const defaultKubeContext = ""
 const (
 	kubeClientQPS   = 50
 	kubeClientBurst = 100
+	// A bound on every request, so a server that never answers cannot hold a goroutine, or a lock,
+	// for the life of the process.
+	kubeClientTimeout = 30 * time.Second
 )
 
 // Everything needed to talk to one cluster. The client-go clients are safe for concurrent use, so
 // a single set is shared by every request targeting the same kubeconfig context.
 type kubeClients struct {
-	dynamic   *dynamic.DynamicClient
-	discovery *discovery.DiscoveryClient
-	rest      *rest.Config
+	dynamic *dynamic.DynamicClient
+	// The interface, not the concrete client: restmapper takes it, and a test can hand in a fake
+	// without reaching for a real API server.
+	discovery discovery.DiscoveryInterface
+	// Issues SubjectAccessReviews on behalf of the logged-in user (#261). GPM keeps reading the
+	// cluster with its own ServiceAccount and asks this client what the person may see.
+	authz authorizationv1client.AuthorizationV1Interface
+	rest  *rest.Config
 }
 
 // Builds a kubeClients per kubeconfig context and keeps them for the process lifetime.
@@ -137,6 +147,11 @@ func buildKubeClients(kubeContext string) (*kubeClients, *api.Config, error) {
 	// let the apiserver's own flow control (APF) protect it.
 	restConfig.QPS = kubeClientQPS
 	restConfig.Burst = kubeClientBurst
+	// Without this every call waits forever on a server that accepts the connection and never
+	// answers. The context-carrying calls are freed when the reader gives up, but discovery takes no
+	// context at all, and it runs under a lock the Resources view needs -- one blackholed apiserver
+	// would wedge that view until the pod restarts. Long enough for a slow list on a big cluster.
+	restConfig.Timeout = kubeClientTimeout
 
 	kubeconfig, err := loader.ConfigAccess().GetStartingConfig()
 	if err != nil {
@@ -154,5 +169,18 @@ func buildKubeClients(kubeContext string) (*kubeClients, *api.Config, error) {
 		return nil, nil, fmt.Errorf("creating constraints discovery Kubernetes client failed: %w", err)
 	}
 
-	return &kubeClients{dynamic: dynamicClient, discovery: discoveryClient, rest: restConfig}, kubeconfig, nil
+	// The SubjectAccessReview client. GPM needs `create subjectaccessreviews` for it to answer; the
+	// checker reports a clear configuration error when the grant is missing, rather than hiding
+	// everything without saying why.
+	authzClient, err := authorizationv1client.NewForConfig(restConfig)
+	if err != nil {
+		return nil, nil, fmt.Errorf("creating the authorization Kubernetes client failed: %w", err)
+	}
+
+	return &kubeClients{
+		dynamic:   dynamicClient,
+		discovery: discoveryClient,
+		authz:     authzClient,
+		rest:      restConfig,
+	}, kubeconfig, nil
 }

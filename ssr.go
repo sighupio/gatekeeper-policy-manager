@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -25,12 +26,12 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"log/slog"
 
 	"github.com/alecthomas/chroma/v2"
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/alecthomas/chroma/v2/styles"
+	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/spf13/viper"
 	"github.com/yuin/goldmark"
@@ -332,23 +333,75 @@ type ssrLayout struct {
 	HasContexts bool
 	AuthEnabled bool
 	LogoutURL   string
+	// Scoped is set whenever GPM is filtering what this person sees, which is whenever the feature
+	// is on. An operator who can reach everything is told so by a chip that says as much; it is not
+	// a lie for them, and it saves everyone else from guessing why their page is smaller.
+	Scoped bool
+	// The identity the SubjectAccessReviews used, shown on the scope chip's tooltip so "GPM shows
+	// me nothing" is answered by a hover instead of a log dig.
+	RBACIdentity string
 }
 
-// The top-nav destinations, at their real paths. Home has no nav entry -- the logo links back to
-// it.
-var ssrNavRoutes = []struct {
-	Key  string
-	Name string
+// ssrView is one view GPM serves, and the permission its data needs (#261). The navbar and the
+// route guard both read this table, so a view cannot be added without deciding what it requires:
+// leave Resource empty and it is open to everyone, which has to be a choice rather than an omission.
+type ssrView struct {
+	Key  string // route and nav key
+	Name string // nav label; empty for a view with no nav entry
 	Path string
-}{
+
+	// A view that names a Resource is gated: the API server is asked whether this person may list
+	// it, cluster-wide. The answer has no middle, Events included: its rows are namespaced, but the
+	// view does not filter them one by one, so listing events everywhere is what it takes to see it.
+	// Only the Resources view scopes per object, which is why it is the one view with no Resource.
+	Group    string
+	Resource string
+}
+
+// gated reports whether this view has a permission to check. No separate flag: a view is gated
+// exactly when it names the resource to ask about, so the two cannot contradict each other.
+func (v ssrView) gated() bool { return v.Resource != "" }
+
+// The views, in nav order. Home has no nav entry -- the logo links back to it.
+//
+// Resource "*" is deliberate where Gatekeeper creates one CRD per template (Constraints) or several
+// kinds in one group (Mutations): the question becomes "may you list everything in this group",
+// which errs closed for someone granted a single kind. That is the right way to be wrong here.
+var ssrViews = []ssrView{
+	{Key: "home", Path: "/", Group: "constraints.gatekeeper.sh", Resource: "*"},
+	// The dashboard answers on /home and /home/<context> too. A path the guard does not
+	// recognise is served unchecked, so every name a view answers on belongs in this table.
+	{Key: "home", Path: "/home", Group: "constraints.gatekeeper.sh", Resource: "*"},
 	// "Templates" rather than the full kind: the nav is the only place the name is shortened, and
 	// it buys back most of the width the Resources entry costs (the page heading stays in full).
-	{"constrainttemplates", "Templates", "/constrainttemplates"},
-	{"constraints", "Constraints", "/constraints"},
-	{"resources", "Resources", "/resources"},
-	{"mutations", "Mutations", "/mutations"},
-	{"events", "Events", "/events"},
-	{"configurations", "Configurations", "/configurations"},
+	{Key: "constrainttemplates", Name: "Templates", Path: "/constrainttemplates",
+		Group: "templates.gatekeeper.sh", Resource: "constrainttemplates"},
+	{Key: "constraints", Name: "Constraints", Path: "/constraints",
+		Group: "constraints.gatekeeper.sh", Resource: "*"},
+	// Not gated on purpose: this view is derived from constraint status, and what it shows is
+	// namespaced objects. There is no single permission that answers for it, so every row is
+	// reviewed instead. That makes it the floor -- any authenticated person reaches it, and sees
+	// exactly what their account can read, which may be nothing.
+	{Key: "resources", Name: "Resources", Path: "/resources"},
+	{Key: "mutations", Name: "Mutations", Path: "/mutations",
+		Group: "mutations.gatekeeper.sh", Resource: "*"},
+	{Key: "events", Name: "Events", Path: "/events", Group: "", Resource: "events"},
+	{Key: "configurations", Name: "Configurations", Path: "/configurations",
+		Group: "config.gatekeeper.sh", Resource: "configs"},
+}
+
+// viewForPath finds the view a request path belongs to, so the guard and the nav agree on what a
+// path is. Longest match first: /constraints must not claim /constrainttemplates.
+func viewForPath(p string) (ssrView, bool) {
+	best, found := ssrView{}, false
+	for _, v := range ssrViews {
+		if p == v.Path || (v.Path != "/" && strings.HasPrefix(p, v.Path+"/")) {
+			if !found || len(v.Path) > len(best.Path) {
+				best, found = v, true
+			}
+		}
+	}
+	return best, found
 }
 
 // Builds the data every SSR page shares: nav with the active item highlighted, the context switcher
@@ -367,13 +420,24 @@ func (s *server) ssrLayoutData(c echo.Context, active, switchBase, title string)
 	}
 	sort.Strings(names)
 
-	nav := make([]navLink, 0, len(ssrNavRoutes))
-	for _, r := range ssrNavRoutes {
-		href := browserPath(r.Path)
-		if r.Path != "/" {
-			href = browserPath(r.Path + "/" + url.PathEscape(selected))
+	// The nav describes this person's access: a view they cannot reach is not shown, rather than
+	// shown and then refused (#261). allowedViews answers from one set of reviews per request.
+	allowed := allowedViews(c)
+
+	nav := make([]navLink, 0, len(ssrViews))
+	for _, v := range ssrViews {
+		if v.Name == "" || !allowed[v.Key] {
+			continue
 		}
-		nav = append(nav, navLink{Name: r.Name, Href: href, Active: r.Key == active})
+		href := browserPath(v.Path)
+		if v.Path != "/" {
+			href = browserPath(v.Path + "/" + url.PathEscape(selected))
+		}
+		nav = append(nav, navLink{Name: v.Name, Href: href, Active: v.Key == active})
+	}
+	// One item is a menu that lost its siblings, and the heading already names the view.
+	if len(nav) < 2 {
+		nav = nil
 	}
 
 	options := make([]ctxOption, 0, len(names))
@@ -385,7 +449,7 @@ func (s *server) ssrLayoutData(c echo.Context, active, switchBase, title string)
 		})
 	}
 
-	return ssrLayout{
+	layout := ssrLayout{
 		Title:       title,
 		Version:     appVersion,
 		AssetBase:   browserPath("/static"),
@@ -394,7 +458,17 @@ func (s *server) ssrLayoutData(c echo.Context, active, switchBase, title string)
 		HasContexts: len(options) > 0,
 		AuthEnabled: authEnabled(),
 		LogoutURL:   browserPath("/logout"),
+		Scoped:      s.rbacFilteringEnabled(),
 	}
+	if layout.Scoped {
+		// The switcher goes: the feature only runs against a single cluster, so it could only ever
+		// offer the one already selected.
+		layout.HasContexts = false
+		if sess, err := session.Get(sessionName, c); err == nil {
+			layout.RBACIdentity = rbacIdentityFrom(sess).String()
+		}
+	}
+	return layout
 }
 
 // --- handlers -------------------------------------------------------------------------------
@@ -1155,7 +1229,26 @@ func (s *server) getResources(c echo.Context) error {
 		models = append(models, m)
 	}
 
-	data["Namespaces"] = resourceModel(models)
+	namespaces := resourceModel(models)
+
+	// Scoped in both modes (#261). The mode decides which *views* someone reaches; it does not
+	// decide what this page may show them. An operator whose only cluster-wide right is listing
+	// Constraint Templates would otherwise read every violation in every namespace here, none of
+	// which they can read with kubectl. "This page shows what you can read" is a sentence that
+	// survives a security review; "everything, unless you are not an operator" is not.
+	if s.rbacFilteringEnabled() {
+		// One checker for the whole render: reading the flag from a second lookup could read a
+		// checker that was rebuilt in between, and so report nothing wrong on a page that is empty
+		// because everything failed.
+		checker := s.checkerFor(clients)
+		var unverified int
+		namespaces, unverified = s.scopeToReader(c, checker, namespaces)
+		// A denial is normal and silent. A review that could not be answered is a malfunction, and
+		// saying nothing would let a broken grant look like a clean cluster.
+		data["Unverified"] = unverified
+		data["Misconfigured"] = checker.misconfigured()
+	}
+	data["Namespaces"] = namespaces
 	// Two different empty states: nothing broken, or nothing audited yet. Saying "no violations"
 	// before the first audit would be a lie.
 	data["Audited"] = audited
@@ -1699,12 +1792,28 @@ func constraintsURL(kubeContext, kind, name string) string {
 // ssrErrorView is the flat shape the error page renders. It mirrors the fields the React Error page
 // shows (message, action, description, and an optional login link when a session expired).
 type ssrErrorView struct {
+	// Heading replaces the page's "Error" title and its tab title. A refused view is a boundary
+	// working correctly, not a fault, and the alarm wording sends people to support for nothing.
+	Heading     string
 	Message     string
 	Action      string
 	Description string
 	LoginURL    string // set only when signing in fixes the error; renders a "Log in" button
 	BackURL     string // where "Go back" points; defaults to home
 }
+
+// Title is the heading the page shows, and the tab title. Defaulted here rather than in renderError
+// so a page rendered directly -- by a test, or by the global error handler -- reads the same.
+func (e ssrErrorView) Title() string {
+	if e.Heading == "" {
+		return "Error"
+	}
+	return e.Heading
+}
+
+// Fault reports whether this page describes something broken, as opposed to a boundary doing its
+// job. Only a fault gets the warning mark and the red box.
+func (e ssrErrorView) Fault() bool { return e.Heading == "" }
 
 // publicLayout builds the layout for a page that is served without a session: the signed-out page
 // and the error and 404 pages. It drops the context switcher, so an anonymous visitor to one of
@@ -1758,7 +1867,7 @@ func (s *server) renderError(c echo.Context, status int, e ssrErrorView) error {
 	if e.BackURL == "" {
 		e.BackURL = browserPath("/")
 	}
-	layout := s.publicLayout(c, "Error")
+	layout := s.publicLayout(c, e.Title())
 	return s.ssr.renderStatus(c, status, "error", map[string]any{"Layout": layout, "Err": e})
 }
 
@@ -1813,4 +1922,117 @@ func (s *server) renderLoggedOut(c echo.Context) error {
 	layout.AuthEnabled = false
 	return s.ssr.renderStatus(c, http.StatusOK, "loggedout",
 		map[string]any{"Layout": layout, "LoginURL": browserPath("/login")})
+}
+
+// accessQuestion is one review the Resources page needs: may this reader see objects of this Kind
+// in this namespace. Rows of the same Kind in the same namespace share one.
+type accessQuestion struct{ namespace, group, kind string }
+
+type accessAnswer struct{ allowed, determined bool }
+
+// resolveAccess answers every distinct question the page asks, a few at a time. The questions are
+// independent, and a cluster with hundreds of (namespace, Kind) pairs would otherwise pay one round
+// trip per pair in series. The answers are returned rather than left in the checker's cache: the
+// caller reads this map, so nothing depends on an entry surviving until the second pass.
+func resolveAccess(ctx context.Context, checker *accessChecker, id rbacIdentity, namespaces []ssrResourceNamespace) map[accessQuestion]*accessAnswer {
+	answers := map[accessQuestion]*accessAnswer{}
+	for _, ns := range namespaces {
+		for _, r := range ns.Resources {
+			q := accessQuestion{ns.Name, r.Group, r.Kind}
+			if answers[q] == nil {
+				answers[q] = &accessAnswer{}
+			}
+		}
+	}
+
+	// Bounded: a big page must not open a connection per row. Each worker writes through its own
+	// pointer, so the answers need no lock of their own.
+	const workers = 8
+	var wg sync.WaitGroup
+	slots := make(chan struct{}, workers)
+	for q, answer := range answers {
+		if ctx.Err() != nil {
+			// The reader is gone. Everything still unasked stays undetermined, which hides it.
+			break
+		}
+		wg.Add(1)
+		slots <- struct{}{}
+		go func(q accessQuestion, answer *accessAnswer) {
+			defer wg.Done()
+			defer func() { <-slots }()
+			// Echo's recover middleware covers the request goroutine, not these. Without this a
+			// panic below would take the whole process down instead of hiding one row.
+			defer func() {
+				if r := recover(); r != nil {
+					slog.Error("checking access to a violation panicked, hiding the row",
+						"namespace", q.namespace, "kind", q.kind, "panic", r)
+				}
+			}()
+			allowed, determined := checker.canSeeViolation(ctx, id, q.namespace, q.group, q.kind)
+			*answer = accessAnswer{allowed: allowed, determined: determined}
+		}(q, answer)
+	}
+	wg.Wait()
+	return answers
+}
+
+// scopeToReader drops every object the logged-in person may not read, and reports how many were
+// hidden because GPM could not get an answer rather than because the answer was no. A namespace
+// left with nothing visible disappears with its rows, so the page shows no empty headings.
+func (s *server) scopeToReader(c echo.Context, checker *accessChecker, namespaces []ssrResourceNamespace) ([]ssrResourceNamespace, int) {
+	sess, err := session.Get(sessionName, c)
+	if err != nil {
+		// Every row counts as unverified, not as denied. Returning zero here would render the page
+		// that tells this person their account cannot read these objects, which GPM never asked.
+		unverified := 0
+		for _, ns := range namespaces {
+			unverified += len(ns.Resources)
+		}
+		slog.Warn("no readable session while scoping the Resources view, showing nothing", "error", err)
+		return nil, unverified
+	}
+	id := rbacIdentityFrom(sess)
+	ctx := c.Request().Context()
+
+	answers := resolveAccess(ctx, checker, id, namespaces)
+
+	unverified := 0
+	kept := make([]ssrResourceNamespace, 0, len(namespaces))
+	for _, ns := range namespaces {
+		visible := make([]ssrResource, 0, len(ns.Resources))
+		scoped := ssrResourceNamespace{Name: ns.Name, Anchor: ns.Anchor}
+		for _, r := range ns.Resources {
+			// resolveAccess allocated an entry for every row of this same slice, so the lookup
+			// always finds one. A question its workers never reached -- the reader left, or the
+			// worker panicked -- is still zero, which reads as undetermined and hides the row.
+			answer := answers[accessQuestion{ns.Name, r.Group, r.Kind}]
+			if !answer.determined {
+				unverified++
+			}
+			if !answer.allowed {
+				continue
+			}
+			visible = append(visible, r)
+			scoped.Deny += r.Deny
+			scoped.DryRun += r.DryRun
+			scoped.Warn += r.Warn
+		}
+		if len(visible) == 0 {
+			continue
+		}
+		scoped.Resources = visible
+		kept = append(kept, scoped)
+	}
+	// Nothing failed when the reader simply left, and saying so would send an operator looking for
+	// an API server problem that never happened. Nor when the checker is refused outright: that is
+	// already reported once per window, with the remediation, and this line would repeat a weaker
+	// version of it on every render. What is left is the case this line is for -- some rows
+	// unanswered while the rest were fine.
+	if unverified > 0 && ctx.Err() == nil && !checker.misconfigured() {
+		// The page says only that rows are missing (the count would tell a reader how much they are
+		// not allowed to see), so the number has to reach the operator here or nowhere.
+		slog.Warn("some resources were left out of the Resources view because their access review failed",
+			"resources", unverified, "identity", id.String())
+	}
+	return kept, unverified
 }

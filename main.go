@@ -8,10 +8,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
+	"sync"
 	"time"
-	"log/slog"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
@@ -20,7 +21,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/spf13/viper"
-
 )
 
 // Holds everything the handlers need. They are methods on it rather than package-level functions
@@ -29,6 +29,24 @@ type server struct {
 	k8s       *clientRegistry
 	ssr       *ssrRenderer
 	dashCache dashboardCache
+
+	// The SubjectAccessReview checker, built on first use (#261). RBAC filtering only engages
+	// against a single cluster, so there is one of these; the mutex covers the concurrent first
+	// requests that would otherwise build it twice.
+	authzMu sync.Mutex
+	authz   *accessChecker
+}
+
+// registerSystemRoutes adds every route that is not a view. They are in one function, called by
+// main and by the test that walks the router, because a route the RBAC guard does not recognise is
+// served unchecked (#261) -- and a route added here would otherwise be outside that test.
+func registerSystemRoutes(e *echo.Echo, auth *authenticator) {
+	if auth != nil {
+		e.GET(callbackPath, auth.callback)
+		e.GET("/login", auth.login)
+		e.GET("/logout", auth.logout)
+	}
+	e.GET("/health", getHealth)
 }
 
 // The single source of truth for the version string shown in logs and the UI.
@@ -86,6 +104,19 @@ func bindSettings() {
 	viper.SetDefault("listen_address", ":8080")
 	// Comma-separated event source components to show. Gatekeeper tags admission (webhook) events
 	// with gatekeeper-webhook and audit events with gatekeeper-audit; show both by default.
+	// RBAC-aligned views (#261). Off by default, and inert unless authentication is on and GPM
+	// talks to a single cluster: without an OIDC identity there is nobody to authorize, and in
+	// multi-cluster mode one identity would have to be valid in every aggregated cluster.
+	_ = viper.BindEnv("rbac_filtering")
+	viper.SetDefault("rbac_filtering", false)
+	// Which ID-token claim carries the name the API server knows this person by, and the prefix the
+	// cluster's --oidc-username-prefix puts in front of it. A mismatch denies everything, by design.
+	_ = viper.BindEnv("rbac_username_claim")
+	_ = viper.BindEnv("rbac_username_prefix")
+	_ = viper.BindEnv("rbac_groups_claim")
+	viper.SetDefault("rbac_groups_claim", "groups")
+	_ = viper.BindEnv("rbac_groups_prefix")
+
 	_ = viper.BindEnv("events_source")
 	viper.SetDefault("events_source", "gatekeeper-webhook,gatekeeper-audit")
 	// Which namespace to read events from. Empty means every namespace, which needs a cluster-wide
@@ -243,6 +274,17 @@ func main() {
 	}
 	s := &server{k8s: registry, ssr: newSSRRenderer()}
 
+	// Registered after the session and auth middleware, so the identity is there to read. Inert
+	// unless GPM_RBAC_FILTERING is on, and it decides what a request may reach rather than only what
+	// the navbar shows (#261). Echo applies Use middleware to every request, so registering it here
+	// -- after the routes it guards are declared below -- still covers them.
+	e.Use(s.rbacMiddleware())
+	// Refuse an unsupported combination rather than quietly serving everything (#261).
+	if err := s.checkConfig(); err != nil {
+		slog.Error("GPM cannot start with this configuration", "error", err)
+		os.Exit(1)
+	}
+
 	// The server-rendered UI: every view at its real path, plus the embedded static assets. See ssr.go.
 	registerViews(e, s)
 
@@ -277,15 +319,12 @@ func main() {
 		// The local logout path renders the SSR "signed out" page; wire it now that s exists.
 		auth.renderLoggedOut = s.renderLoggedOut
 		auth.renderError = s.renderError
-		e.GET(callbackPath, auth.callback)
-		e.GET("/login", auth.login)
-		e.GET("/logout", auth.logout)
 	}
 
 	// One rewrite instead of registering every route twice. Pre, so it runs before routing.
 	e.Pre(middleware.RemoveTrailingSlash())
 
-	e.GET("/health", getHealth)
+	registerSystemRoutes(e, auth)
 
 	address := viper.GetString("listen_address")
 

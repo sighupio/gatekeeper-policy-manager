@@ -21,6 +21,17 @@ rules:
   - apiGroups: ["mutations.gatekeeper.sh"]
     resources: ["*"]
     verbs: ["get", "list", "watch"]
+  {{- if .Values.config.rbacFiltering.enabled }}
+  {{- /*
+    SubjectAccessReview asks the API server what the logged-in person may see. GPM keeps reading the
+    cluster with this ServiceAccount and filters what it renders; it never acts as the user, which is
+    why this is `create subjectaccessreviews` and not the `impersonate` verb. Granted only when the
+    feature is on, so an installation that does not use it never asks for the permission.
+  */}}
+  - apiGroups: ["authorization.k8s.io"]
+    resources: ["subjectaccessreviews"]
+    verbs: ["create"]
+  {{- end }}
   {{- if not .Values.config.eventsNamespace }}
   {{- /*
     With no namespace configured GPM lists events across the cluster, which needs the read here.
@@ -85,3 +96,45 @@ subjects:
     kind: ServiceAccount
 {{- end }}
 {{- end -}}
+
+{{- /*
+  When the chart does not create the main ClusterRole, the SubjectAccessReview rule above is never
+  rendered, and RBAC-aligned views would start with no way to ask the API server anything: GPM comes
+  up, and every page reports that it cannot check what the reader may see. The permission gets its
+  own ClusterRole in that case, so turning the feature on is enough on its own. With rbac.create
+  false the chart creates no RBAC at all, and the rule is the operator's to add.
+*/ -}}
+{{- if and .Values.rbac.create .Values.config.rbacFiltering.enabled (ne .Values.clusterRole.create true) }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ template "gatekeeper-policy-manager.fullname" . }}-subjectaccessreviews
+  labels:
+    app: {{ template "gatekeeper-policy-manager.name" . }}
+    chart: {{ template "gatekeeper-policy-manager.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+rules:
+  - apiGroups: ["authorization.k8s.io"]
+    resources: ["subjectaccessreviews"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ template "gatekeeper-policy-manager.fullname" . }}-subjectaccessreviews
+  labels:
+    app: {{ template "gatekeeper-policy-manager.name" . }}
+    chart: {{ template "gatekeeper-policy-manager.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ template "gatekeeper-policy-manager.fullname" . }}-subjectaccessreviews
+subjects:
+  - name: {{ template "gatekeeper-policy-manager.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace | quote }}
+    kind: ServiceAccount
+{{- end }}

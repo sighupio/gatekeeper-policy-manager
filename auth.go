@@ -14,12 +14,12 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"path"
 	"sort"
 	"strings"
-	"log/slog"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/gorilla/sessions"
@@ -35,7 +35,13 @@ const (
 	// existing client registration keeps working.
 	callbackPath = "/oidc-auth"
 
-	sessionKeyUser        = "user"
+	sessionKeyUser = "user"
+	// The identity the API server knows this person by, kept apart from the display name above:
+	// the two can be different claims. Stored raw, without the configured prefixes -- see
+	// rbacIdentityFrom, which applies them on read so a corrected prefix takes effect on restart
+	// rather than on everyone's next login.
+	sessionKeyRBACUser    = "rbac_user"
+	sessionKeyRBACGroups  = "rbac_groups"
 	sessionKeyState       = "state"
 	sessionKeyNonce       = "nonce"
 	sessionKeyDestination = "destination"
@@ -171,6 +177,8 @@ func newAuthenticator(ctx context.Context) (*authenticator, error) {
 		endSessionEndpoint: endSessionEndpoint,
 	}, nil
 }
+
+
 
 // Derives the pair of keys the cookie store needs from GPM_SECRET_KEY: one to sign the cookie, one
 // to encrypt it. They must differ, and GPM_SECRET_KEY is a single string of whatever length the
@@ -570,6 +578,11 @@ func (a *authenticator) callback(c echo.Context) error {
 	}
 
 	user := firstNonEmpty(claims.PreferredUsername, claims.Email, claims.Name, idToken.Subject)
+
+	// The RBAC identity, for the SubjectAccessReviews the restricted views issue (#261). Decoded
+	// separately because the operator names the claims: the display name above is GPM's choice, and
+	// the API server's idea of this person can be a different claim entirely.
+	rbacUser, rbacGroups := rbacClaims(idToken, user)
 	destination := "/"
 	if d, ok := sess.Values[sessionKeyDestination].(string); ok {
 		destination = safeRedirectTarget(d)
@@ -580,6 +593,8 @@ func (a *authenticator) callback(c echo.Context) error {
 	delete(sess.Values, sessionKeyDestination)
 	delete(sess.Values, sessionKeyVerifier)
 	sess.Values[sessionKeyUser] = user
+	sess.Values[sessionKeyRBACUser] = rbacUser
+	sess.Values[sessionKeyRBACGroups] = rbacGroups
 	if err := sess.Save(c.Request(), c.Response()); err != nil {
 		return fmt.Errorf("saving the OIDC session failed: %w", err)
 	}
