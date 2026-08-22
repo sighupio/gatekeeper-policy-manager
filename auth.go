@@ -14,12 +14,12 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"path"
 	"sort"
 	"strings"
-	"log/slog"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/gorilla/sessions"
@@ -333,12 +333,12 @@ func safeRedirectTarget(target string) string {
 }
 
 // True for the handful of paths that must stay reachable without a session: the health probe, the
-// endpoint the frontend calls to discover whether auth is on at all, the logout page, and the
-// static assets that make up the login-time UI.
+// OIDC callback, the login and logout pages, the metrics endpoint, and the static assets those
+// pages load.
 //
 // Both the raw path and its cleaned form have to pass. Echo routes on the raw one, so checking
-// only the cleaned form opens "/api/v1/../../static/x", and checking only the raw form opens
-// "/static/../api/v1/constraints".
+// only the cleaned form opens "/constraints/../../static/x", and checking only the raw form opens
+// "/static/../constraints".
 func isPublicPath(p string) bool {
 	return isAllowlistedPath(p) && isAllowlistedPath(path.Clean(p))
 }
@@ -359,9 +359,9 @@ func isAllowlistedPath(p string) bool {
 	return false
 }
 
-// Requests under /api are answered by fetch() in the frontend, where a cross-origin redirect to
-// the identity provider surfaces as an opaque network error. Those get a readable 401 instead;
-// only real navigation is redirected.
+// GPM 2.0 serves no /api route, but a caller of the removed 1.x JSON API still reaches this
+// middleware, which runs before routing. A redirect to the identity provider is useless to a
+// script, so those requests get a readable 401 instead; only real navigation is redirected.
 func isAPIPath(p string) bool {
 	return strings.HasPrefix(p, "/api/")
 }
@@ -383,8 +383,7 @@ func (a *authenticator) middleware() echo.MiddlewareFunc {
 
 			if isAPIPath(requestPath) {
 				// The browser keeps sending a root-scoped cookie to every other application on
-				// the host until something expires it, and an API call is usually the first
-				// request the frontend makes.
+				// the host until something expires it.
 				a.clearLegacyRootCookie(c)
 				return c.JSON(http.StatusUnauthorized, ErrorAnswer{
 					ErrorMessage: "Your session expired, or you are not logged in.",

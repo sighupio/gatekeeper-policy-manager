@@ -6,8 +6,8 @@ package main
 
 import (
 	"fmt"
-	"sync"
 	"log/slog"
+	"sync"
 
 	"github.com/spf13/viper"
 	"k8s.io/client-go/discovery"

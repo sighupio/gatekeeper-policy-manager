@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -25,7 +26,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"log/slog"
 
 	"github.com/alecthomas/chroma/v2"
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
