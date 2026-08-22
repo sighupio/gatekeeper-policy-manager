@@ -8,16 +8,22 @@ The best way to use locally these tests is to run them in a docker container, ot
 >
 > For example with: kubectl port-forward -n gatekeeper-system svc/gatekeeper-policy-manager 8080:80
 
-1. Get the container running:
+1. Get the container running. The tag must match the `@playwright/test` version in
+   `package.json`, because the image ships the browsers for that version:
 
 ```console
-docker run --rm -it -v --network=host $PWD:/app mcr.microsoft.com/playwright:v1.55.1
+docker run --rm -it --add-host=host.docker.internal:host-gateway \
+  -e GPM_BASE_URL=http://host.docker.internal:8080 \
+  -v "$PWD":/app -w /app/tests/e2e \
+  mcr.microsoft.com/playwright:v1.62.1 bash
 ```
+
+> `--network=host` does not reach a host port-forward on macOS. The bridge network and
+> `host.docker.internal` work on macOS and on Linux.
 
 2. Install all the dependencies:
 
 ```console
-cd app/tests/e2e
 yarn install
 ```
 
@@ -41,7 +47,14 @@ yarn test
 
 ## Before you regenerate a baseline
 
-Two things about the e2e cluster decide whether a new baseline is correct anywhere but your machine.
+Three things about the e2e cluster decide whether a new baseline is correct anywhere but your machine.
+
+### The kapp labels must stay out of the pixels
+
+`tests/tests.sh` deploys the fixture with kapp. kapp labels every object it manages with
+`kapp.k14s.io/app`, and the value is a timestamp that changes on each deploy. GPM shows that label
+in the "Full YAML definition" block of each card. Those blocks are collapsed, so no baseline holds
+the label today. A spec that opens one and photographs it gets a different picture on every run.
 
 ### The Pod row's name is masked, and must stay masked
 

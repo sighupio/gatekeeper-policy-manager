@@ -9,6 +9,16 @@ linters:
   # starting point — govet already covers `go vet`, so there is no separate vet step.
   exclusions:
     paths:
-      # npm packages vendor Go sources (e.g. flatted/golang); they belong to no module
-      # of ours but `./...` picks them up once `yarn install` has run locally.
-      - tests/e2e/node_modules
+      # Some npm packages vendor Go sources; they belong to no module of ours but `./...`
+      # picks them up wherever `yarn install` has run.
+      - node_modules
+
+# `golangci-lint run` reports these as issues, and `lint-fix` (--fix) applies them. Nothing else in
+# CI catches formatting: the default linters ignore it, and four files had drifted before this was
+# turned on. `mise run lint-fix` is the one-command repair.
+formatters:
+  enable:
+    - gofmt
+  exclusions:
+    paths:
+      - node_modules

@@ -419,7 +419,7 @@ func TestLogoutRoundTripDoesNotLoop(t *testing.T) {
 	e.ServeHTTP(rec, req)
 
 	// The property under test: the return hop lands on a page, it does not redirect again. The
-	// local logout path now renders an embedded SSR page, so there is no static-content dependency.
+	// local logout path renders an embedded SSR page, so nothing external has to be served.
 	if rec.Code == http.StatusFound || rec.Header().Get("Location") != "" {
 		t.Fatalf("the return hop redirected again to %q — this is the redirect loop",
 			rec.Header().Get("Location"))

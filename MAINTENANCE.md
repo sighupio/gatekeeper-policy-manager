@@ -50,24 +50,30 @@ To release a new Helm Chart version:
 
 1. Update the `/chart/Chart.yaml` file accordingly (i.e. bumping the version of the Chart)
 
-2. Update the `/chart/README.md` file if you made changes to the chart. You can use [`frigate`](https://frigate.readthedocs.io/) to do it automatically:
+2. Update the `/chart/README.md` file if you made changes to the chart. The `chart-readme` task generates it with [`frigate`](https://frigate.readthedocs.io/):
 
 ```bash
-cd chart
-frigate gen . > README.md
+mise run chart-readme
 ```
 
-> Notice that `frigate` will use the template in the file `/chart/.frigate` for formatting.
+> mise does not pin `frigate`, because it is a Python tool that you need once per release. Install it with `pipx install frigate`, or run it through `uvx --from frigate frigate`.
+>
+> `frigate` uses the template in the file `/chart/.frigate` for formatting.
 
-3. Tag and push the commit. This can be done as part of the release of a version of GPM or independently.
+3. Commit the change. CI publishes the chart when you tag a GPM version, in the same pipeline run.
 
 > The `release-helm-chart` pipeline packages the chart and pushes it as an OCI artifact to
 > `oci://quay.io/sighup/charts/gatekeeper-policy-manager`, next to the container image on quay.io. It
 > runs on any tag except release candidates (`v**-rc**`), and only after the `release` pipeline
 > succeeds, so a failed GPM build cannot publish a chart that references it.
 >
-> If you want to release just the chart, use a tag like `helm-chart-<version>` and relax the
-> dependency on the `release` pipeline.
+> This branch has no chart-only release. A tag that is not a version tag starts the `release`
+> pipeline, and `prepare-release-notes` fails, because `docs/releases/` holds no file with that name.
+> The chart publish then does not run, because it waits for `release`. To publish a chart on its own,
+> change the pipeline first.
+>
+> The `gh-pages` Helm repository stays for the 1.x charts, because users of older versions still
+> install from it. Nothing on this branch updates it.
 >
 > ⚠️ The first push of a new repository to quay creates it as **private**. Set
 > `quay.io/sighup/charts/gatekeeper-policy-manager` to public once, or `helm install` needs

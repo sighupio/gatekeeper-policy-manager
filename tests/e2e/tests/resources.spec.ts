@@ -28,8 +28,7 @@ test("page resources snapshot", async ({ page }) => {
 });
 
 // Not a snapshot: the filter hides rows in the DOM, and the counts come from the audit, so both are
-// content rather than pixels. The e2e cluster puts every violation in one namespace, which is also
-// the case that must render *without* a sidebar.
+// content rather than pixels.
 test("the view pivots the audit onto resources, and the filter narrows it", async ({
   page,
 }) => {

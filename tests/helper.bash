@@ -2,16 +2,6 @@
 
 # shellcheck disable=SC2086,SC2154,SC2034
 
-apply (){
-  kustomize build $1 >&2
-  kustomize build $1 | kubectl apply -f - 2>&3
-}
-
-delete (){
-  kustomize build $1 >&2
-  kustomize build $1 | kubectl delete -f - 2>&3
-}
-
 info(){
   echo -e "${BATS_TEST_NUMBER}: ${BATS_TEST_DESCRIPTION}" >&3
 }
@@ -35,7 +25,6 @@ loop_it(){
     run ${1}
     ko=${status}
     loop_it_result=${ko}
-    loop_it_output=${output}
     retry_counter=$((retry_counter + 1))
   done
   return 0

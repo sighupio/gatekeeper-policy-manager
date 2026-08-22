@@ -1,0 +1,83 @@
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+#
+# Gatekeeper creates one CRD for each ConstraintTemplate, after the template is applied. The
+# Constraints in the fixture are objects of those CRDs, so an apply that sends everything at once
+# races: kubectl either rejects the Constraints with "no matches for kind", or accepts them into a
+# CRD that Gatekeeper then recreates, which drops them.
+#
+# Each placeholder below tells kapp that the CRD comes from somewhere else. kapp waits for it and
+# applies the Constraints after it exists. Declare one placeholder for each constraint kind the
+# fixture renders: `kustomize build --load-restrictor LoadRestrictionsNone tests/ | grep '^kind:'`
+# lists them, and they come from the remote rules base, not from tests/kustomization.yaml.
+#
+# Copied from module-policy (katalog/tests/kapp/exists.yaml). See also:
+# - https://github.com/carvel-dev/kapp/blob/develop/examples/gatekeeper-v3.10.0/exists.yml
+# - https://carvel.dev/kapp/docs/latest/apply-waiting/
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: k8slivenessprobe.constraints.gatekeeper.sh
+  annotations:
+    kapp.k14s.io/exists: ""
+spec:
+  group: constraints.gatekeeper.sh
+  versions:
+    - name: v1beta1
+  names:
+    kind: K8sLivenessProbe
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: k8sreadinessprobe.constraints.gatekeeper.sh
+  annotations:
+    kapp.k14s.io/exists: ""
+spec:
+  group: constraints.gatekeeper.sh
+  versions:
+    - name: v1beta1
+  names:
+    kind: K8sReadinessProbe
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: k8suniqueingresshost.constraints.gatekeeper.sh
+  annotations:
+    kapp.k14s.io/exists: ""
+spec:
+  group: constraints.gatekeeper.sh
+  versions:
+    - name: v1beta1
+  names:
+    kind: K8sUniqueIngressHost
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: securitycontrols.constraints.gatekeeper.sh
+  annotations:
+    kapp.k14s.io/exists: ""
+spec:
+  group: constraints.gatekeeper.sh
+  versions:
+    - name: v1beta1
+  names:
+    kind: SecurityControls
+---
+# Gatekeeper writes its own certificate into this Secret, which the fixture applies empty. Without
+# this rule a second kapp deploy puts the empty value back and the admission webhook stops working.
+apiVersion: kapp.k14s.io/v1alpha1
+kind: Config
+rebaseRules:
+  - path: [data]
+    type: copy
+    sources: [existing, new]
+    resourceMatchers:
+      - kindNamespaceNameMatcher:
+          kind: Secret
+          namespace: gatekeeper-system
+          name: gatekeeper-webhook-server-cert

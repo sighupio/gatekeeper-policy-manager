@@ -8,10 +8,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
-	"log/slog"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
@@ -20,7 +20,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/spf13/viper"
-
 )
 
 // Holds everything the handlers need. They are methods on it rather than package-level functions

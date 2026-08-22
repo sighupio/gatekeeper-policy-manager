@@ -30,11 +30,6 @@ steps:
       - eval "$(mise activate bash --shims)"
       - mise run license-check
 
-trigger:
-  ref:
-    exclude:
-      - refs/tags/gatekeeper-policy-manager-*
-
 ---
 name: qa
 kind: pipeline
@@ -145,11 +140,6 @@ steps:
       - /pluto detect gpm.yaml --ignore-deprecations --target-versions=k8s=v1.36.0
       - /pluto detect rendered_chart.yaml --ignore-deprecations --target-versions=k8s=v1.36.0
 
-trigger:
-  ref:
-    exclude:
-      - refs/tags/gatekeeper-policy-manager-*
-
 ---
 name: build
 kind: pipeline
@@ -163,8 +153,6 @@ trigger:
     include:
       - refs/tags/**
       - refs/heads/**
-    exclude:
-      - refs/tags/gatekeeper-policy-manager-*
 
 steps:
   # On Dependabot branches, refresh the vendored Alpine to the version package.json now pins, before
@@ -236,8 +224,6 @@ trigger:
     include:
       - refs/tags/**
       - refs/heads/**
-    exclude:
-      - refs/tags/gatekeeper-policy-manager-*
 
 steps:
   - name: kind
@@ -356,8 +342,7 @@ steps:
         from_secret: github_token
       CLUSTER_NAME: ${DRONE_REPO_NAME}-${DRONE_BUILD_NUMBER}
     volumes:
-      - name: dockerconfig
-        path: /root/.docker/config.json
+      # No dockerconfig here: this step pulls no image, it only deletes the cluster.
       - name: dockersock
         path: /var/run/docker.sock
       - name: mise-cache
@@ -390,7 +375,6 @@ type: docker
 
 depends_on:
   - license
-  # - policeman
   - e2e
 
 trigger:
@@ -400,7 +384,6 @@ trigger:
       - refs/heads/**
     exclude:
       - refs/heads/dependabot/**
-      - refs/tags/gatekeeper-policy-manager-*
     # Every push on any branch republishes the `unstable`, `go` and commit-SHA tags. That is
     # deliberate: those tags exist for testing and `unstable` is meant to move. `latest` and the
     # version tag only move on a tag, see the registry-tag step below.
@@ -429,8 +412,6 @@ steps:
       ref:
         include:
           - refs/tags/**
-        exclude:
-          - refs/tags/gatekeeper-policy-manager-* # Exclude helm chart releases
 
   - name: registry-unstable
     image: docker:dind
@@ -443,8 +424,6 @@ steps:
         from_secret: quay_password
       registry: quay.io
       repo: quay.io/sighup/gatekeeper-policy-manager
-      container_image_name: gatekeeper-policy-manager
-      container_image_tag: test-${DRONE_BUILD_NUMBER}
       DOCKERFILE: Dockerfile
       BUILD_CONTEXT: "."
     volumes:
@@ -470,8 +449,6 @@ steps:
         from_secret: quay_password
       registry: quay.io
       repo: quay.io/sighup/gatekeeper-policy-manager
-      container_image_name: gatekeeper-policy-manager
-      container_image_tag: test-${DRONE_BUILD_NUMBER}
       DOCKERFILE: Dockerfile
       BUILD_CONTEXT: "."
     volumes:
@@ -484,7 +461,9 @@ steps:
       # :latest tracks stable releases only. A release candidate (v*-rc*) gets its version tag but
       # must not move :latest, so users pulling :latest never land on a candidate.
       - 'IMAGE_TAGS="-t $${repo}:${DRONE_TAG}"'
-      - 'case "${DRONE_TAG}" in *-rc*) echo "release candidate ${DRONE_TAG}: leaving :latest unchanged" ;; *) IMAGE_TAGS="$${IMAGE_TAGS} -t $${repo}:latest" ;; esac'
+      # Only a version tag moves :latest. The pipeline used to keep stray tags out with a list of
+      # exclusions; gating on the tag shape here covers every stray tag, not the ones we thought of.
+      - 'case "${DRONE_TAG}" in v*-rc*) echo "release candidate ${DRONE_TAG}: leaving :latest unchanged" ;; v*) IMAGE_TAGS="$${IMAGE_TAGS} -t $${repo}:latest" ;; *) echo "${DRONE_TAG} is not a version tag: leaving :latest unchanged" ;; esac'
       - "docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 --pull --push -f $${DOCKERFILE} $${IMAGE_TAGS} $${BUILD_CONTEXT}"
     when:
       event:
@@ -558,7 +537,7 @@ depends_on:
 trigger:
   ref:
     include:
-      # Trigger the Helm Chart Releaser only when tagging
+      # Publish the chart only when tagging
       - refs/tags/**
     exclude:
       # Don't publish a chart from a release candidate.
