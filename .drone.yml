@@ -356,8 +356,7 @@ steps:
         from_secret: github_token
       CLUSTER_NAME: ${DRONE_REPO_NAME}-${DRONE_BUILD_NUMBER}
     volumes:
-      - name: dockerconfig
-        path: /root/.docker/config.json
+      # No dockerconfig here: this step pulls no image, it only deletes the cluster.
       - name: dockersock
         path: /var/run/docker.sock
       - name: mise-cache
@@ -390,7 +389,6 @@ type: docker
 
 depends_on:
   - license
-  # - policeman
   - e2e
 
 trigger:
@@ -443,8 +441,6 @@ steps:
         from_secret: quay_password
       registry: quay.io
       repo: quay.io/sighup/gatekeeper-policy-manager
-      container_image_name: gatekeeper-policy-manager
-      container_image_tag: test-${DRONE_BUILD_NUMBER}
       DOCKERFILE: Dockerfile
       BUILD_CONTEXT: "."
     volumes:
@@ -470,8 +466,6 @@ steps:
         from_secret: quay_password
       registry: quay.io
       repo: quay.io/sighup/gatekeeper-policy-manager
-      container_image_name: gatekeeper-policy-manager
-      container_image_tag: test-${DRONE_BUILD_NUMBER}
       DOCKERFILE: Dockerfile
       BUILD_CONTEXT: "."
     volumes:

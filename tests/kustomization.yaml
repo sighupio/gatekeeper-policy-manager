@@ -8,7 +8,9 @@ resources:
   # Deploy Gatekeeper from KFD OPA Module
   - github.com/sighupio/module-policy/katalog/gatekeeper/core?ref=v1.17.0
   - github.com/sighupio/module-policy/katalog/gatekeeper/rules?ref=v1.17.0
-  - github.com/sighupio/module-policy/katalog/gatekeeper/monitoring?ref=v1.17.0
+  # katalog/gatekeeper/monitoring is left out on purpose. It adds a ServiceMonitor, a
+  # PrometheusRule and a dashboard ConfigMap that no view shows and no test reads, and it
+  # made the suite install two Prometheus CRDs from raw.githubusercontent.com first.
   - mutation.yaml
 
   # Deploy GPM itself
@@ -19,8 +21,8 @@ resources:
 patches:
   - path: deploy-patch.yaml
   # Turn on admission events so the events view has something to show. Gatekeeper emits none by
-  # default, which is why that view went untested. A kustomize patch, not kubectl patch: the
-  # deploy step re-applies until the CRDs settle, and a kubectl patch would be reverted next apply.
+  # default, which is why that view went untested. A kustomize patch, not a kubectl patch: kapp owns
+  # these objects, and it puts back anything patched outside the fixture on the next deploy.
   - target:
       group: apps
       version: v1

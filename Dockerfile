@@ -7,7 +7,9 @@ FROM --platform=$BUILDPLATFORM golang:1.26.6 AS backend
 ARG TARGETOS
 ARG TARGETARCH
 WORKDIR /app
-COPY *.go ./
+# No COPY of the sources: both RUNs below bind-mount the whole build context over /app, and the
+# target stage takes only /bin/gpm. A COPY here would just invalidate the go mod download cache on
+# every source change.
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=bind,source=go.mod,target=go.mod \
     --mount=type=bind,source=go.sum,target=go.sum \

@@ -1,10 +1,8 @@
 .vscode
 # `go build` with no -o drops the binary here, named after the module
 gatekeeper-policy-manager
-static-content/*
 tests/e2e/test-results
 node_modules
-web-client/build
 **/mise.local.toml
 # rendered by `mise run render` for the deprecated-API check
 gpm.yaml

@@ -8,9 +8,12 @@ idiomatic_version_file_enable_tools = ["go"]
 
 [tools]
 golangci-lint = "2.12.2"
-# Keep in sync with KIND_VERSION / CLUSTER_VERSION in .drone.yml.
+# Keep in sync with CLUSTER_VERSION in .drone.yml.
 kind = "0.32.0"
 kubectl = "1.36.1"
+# Deploys the e2e fixture. kapp waits for the CRDs that Gatekeeper makes from the
+# ConstraintTemplates before it applies the Constraints (see tests/kapp/exists.yaml).
+kapp = "0.65.3"
 # Pinned to the versions the retired quay.io/sighup/e2e-testing image shipped, so moving
 # CI onto mise is a refactor and not a behaviour change. kubectl is the deliberate
 # exception: the image carried 1.32.2 against a 1.36 cluster, outside the supported skew.
@@ -21,8 +24,8 @@ shellcheck = "0.11.0"
 "github:google/addlicense" = "v1.1.1"
 # Checks the module graph against the Go vulnerability database.
 "go:golang.org/x/vuln/cmd/govulncheck" = "1.6.0"
-# For the end-to-end tests (tests/e2e runs Playwright through yarn). node 24 is the current LTS
-# line; yarn is v1 to match the committed yarn.lock.
+# For gen:screenshots and the `node -p` version checks below. CI runs Playwright itself inside the
+# Playwright image, with no mise. node 24 is the current LTS line; yarn is v1 to match the lockfile.
 node = "24"
 yarn = "1.22.22"
 # Formats the TypeScript in tests/e2e.
@@ -32,7 +35,9 @@ oxipng = "10.2.0"
 
 [tasks."lint-shell"]
 description = "shellcheck the shell scripts"
-run = 'shellcheck $(find . -name "*.sh" -not -path "*/node_modules/*")'
+# *.bash too: tests/helper.bash is a shell file that the *.sh glob never matched, so it went
+# unlinted and its own shellcheck directive did nothing.
+run = 'shellcheck $(find . \( -name "*.sh" -o -name "*.bash" \) -not -path "*/node_modules/*")'
 
 [tasks.lint]
 description = "run golangci-lint (plus the shell and Alpine-version and Playwright-version checks via deps)"
@@ -50,7 +55,6 @@ description = "check license headers"
 run = """
 addlicense -c "SIGHUP s.r.l" -v -l bsd -check \
   -ignore 'chart/**' \
-  -ignore 'static-content/**' \
   -ignore '**/node_modules/**' \
   -ignore 'static/ssr/*.min.js' \
   -ignore 'gpm.yaml' \
@@ -63,7 +67,6 @@ description = "add license headers"
 run = """
 addlicense -c "SIGHUP s.r.l" -y 2017-present -v -l bsd \
   -ignore 'chart/**' \
-  -ignore 'static-content/**' \
   -ignore '**/node_modules/**' \
   -ignore 'static/ssr/*.min.js' \
   -ignore 'gpm.yaml' \
@@ -99,17 +102,13 @@ description = "check Go dependencies against the vulnerability database"
 # check-go-version first: a passing vulncheck only certifies the artifact if the image builds the
 # same Go the scan used.
 depends = ["check-go-version"]
-# Same node_modules filter as the tests: npm packages vendor Go sources.
+# Same node_modules filter as the tests: some npm packages vendor Go sources.
 run = 'govulncheck $(go list ./... | grep -v /node_modules/)'
 
 [tasks."test:unit:go"]
 description = "run the Go unit tests"
-# node_modules vendors Go sources (flatted) that `./...` would otherwise pick up.
+# Some npm packages vendor Go sources that `./...` would otherwise pick up.
 run = 'go test -count=1 $(go list ./... | grep -v /node_modules/)'
-
-[tasks."test:unit"]
-description = "run the unit tests"
-depends = ["test:unit:go"]
 
 [tasks."chart-readme"]
 description = "regenerate chart/README.md from values.yaml"
@@ -168,22 +167,24 @@ description = "fail if the Playwright container tag in .drone.yml drifts from te
 # The CI e2e steps run INSIDE mcr.microsoft.com/playwright:vX.Y.Z, which ships the browser binaries
 # for Playwright X.Y.Z. The @playwright/test npm version must equal that image tag, or the browser the
 # JS library expects is not in the image. Nothing links them but the version number, so guard it here
-# (same idea as check-alpine-version / check-go-version). A matching bump also needs the -linux.png
-# baselines regenerated, since the container's browser renders them.
+# (same idea as check-alpine-version / check-go-version). The e2e README is checked too: its tag had
+# drifted seven minor versions behind. A matching bump also needs the -linux.png baselines
+# regenerated, since the container's browser renders them.
 run = """
 want=$(node -p "require('./tests/e2e/package.json').devDependencies['@playwright/test'].replace(/[^0-9.]/g,'')")
-count=$(grep -oE 'mcr.microsoft.com/playwright:v[0-9.]+' .drone.yml | sed 's/.*:v//' | sort -u | wc -l | tr -d ' ')
-have=$(grep -oE 'mcr.microsoft.com/playwright:v[0-9.]+' .drone.yml | sed 's/.*:v//' | sort -u | head -1)
+files=".drone.yml tests/e2e/README.md"
+count=$(grep -hoE 'mcr.microsoft.com/playwright:v[0-9.]+' $files | sed 's/.*:v//' | sort -u | wc -l | tr -d ' ')
+have=$(grep -hoE 'mcr.microsoft.com/playwright:v[0-9.]+' $files | sed 's/.*:v//' | sort -u | head -1)
 if [ "$count" != "1" ]; then
-  echo "The mcr.microsoft.com/playwright image tags in .drone.yml disagree with each other." >&2
+  echo "The mcr.microsoft.com/playwright image tags in $files disagree with each other." >&2
   exit 1
 fi
 if [ "$want" != "$have" ]; then
-  echo "Playwright version mismatch: @playwright/test=$want, .drone.yml image=v$have" >&2
-  echo "Bump every mcr.microsoft.com/playwright:v tag in .drone.yml to v$want, then regenerate the -linux.png baselines." >&2
+  echo "Playwright version mismatch: @playwright/test=$want, image tag=v$have" >&2
+  echo "Bump every mcr.microsoft.com/playwright:v tag in $files to v$want, then regenerate the -linux.png baselines." >&2
   exit 1
 fi
-echo "Playwright aligned across tests/e2e/package.json and .drone.yml: $want"
+echo "Playwright aligned across tests/e2e/package.json, .drone.yml and the e2e README: $want"
 """
 
 [tasks."gen:screenshots"]
