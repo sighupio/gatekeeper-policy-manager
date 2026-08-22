@@ -8,8 +8,7 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   use: {
-    headless: true,
-    browserName: "chromium",
+    // Not the defaults: GPM can be served over TLS behind an ingress.
     ignoreHTTPSErrors: true,
     // CI sets this to the port kubectl port-forward picked. Override it locally to point the
     // tests somewhere else, e.g. GPM_BASE_URL=http://192.168.2.1:8080 yarn test

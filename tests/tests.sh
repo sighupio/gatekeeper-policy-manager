@@ -9,57 +9,41 @@
 
 load ./helper
 
-@test "Requirements" {
-    info
-    ns(){
-        kubectl create ns gatekeeper-system
-	# We create the CRD so the apply doesn't fail. We don't care about the servicemonitor and the rule actually
-        kubectl apply -f https://raw.githubusercontent.com/sighupio/module-monitoring/v4.2.0/katalog/prometheus-operator/crds/0servicemonitorCustomResourceDefinition.yaml
-        kubectl apply -f https://raw.githubusercontent.com/sighupio/module-monitoring/v4.2.0/katalog/prometheus-operator/crds/0prometheusruleCustomResourceDefinition.yaml
-    }
-    run ns
-    [ "$status" -eq 0 ]
-}
+# Give kubectl a cache directory of its own, so the Deploy test can drop it. kubectl caches API
+# discovery on disk. When that cache was written before Gatekeeper created the constraint CRDs, the
+# first `kubectl get constraints` resolves the "constraints" category against the stale list: it
+# prints nothing and exits 0. That same call refreshes the cache, so the next one is right. A retry
+# loop never sees this, and a single count does. Dropping the cache keeps the counts below right
+# whichever kubectl call runs first.
+export KUBECACHEDIR="${TMPDIR:-/tmp}/gpm-e2e-kubectl-cache"
 
+# kapp, and not `kubectl apply`, because the fixture holds ConstraintTemplates together with the
+# Constraints that need the CRDs Gatekeeper makes from them. One apply sends both, and the
+# Constraints are rejected with "no matches for kind" until those CRDs exist. That is why this test
+# used to apply the whole fixture in a retry loop. kapp waits for the CRDs that tests/kapp/exists.yaml
+# declares, applies the Constraints after they exist, and waits for the Deployments to become
+# available. That replaces the retry loop here and the two readiness tests that followed it.
 @test "Deploy" {
     info
     deploy(){
-        kustomize build --load-restrictor LoadRestrictionsNone tests/ | kubectl apply -f -
+        kustomize build --load-restrictor LoadRestrictionsNone tests/ |
+            kapp deploy --app gpm-e2e --file - --file tests/kapp/exists.yaml \
+                --yes --wait-timeout 5m
         # Applied outside the kustomization on purpose: it sets `namespace: gatekeeper-system`, and
         # that transformer renames a Namespace object rather than leaving it alone.
         kubectl apply -f tests/violating-workload.yaml
-        # The apply can report success and leave no Constraints behind: Gatekeeper creates the CRD
-        # behind each ConstraintTemplate asynchronously, and recreating one drops the objects that
-        # CRD held. Assert here, so a deploy that produced nothing retries and then says so, instead
-        # of passing and failing three tests later as a timeout with no obvious cause.
-        local constraints
-        constraints=$(kubectl get constraints -o name 2>/dev/null | wc -l | tr -d ' ')
-        echo "deployed ${constraints} constraints"
-        [ "${constraints:-0}" -gt 0 ]
     }
-    # A longer budget than the apply alone needed: this now waits for the Constraints to survive,
-    # not just for the CRDs to accept them.
-    loop_it deploy 20 5
-    status=${loop_it_result}
+    run deploy
+    echo "$output"
     [ "$status" -eq 0 ]
-}
-
-@test "Wait until Gatekeeper Controller is ready" {
-    info
-    ready(){
-        kubectl -n gatekeeper-system wait --for=condition=available --timeout=120s deployment/gatekeeper-controller-manager
-    }
-    run ready
-    [ "$status" -eq 0 ]
-}
-
-@test "Wait until GPM is ready" {
-    info
-    ready(){
-        kubectl -n gatekeeper-system wait --for=condition=available --timeout=120s deployment/gatekeeper-policy-manager
-    }
-    run ready
-    [ "$status" -eq 0 ]
+    # kubectl may have written its discovery cache before these CRDs existed. Drop it, or the count
+    # below is the one query that pays for the stale entry. See the note on KUBECACHEDIR at the top.
+    rm -rf "${KUBECACHEDIR:?}"
+    # kapp reports what it applied, not what survived. A zero here names the fault where it happens,
+    # instead of leaving it to surface three tests later as a timeout.
+    constraints=$(kubectl get constraints -o name | wc -l | tr -d ' ')
+    echo "deployed ${constraints} constraints"
+    [ "${constraints:-0}" -gt 0 ]
 }
 
 # The UI snapshot tests (the Home dashboard and the Constraints view) render Gatekeeper's audit
@@ -112,8 +96,8 @@ spec:
                 port:
                   number: 80
 ING
-    # loop_it retries until the duplicate is denied: the webhook is not enforcing the instant GPM
-    # reports ready, and the constraint needs gpm-events-a in its cache, which lags the apply above.
+    # loop_it retries until the duplicate is denied: the webhook does not enforce the instant the
+    # deploy returns, and the constraint needs gpm-events-a in its cache, which lags the apply above.
     expect_denied(){
         out=$(kubectl -n default apply -f - <<'ING' 2>&1
 apiVersion: networking.k8s.io/v1
@@ -138,24 +122,6 @@ ING
     }
     loop_it expect_denied 30 5
     [ "$loop_it_result" -eq 0 ]
-}
-
-@test "Run tests" {
-    info
-    deploy_test(){
-        kubectl -n kube-system apply -f tests/e2e-tests.yaml
-    }
-    run deploy_test
-    [ "$status" -eq 0 ]
-}
-
-@test "Check tests result" {
-    info
-    test(){
-        kubectl -n kube-system wait --for=condition=complete --timeout=300s job/e2e-tests
-    }
-    run test
-    [ "$status" -eq 0 ]
 }
 
 @test "[AUDIT] check violations are present" {

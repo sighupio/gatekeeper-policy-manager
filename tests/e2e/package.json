@@ -2,7 +2,6 @@
   "name": "gpm-e2e",
   "version": "1.0.0",
   "description": "E2E Testing suite for GPM",
-  "main": "index.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sighupio/gatekeeper-policy-manager.git"
@@ -18,6 +17,6 @@
   },
   "scripts": {
     "test": "playwright test",
-    "gen:snapshot": "rm -rf tests/*-snapshots && playwright test --update-snapshots --config=playwright.config.js"
+    "gen:snapshot": "rm -rf tests/*-snapshots && playwright test --update-snapshots"
   }
 }
