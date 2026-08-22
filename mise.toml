@@ -120,7 +120,13 @@ description = "regenerate chart/README.md from values.yaml"
 # truncates the README before the shell resolves frigate, so a missing frigate left an empty file.
 run = """
 tmp=$(mktemp)
-if (cd chart && frigate gen .) > "$tmp" && [ -s "$tmp" ]; then
+if command -v frigate >/dev/null 2>&1; then
+  gen="frigate"
+else
+  # The README tells maintainers they can run frigate through uvx, which puts no `frigate` on PATH.
+  gen="uvx --from frigate frigate"
+fi
+if (cd chart && $gen gen .) > "$tmp" && [ -s "$tmp" ]; then
   mv "$tmp" chart/README.md
   echo "chart/README.md regenerated"
 else
