@@ -116,7 +116,20 @@ description = "regenerate chart/README.md from values.yaml"
 # frigate is not pinned here on purpose. It is a python tool, needed once per release, and pinning
 # it through the pipx backend makes `mise install` fail wherever uv is missing. Install it with
 # `uvx --from frigate frigate` or `pipx install frigate`.
-run = "cd chart && frigate gen . > README.md"
+# Render to a temporary file and move it into place only on success. `frigate gen . > README.md`
+# truncates the README before the shell resolves frigate, so a missing frigate left an empty file.
+run = """
+tmp=$(mktemp)
+if (cd chart && frigate gen .) > "$tmp" && [ -s "$tmp" ]; then
+  mv "$tmp" chart/README.md
+  echo "chart/README.md regenerated"
+else
+  rm -f "$tmp"
+  echo "frigate produced nothing; chart/README.md is unchanged." >&2
+  echo "Install it with 'pipx install frigate', or run 'uvx --from frigate frigate'." >&2
+  exit 1
+fi
+"""
 
 [tasks.render]
 description = "render the manifests and the chart for the deprecated-API check"
@@ -202,7 +215,13 @@ oxipng -o max --strip safe ../../screenshots/*.png
 
 [tasks.e2e]
 description = "run the bats e2e suite; expects KUBECONFIG and LOAD_IMAGE to be set"
+# `kustomize edit` re-serializes the whole kustomization and detaches every comment from what it
+# documents, so a local run used to leave ~80 lines of noise in a tracked file. Put the fixture back
+# the way it was found. A snapshot and not `git checkout`: that would also discard real edits.
 run = """
+backup=$(mktemp)
+cp tests/kustomization.yaml "$backup"
+trap 'cp "$backup" tests/kustomization.yaml; rm -f "$backup"' EXIT INT TERM
 (cd tests && kustomize edit set image quay.io/sighup/gatekeeper-policy-manager="$LOAD_IMAGE")
 bats -t tests/tests.sh
 """

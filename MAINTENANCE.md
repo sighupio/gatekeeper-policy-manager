@@ -50,14 +50,15 @@ To release a new Helm Chart version:
 
 1. Update the `/chart/Chart.yaml` file accordingly (i.e. bumping the version of the Chart)
 
-2. Update the `/chart/README.md` file if you made changes to the chart. You can use [`frigate`](https://frigate.readthedocs.io/) to do it automatically:
+2. Update the `/chart/README.md` file if you made changes to the chart. The `chart-readme` task generates it with [`frigate`](https://frigate.readthedocs.io/):
 
 ```bash
-cd chart
-frigate gen . > README.md
+mise run chart-readme
 ```
 
-> Notice that `frigate` will use the template in the file `/chart/.frigate` for formatting.
+> mise does not pin `frigate`, because it is a Python tool that you need once per release. Install it with `pipx install frigate`, or run it through `uvx --from frigate frigate`.
+>
+> `frigate` uses the template in the file `/chart/.frigate` for formatting.
 
 3. Tag and push the commit. This can be done as part of the release of a version of GPM or independently.
 
