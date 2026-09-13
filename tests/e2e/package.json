@@ -13,7 +13,7 @@
   },
   "homepage": "https://github.com/sighupio/gatekeeper-policy-manager#readme",
   "devDependencies": {
-    "@playwright/test": "1.62.1"
+    "@playwright/test": "1.63.0"
   },
   "scripts": {
     "test": "playwright test",
