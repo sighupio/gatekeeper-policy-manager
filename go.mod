@@ -16,7 +16,7 @@ require (
 	github.com/yuin/goldmark v1.8.5
 	golang.org/x/oauth2 v0.36.0
 	k8s.io/api v0.36.3
-	k8s.io/apimachinery v0.36.3
+	k8s.io/apimachinery v0.37.0
 	k8s.io/client-go v0.36.3
 	sigs.k8s.io/yaml v1.6.0
 )
