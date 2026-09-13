@@ -59,14 +59,19 @@ export KUBECACHEDIR="${TMPDIR:-/tmp}/gpm-e2e-kubectl-cache"
         #  - every Constraint's status.byPod lists all the Gatekeeper pods (audit + controllers), so
         #    the "Status by pod" block on the Constraints page has stopped growing.
         # With both settled, the Home and Constraints snapshots need no retry loop of their own.
-        local total_c audited_c total_v reporters incomplete
+        local total_c audited_c total_v reporters incomplete fixture
         total_c=$(kubectl get constraints -o jsonpath='{.items[*].metadata.name}' | wc -w)
         audited_c=$(kubectl get constraints -o jsonpath='{range .items[*]}{.status.auditTimestamp}{"\n"}{end}' | grep -c .)
         total_v=$(kubectl get constraints -o jsonpath='{range .items[*]}{.status.totalViolations}{" "}{end}' | tr ' ' '\n' | awk '{s+=$1} END{print s+0}')
         reporters=$(kubectl get pods -n gatekeeper-system -l gatekeeper.sh/system=yes --field-selector=status.phase=Running -o name | wc -l)
         incomplete=$(kubectl get constraints -o jsonpath='{range .items[*]}{.status.byPod[*].id}{"\n"}{end}' | awk -v r="$reporters" 'NF < r {c++} END{print c+0}')
-        echo "audited ${audited_c}/${total_c} constraints, ${total_v} violations, ${incomplete} with incomplete byPod (reporters=${reporters})"
-        [ "$total_c" -gt 0 ] && [ "$audited_c" -eq "$total_c" ] && [ "$total_v" -gt 0 ] && [ "$reporters" -gt 0 ] && [ "$incomplete" -eq 0 ]
+        # Gatekeeper stamps auditTimestamp on every Constraint as soon as a cycle finishes, even one
+        # that ran before violating-workload.yaml was admitted. The checks above are then all true
+        # with that namespace missing, and the UI tests fail instead: the Resources page draws one
+        # card, the sidebar needs two to appear, and three snapshots differ. Wait for the workload.
+        fixture=$(kubectl get constraints -o jsonpath='{range .items[*]}{range .status.violations[*]}{.namespace}{"\n"}{end}{end}' | grep -c '^gpm-e2e-apps$' || true)
+        echo "audited ${audited_c}/${total_c} constraints, ${total_v} violations (${fixture} in gpm-e2e-apps), ${incomplete} with incomplete byPod (reporters=${reporters})"
+        [ "$total_c" -gt 0 ] && [ "$audited_c" -eq "$total_c" ] && [ "$total_v" -gt 0 ] && [ "$reporters" -gt 0 ] && [ "$incomplete" -eq 0 ] && [ "$fixture" -gt 0 ]
     }
     loop_it settled 30 10
     [ "$loop_it_result" -eq 0 ]
