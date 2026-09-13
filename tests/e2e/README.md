@@ -15,7 +15,7 @@ The best way to use locally these tests is to run them in a docker container, ot
 docker run --rm -it --add-host=host.docker.internal:host-gateway \
   -e GPM_BASE_URL=http://host.docker.internal:8080 \
   -v "$PWD":/app -w /app/tests/e2e \
-  mcr.microsoft.com/playwright:v1.62.1 bash
+  mcr.microsoft.com/playwright:v1.63.0 bash
 ```
 
 > `--network=host` does not reach a host port-forward on macOS. The bridge network and
