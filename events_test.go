@@ -187,7 +187,7 @@ func TestGetKubernetesEventsHonorsContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // already cancelled before the call
 
-	if _, err := getKubernetesEvents(ctx, *clients.dynamic, "", []string{"gatekeeper-webhook"}); err == nil {
+	if _, err := getKubernetesEvents(ctx, clients.dynamic, "", []string{"gatekeeper-webhook"}); err == nil {
 		t.Error("a cancelled context did not abort the events list; the context is not threaded")
 	}
 }

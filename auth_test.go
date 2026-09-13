@@ -6,14 +6,73 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/spf13/viper"
 )
+
+// "Log in again" is the wrong advice for a provider that rejects GPM's client: the same error
+// returns every time, and the person retrying cannot fix it from a browser.
+func TestALoginErrorTellsTheReaderSomethingTheyCanAct(t *testing.T) {
+	for code, want := range map[string]string{
+		"invalid_scope":       "GPM_OIDC_SCOPES",
+		"invalid_client":      "Contact a cluster administrator",
+		"unauthorized_client": "Contact a cluster administrator",
+		"login_required":      "log in again",
+		"access_denied":       "log in again",
+	} {
+		t.Run(code, func(t *testing.T) {
+			got := loginErrorAction(code)
+			if !strings.Contains(got, want) {
+				t.Errorf("advice for %s = %q, want it to mention %q", code, got, want)
+			}
+			if code == "invalid_scope" || strings.HasSuffix(code, "_client") {
+				if strings.Contains(got, "Log out") {
+					t.Errorf("advice for %s sends the reader round the loop again: %q", code, got)
+				}
+			}
+		})
+	}
+}
+
+// A provider can keep group membership behind a scope the client has to name. Without a way to add
+// one, the groups claim never arrives and every group-based RoleBinding misses -- and the operator
+// has nothing to change. openid, profile and email stay whatever the operator writes.
+func TestExtraScopesJoinTheLoginRequest(t *testing.T) {
+	for name, tt := range map[string]struct {
+		configured string
+		want       []string
+	}{
+		"unset":                  {"", []string{"openid", "profile", "email"}},
+		"one scope":              {"groups", []string{"openid", "profile", "email", "groups"}},
+		"comma separated":        {"groups,offline_access", []string{"openid", "profile", "email", "groups", "offline_access"}},
+		"space separated":        {"groups offline_access", []string{"openid", "profile", "email", "groups", "offline_access"}},
+		"messy spacing":          {" groups ,  offline_access ", []string{"openid", "profile", "email", "groups", "offline_access"}},
+		"repeating a default":    {"email groups", []string{"openid", "profile", "email", "groups"}},
+		"repeating itself":       {"groups groups", []string{"openid", "profile", "email", "groups"}},
+		"cannot drop the openid": {"groups", []string{"openid", "profile", "email", "groups"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Cleanup(viper.Reset)
+			viper.Set("oidc_scopes", tt.configured)
+			got := oidcScopes()
+			if len(got) != len(tt.want) {
+				t.Fatalf("scopes = %v, want %v", got, tt.want)
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Fatalf("scopes = %v, want %v", got, tt.want)
+				}
+			}
+		})
+	}
+}
 
 func TestAuthEnabled(t *testing.T) {
 	tests := []struct {
@@ -279,5 +338,58 @@ func TestMiddlewareStopsATraversalDressedAsAPublicPath(t *testing.T) {
 		if handlerRan {
 			t.Errorf("%q reached the handler without a session", target)
 		}
+	}
+}
+
+// A person in many directory groups must still be able to log in. The group list rides in the
+// session cookie, and securecookie refuses a value above 4KB, so a large one used to fail the save
+// and return 500 from the OIDC callback: the login was impossible, not merely degraded. Dropping
+// the groups is the safe direction -- it can only narrow what the reviews allow.
+func TestALongGroupListSignsInWithoutItsGroups(t *testing.T) {
+	guid := func(i int) string { return fmt.Sprintf("11111111-2222-3333-4444-%012d", i) }
+	for _, tt := range []struct {
+		name       string
+		groups     int
+		wantGroups int
+	}{
+		{"a list the cookie can hold keeps its groups", 5, 5},
+		{"a list it cannot hold signs in with none", 200, 0},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			groups := make([]string, 0, tt.groups)
+			for i := 0; i < tt.groups; i++ {
+				groups = append(groups, guid(i))
+			}
+
+			e := echo.New()
+			e.Use(session.Middleware(newSessionStore()))
+			var saveErr error
+			var stored []string
+			e.GET("/callback", func(c echo.Context) error {
+				sess, err := session.Get(sessionName, c)
+				if err != nil {
+					t.Fatalf("session: %v", err)
+				}
+				sess.Values[sessionKeyUser] = "someone@example.com"
+				sess.Values[sessionKeyRBACUser] = "someone@example.com"
+				sess.Values[sessionKeyRBACGroups] = groups
+				saveErr = saveLoginSession(c, sess, "someone@example.com")
+				stored, _ = sess.Values[sessionKeyRBACGroups].([]string)
+				return c.NoContent(http.StatusOK)
+			})
+
+			rec := httptest.NewRecorder()
+			e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/callback", nil))
+
+			if saveErr != nil {
+				t.Fatalf("the login must succeed, got %v", saveErr)
+			}
+			if len(stored) != tt.wantGroups {
+				t.Errorf("session carries %d groups, want %d", len(stored), tt.wantGroups)
+			}
+			if rec.Header().Get("Set-Cookie") == "" {
+				t.Error("no session cookie was written, so the person is not logged in")
+			}
+		})
 	}
 }
