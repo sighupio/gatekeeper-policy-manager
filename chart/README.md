@@ -51,7 +51,7 @@ The following table lists the configurable parameters of the Gatekeeper Policy M
 | `config.secretKey` | Key that signs and encrypts the session cookie. Required with OIDC. | null |
 | `config.secretRef` | Name of an existing Secret holding the session key, instead of secretKey. | null |
 | `config.rbacFiltering.enabled` | Show each person only the views and objects their Kubernetes account can read. | false |
-| `config.rbacFiltering.usernameClaim` | ID-token claim holding the username the API server knows. | null |
+| `config.rbacFiltering.usernameClaim` | Required when enabled. ID-token claim holding the username the API server knows. | null |
 | `config.rbacFiltering.usernamePrefix` | Prefix the API server's --oidc-username-prefix adds, for example oidc:. | null |
 | `config.rbacFiltering.groupsClaim` | ID-token claim listing the person's groups. | null |
 | `config.rbacFiltering.groupsPrefix` | Prefix the API server's --oidc-groups-prefix adds. | null |

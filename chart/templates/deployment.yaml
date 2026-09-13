@@ -79,10 +79,8 @@ spec:
             {{- if .Values.config.rbacFiltering.enabled }}
             - name: GPM_RBAC_FILTERING
               value: "true"
-            {{- with .Values.config.rbacFiltering.usernameClaim }}
             - name: GPM_RBAC_USERNAME_CLAIM
-              value: {{ . | quote }}
-            {{- end }}
+              value: {{ required "config.rbacFiltering.usernameClaim is required when config.rbacFiltering.enabled is true. Name the claim your API server reads in --oidc-username-claim, for example email or preferred_username." .Values.config.rbacFiltering.usernameClaim | quote }}
             {{- with .Values.config.rbacFiltering.usernamePrefix }}
             - name: GPM_RBAC_USERNAME_PREFIX
               value: {{ . | quote }}

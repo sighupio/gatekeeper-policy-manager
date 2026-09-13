@@ -487,7 +487,7 @@ func (s *server) getConfigurations(c echo.Context) error {
 		return s.ssr.render(c, "configurations", data)
 	}
 
-	configResources, err := getCustomResources(c.Request().Context(), *clients.dynamic,
+	configResources, err := getCustomResources(c.Request().Context(), clients.dynamic,
 		"config.gatekeeper.sh", "v1alpha1", "configs")
 	if err != nil {
 		slog.Error("SSR configurations: getting config resources failed", "error", err)
@@ -523,7 +523,7 @@ func (s *server) getMutations(c echo.Context) error {
 	mutators := []string{"assign", "assignmetadata", "modifyset", "assignimage"}
 	items := make([]map[string]any, 0)
 	for _, mutator := range mutators {
-		mutations, err := getCustomResources(c.Request().Context(), *clients.dynamic,
+		mutations, err := getCustomResources(c.Request().Context(), clients.dynamic,
 			"mutations.gatekeeper.sh", "v1", mutator)
 		if err != nil {
 			slog.Error("SSR mutations: getting mutator resources failed", "mutator", mutator, "error", err)
@@ -622,7 +622,7 @@ func (s *server) getConstraintTemplates(c echo.Context) error {
 	}
 
 	ctx := c.Request().Context()
-	cts, err := getCustomResources(ctx, *clients.dynamic, "templates.gatekeeper.sh", "v1", "constrainttemplates")
+	cts, err := getCustomResources(ctx, clients.dynamic, "templates.gatekeeper.sh", "v1", "constrainttemplates")
 	if err != nil {
 		slog.Error("SSR constraint templates: getting resources failed", "error", err)
 		setViewError(data, "GPM could not get the Constraint Template objects from the Kubernetes API. Make sure Gatekeeper is installed in the cluster.", err)
@@ -636,7 +636,7 @@ func (s *server) getConstraintTemplates(c echo.Context) error {
 		name := cts.Items[i].GetName()
 		// A missing constraint kind just means the template has no constraints yet, so we log and
 		// continue with an empty list rather than failing the whole page.
-		constraints, err := getCustomResources(ctx, *clients.dynamic, "constraints.gatekeeper.sh", "v1beta1", name)
+		constraints, err := getCustomResources(ctx, clients.dynamic, "constraints.gatekeeper.sh", "v1beta1", name)
 		if err != nil {
 			slog.Debug("SSR constraint templates: getting related constraints failed", "constraintTemplate", name, "error", err)
 			constraints = &unstructured.UnstructuredList{}
@@ -1040,6 +1040,24 @@ func resourceModel(constraints []ssrConstraint) []ssrResourceNamespace {
 	for _, ns := range byNS {
 		out = append(out, *ns)
 	}
+	sortResourceNamespaces(out)
+	return out
+}
+
+// rows counts the resource rows on the page, which is how the scoping reports that it removed some.
+func rows(namespaces []ssrResourceNamespace) int {
+	n := 0
+	for _, ns := range namespaces {
+		n += len(ns.Resources)
+	}
+	return n
+}
+
+// sortResourceNamespaces puts the worst namespace first and the cluster-scoped bucket last. The
+// scoping runs this again on what it kept: it recounts each card from the rows that survived, and an
+// order left over from the counts before that would rank a card above one that now shows more
+// violations -- which says something about the rows this reader cannot see.
+func sortResourceNamespaces(out []ssrResourceNamespace) {
 	sort.Slice(out, func(i, j int) bool {
 		// The cluster-scoped bucket is not "worse", it is different: keep it at the bottom.
 		if (out[i].Name == "") != (out[j].Name == "") {
@@ -1053,7 +1071,6 @@ func resourceModel(constraints []ssrConstraint) []ssrResourceNamespace {
 		}
 		return out[i].Name < out[j].Name
 	})
-	return out
 }
 
 // enforcementMode collapses spec.enforcementAction to the three modes the UI shows, matching the
@@ -1168,7 +1185,7 @@ func listConstraints(ctx context.Context, clients *kubeClients) ([]map[string]in
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
-			list, err := getCustomResources(ctx, *clients.dynamic, "constraints.gatekeeper.sh", "v1beta1", name)
+			list, err := getCustomResources(ctx, clients.dynamic, "constraints.gatekeeper.sh", "v1beta1", name)
 			if err != nil {
 				errs[i] = fmt.Errorf("getting %s constraints: %w", name, err)
 				return
@@ -1197,6 +1214,34 @@ func listConstraints(ctx context.Context, clients *kubeClients) ([]map[string]in
 // at the existing HTML report the JSON handler serves with ?report=html.
 // The Resources view: the audit, pivoted onto the objects that break policies. It reads the same
 // Constraints as the Constraints view and does the grouping in memory -- no extra API calls.
+// scopeResources applies the reader's own access to the Resources page model, and reports what it
+// could not review. The flag lives in here rather than in an `if` around the call, so the page
+// cannot render unscoped because a branch was dropped: there is one call, and it always runs.
+func (s *server) scopeResources(c echo.Context, clients *kubeClients, namespaces []ssrResourceNamespace, data map[string]any) []ssrResourceNamespace {
+	if !s.rbacFilteringEnabled() {
+		return namespaces
+	}
+	// One checker for the whole render: reading the flag from a second lookup could read a checker
+	// that was rebuilt in between, and so report nothing wrong on a page that is empty because
+	// everything failed.
+	checker := s.checkerFor(clients)
+	scoped, unverified := s.scopeToReader(c, checker, namespaces)
+	// Gatekeeper's audit cap is a fact about every Constraint in the cluster. Telling a reader whose
+	// own rows were filtered that some violation somewhere was not reported hands them a fact about
+	// what they cannot see. A reader who lost no rows sees the whole picture, so the banner stands.
+	if rows(scoped) < rows(namespaces) {
+		data["AuditLimited"] = false
+		// "Not audited yet" is a fact about Gatekeeper, and this reader cannot check it: their page
+		// is short because rows were removed. Send them to the empty state that is true for them.
+		data["Audited"] = true
+	}
+	// A denial is normal and silent. A review that could not be answered is a malfunction, and
+	// saying nothing would let a broken grant look like a clean cluster.
+	data["Unverified"] = unverified
+	data["Misconfigured"] = checker.misconfigured()
+	return scoped
+}
+
 func (s *server) getResources(c echo.Context) error {
 	layout := s.ssrLayoutData(c, "resources", "/resources", "Resources")
 
@@ -1236,24 +1281,14 @@ func (s *server) getResources(c echo.Context) error {
 	// Constraint Templates would otherwise read every violation in every namespace here, none of
 	// which they can read with kubectl. "This page shows what you can read" is a sentence that
 	// survives a security review; "everything, unless you are not an operator" is not.
-	if s.rbacFilteringEnabled() {
-		// One checker for the whole render: reading the flag from a second lookup could read a
-		// checker that was rebuilt in between, and so report nothing wrong on a page that is empty
-		// because everything failed.
-		checker := s.checkerFor(clients)
-		var unverified int
-		namespaces, unverified = s.scopeToReader(c, checker, namespaces)
-		// A denial is normal and silent. A review that could not be answered is a malfunction, and
-		// saying nothing would let a broken grant look like a clean cluster.
-		data["Unverified"] = unverified
-		data["Misconfigured"] = checker.misconfigured()
-	}
-	data["Namespaces"] = namespaces
 	// Two different empty states: nothing broken, or nothing audited yet. Saying "no violations"
 	// before the first audit would be a lie.
 	data["Audited"] = audited
-	// Gatekeeper caps the violations it reports per constraint, so the pivot can be short too.
+	// Gatekeeper caps the violations it reports per constraint, so the pivot can be short too. Set
+	// before the scoping, which withdraws it when this reader lost rows: written after, it would
+	// overwrite that decision.
 	data["AuditLimited"] = limited
+	data["Namespaces"] = s.scopeResources(c, clients, namespaces, data)
 
 	return s.ssr.render(c, "resources", data)
 }
@@ -1431,7 +1466,7 @@ func (s *server) getEvents(c echo.Context) error {
 		namespace = c.QueryParam("namespace")
 	}
 
-	events, err := getKubernetesEvents(c.Request().Context(), *clients.dynamic, namespace, sources)
+	events, err := getKubernetesEvents(c.Request().Context(), clients.dynamic, namespace, sources)
 	if err != nil {
 		slog.Error("SSR events: getting events failed", "namespace", namespace, "sources", sources, "error", err)
 		setViewError(data, "GPM could not get the events from the Kubernetes API. Make sure the API is reachable.", err)
@@ -1858,6 +1893,13 @@ func setViewError(data map[string]any, message string, err error) {
 			"Set GPM_SKIP_TLS_VERIFY=true if the cluster CA is missing the AKI/SKI extensions, as happens on EKS. Use with caution."
 	}
 	data["Error"] = message
+	if rbacFilteringEnabled() {
+		// The detail carries Kind names and the API server's address, and the Resources view is
+		// reachable by a reader who is allowed nothing else. Send it where the operator reads it.
+		slog.Error("a view failed while RBAC filtering is on, so its detail stays out of the page",
+			"error", err)
+		return
+	}
 	data["ErrorDetail"] = err.Error()
 }
 
@@ -2023,12 +2065,17 @@ func (s *server) scopeToReader(c echo.Context, checker *accessChecker, namespace
 		scoped.Resources = visible
 		kept = append(kept, scoped)
 	}
+	// The counts above are recounted from the visible rows, so the order has to be recomputed too.
+	sortResourceNamespaces(kept)
 	// Nothing failed when the reader simply left, and saying so would send an operator looking for
 	// an API server problem that never happened. Nor when the checker is refused outright: that is
 	// already reported once per window, with the remediation, and this line would repeat a weaker
 	// version of it on every render. What is left is the case this line is for -- some rows
 	// unanswered while the rest were fine.
-	if unverified > 0 && ctx.Err() == nil && !checker.misconfigured() {
+	// Not when the identity itself is unusable: no review was made for any row, so "their access
+	// review failed" names the wrong fault. The middleware already reported that one, with the
+	// remediation, once per window.
+	if unverified > 0 && id.valid() && ctx.Err() == nil && !checker.misconfigured() {
 		// The page says only that rows are missing (the count would tell a reader how much they are
 		// not allowed to see), so the number has to reach the operator here or nowhere.
 		slog.Warn("some resources were left out of the Resources view because their access review failed",

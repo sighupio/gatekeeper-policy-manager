@@ -6,11 +6,13 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/spf13/viper"
 )
@@ -336,5 +338,58 @@ func TestMiddlewareStopsATraversalDressedAsAPublicPath(t *testing.T) {
 		if handlerRan {
 			t.Errorf("%q reached the handler without a session", target)
 		}
+	}
+}
+
+// A person in many directory groups must still be able to log in. The group list rides in the
+// session cookie, and securecookie refuses a value above 4KB, so a large one used to fail the save
+// and return 500 from the OIDC callback: the login was impossible, not merely degraded. Dropping
+// the groups is the safe direction -- it can only narrow what the reviews allow.
+func TestALongGroupListSignsInWithoutItsGroups(t *testing.T) {
+	guid := func(i int) string { return fmt.Sprintf("11111111-2222-3333-4444-%012d", i) }
+	for _, tt := range []struct {
+		name       string
+		groups     int
+		wantGroups int
+	}{
+		{"a list the cookie can hold keeps its groups", 5, 5},
+		{"a list it cannot hold signs in with none", 200, 0},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			groups := make([]string, 0, tt.groups)
+			for i := 0; i < tt.groups; i++ {
+				groups = append(groups, guid(i))
+			}
+
+			e := echo.New()
+			e.Use(session.Middleware(newSessionStore()))
+			var saveErr error
+			var stored []string
+			e.GET("/callback", func(c echo.Context) error {
+				sess, err := session.Get(sessionName, c)
+				if err != nil {
+					t.Fatalf("session: %v", err)
+				}
+				sess.Values[sessionKeyUser] = "someone@example.com"
+				sess.Values[sessionKeyRBACUser] = "someone@example.com"
+				sess.Values[sessionKeyRBACGroups] = groups
+				saveErr = saveLoginSession(c, sess, "someone@example.com")
+				stored, _ = sess.Values[sessionKeyRBACGroups].([]string)
+				return c.NoContent(http.StatusOK)
+			})
+
+			rec := httptest.NewRecorder()
+			e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/callback", nil))
+
+			if saveErr != nil {
+				t.Fatalf("the login must succeed, got %v", saveErr)
+			}
+			if len(stored) != tt.wantGroups {
+				t.Errorf("session carries %d groups, want %d", len(stored), tt.wantGroups)
+			}
+			if rec.Header().Get("Set-Cookie") == "" {
+				t.Error("no session cookie was written, so the person is not logged in")
+			}
+		})
 	}
 }

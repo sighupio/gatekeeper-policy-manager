@@ -638,3 +638,35 @@ func TestAnEmptySessionYieldsAnIdentityThatSeesNothing(t *testing.T) {
 		t.Error("no session means no identity, and an identity that cannot be reviewed must not be valid")
 	}
 }
+
+// The operator pins GPM_RBAC_USERNAME_CLAIM because it is the claim the API server reads. A token
+// that does not carry it must authorize nobody: reviewing some other claim would answer for a name
+// the operator never chose, which is the whole hazard the pinning removes. The API server rejects
+// such a token outright; GPM cannot reject the login, so it refuses to authorize instead.
+func TestAMissingPinnedClaimAuthorizesNobody(t *testing.T) {
+	t.Cleanup(viper.Reset)
+	viper.Set("rbac_username_claim", "upn")
+
+	if got, _ := identityFromClaims(map[string]any{"upn": "someone@corp.example"}, "display-name"); got != "someone@corp.example" {
+		t.Errorf("the pinned claim must name the subject, got %q", got)
+	}
+
+	for _, tt := range []struct {
+		name   string
+		claims map[string]any
+	}{
+		{"the claim is absent", map[string]any{"preferred_username": "someone-else"}},
+		{"the claim is empty", map[string]any{"upn": "", "email": "someone-else@corp.example"}},
+		{"the claim is not a string", map[string]any{"upn": []any{"someone-else"}}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got, _ := identityFromClaims(tt.claims, "display-name")
+			if got != "" {
+				t.Errorf("GPM fell back to %q; a name the operator did not pin must not be reviewed", got)
+			}
+			if (rbacIdentity{Username: got}).valid() {
+				t.Error("the identity must be invalid, so every review denies")
+			}
+		})
+	}
+}

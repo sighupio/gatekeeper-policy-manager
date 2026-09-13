@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -399,6 +400,50 @@ func TestResolveAccessKeepsTheWorkerBound(t *testing.T) {
 	}
 }
 
+// The Resources page must scope, and must scope only when the feature is on. This pins the flag to
+// the behaviour at scopeResources, which is where the decision lives.
+//
+// That the page actually calls it is a separate question, and a separate test:
+// TestTheResourcesPageServesOnlyWhatTheReaderCanList drives GET /resources end to end.
+func TestTheResourcesPageScopesOnlyWhenTheFeatureIsOn(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		filtering  bool
+		wantKept   int
+		wantScoped bool
+	}{
+		{"on: only the namespaces the reader can list survive", true, 1, true},
+		{"off: the page is whole", false, 2, false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(viper.Reset)
+			viper.Set("rbac_filtering", tt.filtering)
+			viper.Set("auth_enabled", "OIDC")
+
+			s, clients := scopedServer(t, func(namespace, _ string) bool { return namespace == "mine" })
+			data := map[string]any{}
+			kept := s.scopeResources(requestWithIdentity(t), clients, twoNamespaces(), data)
+
+			if len(kept) != tt.wantKept {
+				var names []string
+				for _, ns := range kept {
+					names = append(names, ns.Name)
+				}
+				t.Fatalf("kept %d namespaces %v, want %d", len(kept), names, tt.wantKept)
+			}
+			for _, ns := range kept {
+				if tt.wantScoped && ns.Name == "theirs" {
+					t.Error("a namespace the reader cannot list reached the page")
+				}
+			}
+			// The page reports what it could not review only when it reviewed at all.
+			if _, reported := data["Unverified"]; reported != tt.wantScoped {
+				t.Errorf("Unverified present = %v, want %v", reported, tt.wantScoped)
+			}
+		})
+	}
+}
+
 // The page must not ship what the scoping removed. The model test above proves scopeToReader drops
 // the rows; this one proves the rendered HTML carries no trace of them, and that the page has no
 // data island -- the natural way to reintroduce the whole set is to add one for a client-side
@@ -663,18 +708,23 @@ func TestUnsupportedRBACModesStopStartup(t *testing.T) {
 		name     string
 		filter   bool
 		auth     string
+		claim    string
 		contexts int
 		wantErr  string
 	}{
-		{"off: nothing to check", false, "Anonymous", 5, ""},
-		{"on, OIDC, one cluster: supported", true, "OIDC", 1, ""},
-		{"on without authentication", true, "Anonymous", 1, "needs authentication"},
-		{"on with more than one cluster", true, "OIDC", 3, "does not support more than one cluster"},
+		{"off: nothing to check", false, "Anonymous", "", 5, ""},
+		{"on, OIDC, one cluster, claim named: supported", true, "OIDC", "email", 1, ""},
+		{"on without authentication", true, "Anonymous", "email", 1, "needs authentication"},
+		// Without a named claim the subject is whichever claim the token happens to carry, so two
+		// people can be authorized as one identity. That is a refusal, not a default.
+		{"on without a username claim", true, "OIDC", "", 1, "needs GPM_RBAC_USERNAME_CLAIM"},
+		{"on with more than one cluster", true, "OIDC", "email", 3, "does not support more than one cluster"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Cleanup(viper.Reset)
 			viper.Set("rbac_filtering", tt.filter)
 			viper.Set("auth_enabled", tt.auth)
+			viper.Set("rbac_username_claim", tt.claim)
 
 			err := (&server{k8s: registryWithContexts(tt.contexts)}).checkRBACConfig()
 			switch {
@@ -709,6 +759,9 @@ func TestATypoInABooleanSettingStopsStartup(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Cleanup(viper.Reset)
 			viper.Set("auth_enabled", "OIDC")
+			// This test is about the spelling of booleans, so name the claim that a valid
+			// rbac_filtering=true would otherwise be refused for.
+			viper.Set("rbac_username_claim", "email")
 			viper.Set(tt.key, tt.value)
 
 			err := (&server{k8s: registryWithContexts(1)}).checkConfig()
@@ -802,3 +855,266 @@ func TestTheRefusalPageExplainsItself(t *testing.T) {
 
 // GPM refuses to start in a mode where the feature cannot be enforced: serving every view to
 // everyone while the operator believes access is scoped is worse than not starting.
+
+// constraintAPI stands in for the API server: discovery, one constraint list, and the reviews. The
+// reviews allow the namespace "mine" and refuse "theirs", so the page has something to drop.
+func constraintAPI(t *testing.T) *httptest.Server {
+	t.Helper()
+	const constraints = `{"apiVersion":"constraints.gatekeeper.sh/v1beta1","kind":"K8sLivenessProbeList","items":[
+	  {"apiVersion":"constraints.gatekeeper.sh/v1beta1","kind":"K8sLivenessProbe",
+	   "metadata":{"name":"liveness-probe"},"spec":{"enforcementAction":"deny"},
+	   "status":{"totalViolations":40,"violations":[
+	     {"group":"apps","version":"v1","kind":"Deployment","namespace":"mine","name":"checkout-api","enforcementAction":"deny","message":"no probe"},
+	     {"group":"apps","version":"v1","kind":"Deployment","namespace":"theirs","name":"ledger","enforcementAction":"deny","message":"no probe"}]}}]}`
+
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/subjectaccessreviews"):
+			// client-go negotiates protobuf for the built-in groups, so match the namespace as a
+			// plain substring rather than as JSON. The answer goes back as JSON, which it accepts.
+			body, _ := io.ReadAll(r.Body)
+			allowed := strings.Contains(string(body), "mine")
+			_, _ = fmt.Fprintf(w, `{"apiVersion":"authorization.k8s.io/v1","kind":"SubjectAccessReview","status":{"allowed":%t}}`, allowed)
+		case r.URL.Path == "/apis/constraints.gatekeeper.sh/v1beta1":
+			_, _ = fmt.Fprint(w, `{"kind":"APIResourceList","apiVersion":"v1","groupVersion":"constraints.gatekeeper.sh/v1beta1","resources":[{"name":"k8slivenessprobes","singularName":"k8slivenessprobe","namespaced":false,"kind":"K8sLivenessProbe","verbs":["list"],"categories":["constraint"]}]}`)
+		case strings.Contains(r.URL.Path, "k8slivenessprobe"):
+			_, _ = fmt.Fprint(w, constraints)
+		case r.URL.Path == "/apis":
+			_, _ = fmt.Fprint(w, `{"kind":"APIGroupList","apiVersion":"v1","groups":[{"name":"apps","versions":[{"groupVersion":"apps/v1","version":"v1"}],"preferredVersion":{"groupVersion":"apps/v1","version":"v1"}}]}`)
+		case r.URL.Path == "/apis/apps/v1":
+			_, _ = fmt.Fprint(w, `{"kind":"APIResourceList","apiVersion":"v1","groupVersion":"apps/v1","resources":[{"name":"deployments","singularName":"deployment","namespaced":true,"kind":"Deployment","verbs":["list"]}]}`)
+		case r.URL.Path == "/api":
+			_, _ = fmt.Fprint(w, `{"kind":"APIVersions","versions":["v1"]}`)
+		case r.URL.Path == "/api/v1":
+			_, _ = fmt.Fprint(w, `{"kind":"APIResourceList","groupVersion":"v1","resources":[]}`)
+		default:
+			_, _ = fmt.Fprint(w, `{}`)
+		}
+	}))
+	t.Cleanup(api.Close)
+	return api
+}
+
+// The page itself, not the helper below it. The scoping decision is pinned by
+// TestTheResourcesPageScopesOnlyWhenTheFeatureIsOn; this drives GET /resources through getResources
+// and reads the HTML, so a handler that stops calling the scoping at all fails here.
+func TestTheResourcesPageServesOnlyWhatTheReaderCanList(t *testing.T) {
+	useTestSettings(t)
+	t.Cleanup(viper.Reset)
+	api := constraintAPI(t)
+	useTestKubeconfig(t, fmt.Sprintf(`apiVersion: v1
+kind: Config
+current-context: fake
+clusters:
+  - name: fake-cluster
+    cluster:
+      server: %s
+contexts:
+  - name: fake
+    context:
+      cluster: fake-cluster
+      user: fake-user
+users:
+  - name: fake-user
+    user:
+      token: fake-token
+`, api.URL))
+	viper.Set("rbac_filtering", true)
+	viper.Set("auth_enabled", "OIDC")
+	viper.Set("rbac_username_claim", "email")
+
+	registry, err := newClientRegistry()
+	if err != nil {
+		t.Fatalf("building the registry failed: %v", err)
+	}
+	s := &server{k8s: registry, ssr: newSSRRenderer()}
+
+	e := echo.New()
+	e.Use(session.Middleware(newSessionStore()))
+	rec := httptest.NewRecorder()
+	e.GET("/resources", func(c echo.Context) error {
+		sess, err := session.Get(sessionName, c)
+		if err != nil {
+			t.Fatalf("session: %v", err)
+		}
+		sess.Values[sessionKeyUser] = "dev@example.com"
+		sess.Values[sessionKeyRBACUser] = "dev@example.com"
+		sess.Values[sessionKeyRBACGroups] = []string{}
+		return s.getResources(c)
+	})
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/resources", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "checkout-api") {
+		t.Error("the page dropped a violation the reader is allowed to list")
+	}
+	if strings.Contains(body, "ledger") {
+		t.Error("the page served a violation in a namespace the reader cannot list")
+	}
+	// The fixture reports 40 violations and returns 2, so the audit cap applies. The reader lost
+	// rows, and the cap is a fact about constraints they cannot see.
+	if strings.Contains(body, "Not every violation is listed") {
+		t.Error("the audit-cap banner told a scoped reader about violations elsewhere in the cluster")
+	}
+}
+
+// The cards are ordered worst-first from counts the scoping recomputes. An order carried over from
+// the counts before scoping would rank a card above one that now shows more violations, which says
+// something about the rows this reader cannot see.
+func TestScopedNamespaceCardsAreOrderedByWhatTheReaderSees(t *testing.T) {
+	t.Cleanup(viper.Reset)
+	viper.Set("rbac_filtering", true)
+	viper.Set("auth_enabled", "OIDC")
+
+	// Before scoping "theirs" leads: same denies as "mine", one more violation. The reader may list
+	// everything in "mine" but only the Pod in "theirs", so afterwards "mine" holds the only deny.
+	s, clients := scopedServer(t, func(namespace, resource string) bool {
+		return namespace == "mine" || resource == "pods"
+	})
+	before := twoNamespaces()
+	if before[0].Name != "theirs" {
+		t.Fatalf("fixture changed: the pre-scope order starts with %q, want theirs", before[0].Name)
+	}
+
+	kept := s.scopeResources(requestWithIdentity(t), clients, twoNamespaces(), map[string]any{})
+
+	if len(kept) != 2 {
+		t.Fatalf("kept %d namespaces, want 2", len(kept))
+	}
+	if kept[0].Name != "mine" {
+		t.Errorf("the cards lead with %q; after scoping %q holds the only deny", kept[0].Name, "mine")
+	}
+	if kept[0].Deny <= kept[1].Deny && kept[0].Total() < kept[1].Total() {
+		t.Error("the order does not follow the counts the reader can see")
+	}
+}
+
+// Gatekeeper's audit cap is a fact about every Constraint in the cluster. A reader whose own rows
+// were filtered must not be told that some violation somewhere went unreported.
+func TestTheAuditCapBannerIsHiddenFromAReaderWhoLostRows(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		allow func(namespace, resource string) bool
+		want  bool
+	}{
+		{"rows were removed: the banner goes", func(namespace, _ string) bool { return namespace == "mine" }, false},
+		{"nothing was removed: the banner stands", func(string, string) bool { return true }, true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(viper.Reset)
+			viper.Set("rbac_filtering", true)
+			viper.Set("auth_enabled", "OIDC")
+
+			s, clients := scopedServer(t, tt.allow)
+			data := map[string]any{"AuditLimited": true}
+			s.scopeResources(requestWithIdentity(t), clients, twoNamespaces(), data)
+
+			if got := data["AuditLimited"]; got != tt.want {
+				t.Errorf("AuditLimited = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// The failure detail carries Kind names and the API server's address. Resources is reachable by a
+// reader who is allowed nothing else, so with the feature on the detail goes to the log instead.
+func TestAViewFailureKeepsItsDetailOffAScopedPage(t *testing.T) {
+	for _, tt := range []struct {
+		name      string
+		filtering bool
+		wantOnPag bool
+	}{
+		{"filtering on: the detail is withheld", true, false},
+		{"filtering off: the operator sees it", false, true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(viper.Reset)
+			viper.Set("rbac_filtering", tt.filtering)
+			viper.Set("auth_enabled", "OIDC")
+
+			data := map[string]any{}
+			setViewError(data, "GPM could not read the Constraints.",
+				fmt.Errorf("getting k8slivenessprobe constraints: Get \"https://10.0.0.1:6443/apis\": refused"))
+
+			if _, on := data["ErrorDetail"]; on != tt.wantOnPag {
+				t.Errorf("ErrorDetail on the page = %v, want %v", on, tt.wantOnPag)
+			}
+			if data["Error"] == nil {
+				t.Error("the reader must still be told the view failed")
+			}
+		})
+	}
+}
+
+// The README tells an operator whose users see nothing to compare the name on the page with the
+// subject of their RoleBinding, and says GPM writes that name to its log. It has to be there: a
+// correct restriction and a wrong username look identical from the browser.
+func TestAPersonWhoReachesNoViewHasTheirNameLogged(t *testing.T) {
+	t.Cleanup(viper.Reset)
+	viper.Set("rbac_filtering", true)
+	viper.Set("auth_enabled", "OIDC")
+
+	var logged bytes.Buffer
+	restore := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&logged, &slog.HandlerOptions{Level: slog.LevelInfo})))
+	t.Cleanup(func() { slog.SetDefault(restore) })
+
+	// Refuses every gated view, which is what a username the API server does not know looks like.
+	s, clients := scopedServer(t, func(string, string) bool { return false })
+	s.k8s.clients = map[string]*kubeClients{defaultKubeContext: clients}
+
+	s.resolveAllowedViews(requestWithIdentity(t))
+
+	if !strings.Contains(logged.String(), "dev") {
+		t.Errorf("the name GPM asked about never reached the log, so the README's advice cannot be followed:\n%s", logged.String())
+	}
+}
+
+// The name is logged to tell a correct restriction apart from a wrong username. A review that could
+// not be made is neither: it is GPM's own fault, reported elsewhere with its remediation, and
+// naming the person here sends the operator to a RoleBinding that is not the problem.
+func TestAFailedReviewDoesNotBlameThePersonsName(t *testing.T) {
+	t.Cleanup(viper.Reset)
+	viper.Set("rbac_filtering", true)
+	viper.Set("auth_enabled", "OIDC")
+
+	var logged bytes.Buffer
+	restore := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&logged, &slog.HandlerOptions{Level: slog.LevelInfo})))
+	t.Cleanup(func() { slog.SetDefault(restore) })
+
+	// Every review fails, which is what a missing SubjectAccessReview grant looks like.
+	client := sarClient(func(*authorizationv1.SubjectAccessReview) (bool, error) {
+		return false, fmt.Errorf("subjectaccessreviews.authorization.k8s.io is forbidden")
+	})
+	registry := registryWithContexts(1)
+	registry.clients = map[string]*kubeClients{defaultKubeContext: {authz: client.AuthorizationV1()}}
+	s := &server{k8s: registry, ssr: newSSRRenderer()}
+
+	s.resolveAllowedViews(requestWithIdentity(t))
+
+	if strings.Contains(logged.String(), "compare the name below") {
+		t.Errorf("a failed review was reported as a naming problem:\n%s", logged.String())
+	}
+}
+
+// "Not audited yet" reports Gatekeeper's state to a reader who cannot verify it. When rows were
+// removed, the page is short for a reason this reader owns, so it must take the empty state that is
+// true for them rather than the one about the cluster.
+func TestAReaderWhoLostRowsIsNotToldAboutTheClusterAudit(t *testing.T) {
+	t.Cleanup(viper.Reset)
+	viper.Set("rbac_filtering", true)
+	viper.Set("auth_enabled", "OIDC")
+
+	s, clients := scopedServer(t, func(namespace, _ string) bool { return namespace == "mine" })
+	data := map[string]any{"Audited": false, "AuditLimited": true}
+	s.scopeResources(requestWithIdentity(t), clients, twoNamespaces(), data)
+
+	if data["Audited"] != true {
+		t.Error("the page would tell a scoped reader that Gatekeeper has not audited the cluster")
+	}
+}

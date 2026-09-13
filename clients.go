@@ -36,7 +36,9 @@ const (
 // Everything needed to talk to one cluster. The client-go clients are safe for concurrent use, so
 // a single set is shared by every request targeting the same kubeconfig context.
 type kubeClients struct {
-	dynamic *dynamic.DynamicClient
+	// The interface, not *dynamic.DynamicClient: a fake reaches the handlers only through it, and
+	// the Resources view's scoping is worth testing at the page rather than one level below.
+	dynamic dynamic.Interface
 	// The interface, not the concrete client: restmapper takes it, and a test can hand in a fake
 	// without reaching for a real API server.
 	discovery discovery.DiscoveryInterface

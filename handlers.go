@@ -32,7 +32,7 @@ type ErrorAnswer struct {
 
 // Helper function to get custom resources from the Kubernetes API of the specified group, verison and resource.
 // Parameters can be an empty string.
-func getCustomResources(ctx context.Context, clientset dynamic.DynamicClient, group string, version string, resource string) (*unstructured.UnstructuredList, error) {
+func getCustomResources(ctx context.Context, clientset dynamic.Interface, group string, version string, resource string) (*unstructured.UnstructuredList, error) {
 	r := schema.GroupVersionResource{Group: group, Version: version, Resource: resource}
 	return clientset.Resource(r).List(ctx, metav1.ListOptions{})
 }
@@ -63,7 +63,7 @@ func sortConstraints(response []map[string]interface{}) {
 // Returns the events whose source.component is one of the given sources (Gatekeeper tags admission
 // events with gatekeeper-webhook and audit events with gatekeeper-audit). An empty namespace lists
 // events from every namespace.
-func getKubernetesEvents(ctx context.Context, clientset dynamic.DynamicClient, namespace string, sources []string) (*[]unstructured.Unstructured, error) {
+func getKubernetesEvents(ctx context.Context, clientset dynamic.Interface, namespace string, sources []string) (*[]unstructured.Unstructured, error) {
 	// FieldSeletor is very limited in the supported fields, we can't filter like this:
 	//   listOptions := metav1.ListOptions{
 	// 	  FieldSelector: "involvedObject.metadata.source.component=gatekeeper-webhook", //Filter events related to Pods

@@ -112,8 +112,8 @@ topologySpreadConstraints: [] # How the pods spread over zones or nodes.
 config:
   preferredURLScheme: http # Set to https when GPM is served over TLS, so the session cookie is marked Secure.
   logLevel: info # How much GPM writes to its log.
-  # Which source component the events view shows. Leave unset to use GPM's own default,
-  # gatekeeper-webhook.
+  # Which source components the events view shows. Leave unset to use GPM's own default,
+  # gatekeeper-webhook,gatekeeper-audit.
   eventsSource: null # Which Gatekeeper components' events the Events view shows.
   # Read events from this namespace only. Unset means every namespace, which needs a cluster-wide
   # read on events. Naming one namespace moves that read into a Role in that namespace instead.
@@ -133,10 +133,12 @@ config:
     # creates a small ClusterRole of its own when clusterRole.create is false. With rbac.create
     # false the chart creates no RBAC, so add the rule to your own ClusterRole.
     enabled: false # Show each person only the views and objects their Kubernetes account can read.
-    # Set these when the API server's --oidc-username-claim differs from the claim GPM displays, or
-    # when it adds --oidc-username-prefix / --oidc-groups-prefix. A mismatch denies everything: the
-    # user sees an empty page, and the chip on it shows the name GPM asked about.
-    usernameClaim: null # ID-token claim holding the username the API server knows.
+    # usernameClaim is required when enabled is true: it names the claim the API server reads in
+    # --oidc-username-claim. Without it the reviews name whichever claim the token happens to carry.
+    # Set the prefixes when the API server adds --oidc-username-prefix / --oidc-groups-prefix. A
+    # mismatch denies everything: the user sees an empty page, and the chip on it shows the name GPM
+    # asked about.
+    usernameClaim: null # Required when enabled. ID-token claim holding the username the API server knows.
     usernamePrefix: null # Prefix the API server's --oidc-username-prefix adds, for example oidc:.
     groupsClaim: null # ID-token claim listing the person's groups.
     groupsPrefix: null # Prefix the API server's --oidc-groups-prefix adds.

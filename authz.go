@@ -83,8 +83,14 @@ func identityFromClaims(all map[string]any, displayName string) (string, []strin
 		if v, ok := all[claim].(string); ok && v != "" {
 			username = v
 		} else {
-			slog.Warn("the configured RBAC username claim is missing from the ID token",
-				"claim", claim, "falling_back_to", displayName)
+			// No fallback. The operator pinned this claim because it is the one the API server
+			// reads; reviewing some other claim would authorize a name nobody chose, which is the
+			// hazard the pinning removes. An empty username is an invalid identity, and denies.
+			slog.Warn("the configured RBAC username claim is missing from this ID token, so GPM "+
+				"cannot authorize this person and shows them nothing. GPM does not fall back to "+
+				"another claim: that would review a name the operator never pinned",
+				"claim", claim)
+			username = ""
 		}
 	}
 
@@ -329,9 +335,15 @@ func allowedViews(c echo.Context) map[string]bool {
 }
 
 // rbacFilteringEnabled reports whether the operator asked for the feature. checkConfig has already
-// refused to start in a mode that cannot enforce it, so this is the switch alone.
-func (s *server) rbacFilteringEnabled() bool {
+// refused to start in a mode that cannot enforce it, so this is the switch alone. The package-level
+// form exists because the OIDC callback decides what to put in the session before a server is in
+// reach, and the two must not drift.
+func rbacFilteringEnabled() bool {
 	return viper.GetBool("rbac_filtering") && authEnabled()
+}
+
+func (s *server) rbacFilteringEnabled() bool {
+	return rbacFilteringEnabled()
 }
 
 // rbacMiddleware resolves, once per request, which views this person may reach, and refuses the
@@ -410,26 +422,66 @@ func (s *server) resolveAllowedViews(c echo.Context) map[string]bool {
 		slog.Warn("could not read the session while resolving access, showing only the scoped view", "error", err)
 		return allowed
 	}
-	id := rbacIdentityFrom(sess)
-	if !id.valid() {
-		slog.Warn("no RBAC identity in the session, showing only the scoped view",
-			"hint", "check GPM_RBAC_USERNAME_CLAIM against the claims the provider issues")
-		return allowed
-	}
 	clients, err := s.clientsFor(c)
 	if err != nil {
 		slog.Warn("could not reach the cluster while resolving access, showing only the scoped view", "error", err)
 		return allowed
 	}
-
+	// Resolved before the identity check so the lines below can be rationed too: with the claim
+	// pinned, an identity GPM cannot build is a steady state for that person, not a one-off, and an
+	// unrationed line per request buries everything else in the log.
 	checker := s.checkerFor(clients)
+
+	id := rbacIdentityFrom(sess)
+	if !id.valid() {
+		// Two different faults, and the wrong hint sends the operator hunting a claim that is fine.
+		// A session that was created before the feature was switched on carries no identity at all,
+		// because the claims are only read at login. Signing in again is the whole fix.
+		_, signedIn := sess.Values[sessionKeyUser]
+		_, reviewed := sess.Values[sessionKeyRBACUser]
+		switch {
+		case signedIn && !reviewed && checker.shouldReport("session-predates-filtering"):
+			slog.Warn("this session was created before GPM_RBAC_FILTERING was switched on, so it "+
+				"carries no identity to authorize, and this person sees only the scoped view. "+
+				"They have to sign out and in again",
+				"hint", "existing sessions do not pick the feature up; new logins do")
+		case !signedIn || reviewed:
+			if checker.shouldReport("no-identity") {
+				slog.Warn("no RBAC identity in the session, showing only the scoped view",
+					"hint", "check GPM_RBAC_USERNAME_CLAIM against the claims the provider issues")
+			}
+		}
+		return allowed
+	}
+
 	ctx := c.Request().Context()
+	reachable, undetermined := 0, 0
 	for _, v := range ssrViews {
 		if !v.gated() {
 			continue
 		}
-		ok, _ := checker.canAccess(ctx, id, "", v.Group, v.Resource, "list")
+		ok, determined := checker.canAccess(ctx, id, "", v.Group, v.Resource, "list")
 		allowed[v.Key] = ok
+		switch {
+		case ok:
+			reachable++
+		case !determined:
+			undetermined++
+		}
+	}
+	// A person who reaches no gated view is either correctly restricted or named wrongly, and the
+	// two look identical from the browser. The name GPM asked about is what tells them apart, so it
+	// goes to the log where an operator can compare it with the subject of a RoleBinding. Rationed:
+	// this runs on every request, and one line per window is enough to answer the question.
+	// Only when the reviews answered. A review that could not be made is a GPM fault -- a missing
+	// SAR grant, an unreachable API server, a reader who left -- and it is reported with its own
+	// remediation elsewhere. Naming the person here would send the operator to a RoleBinding that is
+	// not the problem.
+	if reachable == 0 && undetermined == 0 && ctx.Err() == nil && !checker.misconfigured() &&
+		checker.shouldReport("denied-every-view") {
+		slog.Info("this person reaches no gated view. If that is unexpected, compare the name below "+
+			"with the subject of their RoleBinding: the API server has to know GPM's name for them",
+			"identity", id.String())
 	}
 	return allowed
 }
@@ -472,6 +524,12 @@ func (s *server) checkRBACConfig() error {
 	if !authEnabled() {
 		return fmt.Errorf("GPM_RBAC_FILTERING needs authentication: there is no identity to authorize " +
 			"without it. Set GPM_AUTH_ENABLED=OIDC, or unset GPM_RBAC_FILTERING")
+	}
+	if viper.GetString("rbac_username_claim") == "" {
+		return fmt.Errorf("GPM_RBAC_FILTERING needs GPM_RBAC_USERNAME_CLAIM: without it the reviews " +
+			"name whichever claim the token happens to carry, so two people can be authorized as " +
+			"the same cluster identity. Set it to the claim the API server reads in " +
+			"--oidc-username-claim, for example email or preferred_username")
 	}
 	if contexts, _ := s.k8s.contexts(); len(contexts) > 1 {
 		return fmt.Errorf("GPM_RBAC_FILTERING does not support more than one cluster: the kubeconfig "+

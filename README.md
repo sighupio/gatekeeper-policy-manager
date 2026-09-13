@@ -208,25 +208,29 @@ GPM shows each person only what their own Kubernetes account can read.
 
 GPM asks the Kubernetes API server, with a `SubjectAccessReview`, whether the logged-in person can
 list the data behind a view. A view whose answer is no does not appear in the navigation, and a
-request for it gets a 403. The Resources view is always available, and it lists only the objects
+request for it gets a 403. A request for the dashboard sends the reader to the Resources view
+instead, because a browser lands there by default. The Resources view is always available, and it lists only the objects
 that the person can read. Someone with access to one namespace sees that namespace.
 
 GPM does not act as the user. It reads the cluster with its own ServiceAccount and asks about the
 user separately, so it needs `create subjectaccessreviews` and not the `impersonate` permission. The
 Helm chart adds this rule when you set `config.rbacFiltering.enabled`.
 
-This feature needs two things, and GPM refuses to start without them:
+This feature needs three things, and GPM refuses to start without them:
 
 - **Authentication.** Without OIDC there is no identity to ask about.
 - **One cluster.** One identity cannot be authorized against several clusters, so GPM refuses to
   start when the kubeconfig names more than one context.
+- **A named username claim.** `GPM_RBAC_USERNAME_CLAIM` must name the claim the API server reads.
+  Without it the reviews carry whichever claim the token happens to hold, and two people can be
+  authorized as one identity.
 
 The name that GPM sends must be the name that the API server knows. Many clusters add a prefix with
 `--oidc-username-prefix`, and some read the username from a different claim:
 
 | Variable | Purpose |
 | --- | --- |
-| `GPM_RBAC_USERNAME_CLAIM` | The ID-token claim that holds the username, when it is not the one GPM displays. |
+| `GPM_RBAC_USERNAME_CLAIM` | **Required.** The ID-token claim that holds the username the API server knows. Use the claim your API server reads in `--oidc-username-claim`. |
 | `GPM_RBAC_USERNAME_PREFIX` | The prefix that `--oidc-username-prefix` adds, for example `oidc:`. |
 | `GPM_RBAC_GROUPS_CLAIM` | The ID-token claim that lists the groups. The default is `groups`. |
 | `GPM_RBAC_GROUPS_PREFIX` | The prefix that `--oidc-groups-prefix` adds. |
