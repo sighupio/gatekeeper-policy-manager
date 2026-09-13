@@ -635,6 +635,11 @@ func (a *accessChecker) buildMapper(refresh bool) (meta.RESTMapper, error) {
 // canSeeViolation is the question the Resources view asks per row. The verb is `list`, not `get`,
 // because the page enumerates: it shows the names of the objects that broke a policy. A role that
 // grants `get` without `list` withholds exactly that enumeration, and GPM must withhold it too.
+//
+// The question is about the violated object, never the Constraint that reported it. GPM read that
+// with its own ServiceAccount, and Constraints are cluster-scoped: a reader scoped to one namespace
+// cannot list them. Reading as the reader instead -- impersonation -- would fail here for exactly
+// the people the feature serves.
 func (a *accessChecker) canSeeViolation(ctx context.Context, id rbacIdentity, namespace, group, kind string) (allowed, determined bool) {
 	resource, ok := a.resourceFor(group, kind)
 	if !ok {

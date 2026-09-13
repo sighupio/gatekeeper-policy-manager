@@ -216,6 +216,10 @@ GPM does not act as the user. It reads the cluster with its own ServiceAccount a
 user separately, so it needs `create subjectaccessreviews` and not the `impersonate` permission. The
 Helm chart adds this rule when you set `config.rbacFiltering.enabled`.
 
+The feature narrows what a person sees through GPM. It does not narrow what GPM reads. The
+ServiceAccount keeps its cluster-wide read on the Gatekeeper objects, and a person who can run code
+in the pod reads all of them.
+
 This feature needs three things, and GPM refuses to start without them:
 
 - **Authentication.** Without OIDC there is no identity to ask about.
