@@ -250,17 +250,17 @@ code { font-family: var(--mono); font-size: 0.9em; }
   padding: 6px 10px;
   border-radius: var(--radius-sm);
   color: var(--text-muted);
-  border-left: 2px solid transparent;
 }
 .sidebar-nav a:hover { color: var(--text); background: var(--surface-2); text-decoration: none; }
 /* Scroll-spy marks the entry whose section is in view (sidebar-spy.js). After :hover so an active
    item keeps its highlight while hovered. The name inherits the accent; the mode and badge keep
    their own colors. */
 /* No font-weight here on purpose: bolding the marked entry reflows the text and nudges the whole
-   list as you scroll, which reads as the layout jittering. The accent border, tint and color carry
-   the cue without changing metrics. */
+   list as you scroll, which reads as the layout jittering. The tint and the accent colour carry the
+   cue without changing metrics.
+   No left border either: a single-sided border under a border-radius is rounded into a lozenge at
+   the corner, which is exactly the shape people read as generated-by-AI styling. */
 .sidebar-nav a.active {
-  border-left-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   color: var(--accent);
 }
