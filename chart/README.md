@@ -51,12 +51,18 @@ The following table lists the configurable parameters of the Gatekeeper Policy M
 | `config.secretKey` | Key that signs and encrypts the session cookie. Required with OIDC. | null |
 | `config.secretRef` | Name of an existing Secret holding the session key, instead of secretKey. | null |
 | `config.rbacFiltering.enabled` | Show each person only the views and objects their Kubernetes account can read. | false |
-| `config.rbacFiltering.usernameClaim` | Required when enabled. ID-token claim holding the username the API server knows. | null |
+| `config.rbacFiltering.usernameClaim` | Required when enabled. Claim holding the username the API server knows. | null |
 | `config.rbacFiltering.usernamePrefix` | Prefix the API server's --oidc-username-prefix adds, for example oidc:. | null |
-| `config.rbacFiltering.groupsClaim` | ID-token claim listing the person's groups. | null |
+| `config.rbacFiltering.groupsClaim` | Claim listing the person's groups. | null |
 | `config.rbacFiltering.groupsPrefix` | Prefix the API server's --oidc-groups-prefix adds. | null |
 | `config.multiCluster.enabled` | Read more than one cluster, from the kubeconfig below. | false |
 | `config.multiCluster.kubeconfig` | Kubeconfig naming one context per cluster GPM reads. | "apiVersion: v1\nclusters:\n- cluster:\n    certificate-authority-data: REDACTED\n    server: https://127.0.0.1:54216\n  name: kind-kind\ncontexts:\n- context:\n    cluster: kind-kind\n    user: kind-kind\n  name: kind-kind\ncurrent-context: kind-kind\nkind: Config\npreferences: {}\nusers:\n- name: kind-kind\n  user:\n    client-certificate-data: REDACTED\n    client-key-data: REDACTED\n" |
+| `config.jwt.enabled` | Trust a signed identity assertion from an authenticating proxy. | false |
+| `config.jwt.jwkSetURL` | Required. The proxy's JWKS, https only. For example https://pomerium.example.com/.well-known/pomerium/jwks.json | null |
+| `config.jwt.audience` | Required. The host GPM is served on, for example gpm.example.com. | null |
+| `config.jwt.headerName` | Header carrying the assertion. Default X-Pomerium-Jwt-Assertion. Use Authorization for oauth2-proxy. | null |
+| `config.jwt.issuer` | The iss claim GPM accepts. Not checked when empty. Set it when jwkSetURL points at an identity provider. | null |
+| `config.jwt.logoutURL` | Where the Log out button points, for example https://gpm.example.com/.pomerium/sign_out. No button when empty. | null |
 | `config.oidc.enabled` | Require a login through an OIDC provider. | false |
 | `config.oidc.issuer` | Issuer URL. GPM discovers the rest of the provider's configuration from it. | null |
 | `config.oidc.redirectDomain` | Public address of GPM. The provider sends people back to it. | null |

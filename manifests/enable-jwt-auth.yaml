@@ -1,0 +1,39 @@
+# Copyright (c) 2017-present SIGHUP s.r.l All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+# Protect GPM with an authenticating proxy, for example Pomerium. The proxy identifies the user and
+# signs an assertion. GPM verifies that signature on every request.
+#
+# This mode needs no GPM_SECRET_KEY: GPM holds no session.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gatekeeper-policy-manager
+spec:
+  template:
+    spec:
+      containers:
+      - name: gatekeeper-policy-manager
+        env:
+          - name: GPM_AUTH_ENABLED
+            value: "JWT"
+          # The proxy's public keys. GPM fetches them on the first request and refreshes them.
+          - name: GPM_JWT_JWK_SET_URL
+            value: "https://pomerium.example.com/.well-known/pomerium/jwks.json"
+          # REQUIRED. The host GPM is served on, which the proxy writes into the aud claim.
+          # Without it, GPM accepts an assertion the proxy made for any other route it serves.
+          # For Pomerium, use the bare host: no scheme, and no trailing slash.
+          - name: GPM_JWT_AUDIENCE
+            value: "gpm.example.com"
+          # Optional. The default is X-Pomerium-Jwt-Assertion.
+          # Use "Authorization" for oauth2-proxy with --set-authorization-header.
+          # - name: GPM_JWT_HEADER_NAME
+          #   value: "X-Pomerium-Jwt-Assertion"
+          # Optional. Pomerium writes either the bare host or https://<host>/ into iss, which
+          # depends on its jwt_issuer_format. GPM does not check iss when this is empty.
+          # - name: GPM_JWT_ISSUER
+          #   value: "gpm.example.com"
+          # Optional. Where the Log out button points. GPM hides the button when this is empty.
+          - name: GPM_JWT_LOGOUT_URL
+            value: "https://gpm.example.com/.pomerium/sign_out"

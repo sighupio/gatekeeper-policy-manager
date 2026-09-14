@@ -31,7 +31,6 @@ import (
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/alecthomas/chroma/v2/styles"
-	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/spf13/viper"
 	"github.com/yuin/goldmark"
@@ -449,6 +448,7 @@ func (s *server) ssrLayoutData(c echo.Context, active, switchBase, title string)
 		})
 	}
 
+	logoutURL := logoutTarget()
 	layout := ssrLayout{
 		Title:       title,
 		Version:     appVersion,
@@ -456,16 +456,18 @@ func (s *server) ssrLayoutData(c echo.Context, active, switchBase, title string)
 		Nav:         nav,
 		Contexts:    options,
 		HasContexts: len(options) > 0,
-		AuthEnabled: authEnabled(),
-		LogoutURL:   browserPath("/logout"),
+		// Whether to show the Log out control, not whether authentication is on. JWT mode holds no
+		// session of its own, so it has a control only when the proxy's sign-out page is configured.
+		AuthEnabled: logoutURL != "",
+		LogoutURL:   logoutURL,
 		Scoped:      s.rbacFilteringEnabled(),
 	}
 	if layout.Scoped {
 		// The switcher goes: the feature only runs against a single cluster, so it could only ever
 		// offer the one already selected.
 		layout.HasContexts = false
-		if sess, err := session.Get(sessionName, c); err == nil {
-			layout.RBACIdentity = rbacIdentityFrom(sess).String()
+		if id, err := identityFor(c); err == nil {
+			layout.RBACIdentity = id.String()
 		}
 	}
 	return layout
@@ -2022,7 +2024,7 @@ func resolveAccess(ctx context.Context, checker *accessChecker, id rbacIdentity,
 // hidden because GPM could not get an answer rather than because the answer was no. A namespace
 // left with nothing visible disappears with its rows, so the page shows no empty headings.
 func (s *server) scopeToReader(c echo.Context, checker *accessChecker, namespaces []ssrResourceNamespace) ([]ssrResourceNamespace, int) {
-	sess, err := session.Get(sessionName, c)
+	id, err := identityFor(c)
 	if err != nil {
 		// Every row counts as unverified, not as denied. Returning zero here would render the page
 		// that tells this person their account cannot read these objects, which GPM never asked.
@@ -2030,10 +2032,10 @@ func (s *server) scopeToReader(c echo.Context, checker *accessChecker, namespace
 		for _, ns := range namespaces {
 			unverified += len(ns.Resources)
 		}
-		slog.Warn("no readable session while scoping the Resources view, showing nothing", "error", err)
+		slog.Warn("could not establish who is asking while scoping the Resources view, showing nothing",
+			"error", err)
 		return nil, unverified
 	}
-	id := rbacIdentityFrom(sess)
 	ctx := c.Request().Context()
 
 	answers := resolveAccess(ctx, checker, id, namespaces)

@@ -115,6 +115,40 @@ spec:
                   name: {{ .Values.config.secretRef }}
                   key: secretKey
             {{- end }}
+            {{- if and .Values.config.oidc.enabled .Values.config.jwt.enabled }}
+            {{- fail "config.oidc.enabled and config.jwt.enabled are two ways to do the same job: turn on exactly one" }}
+            {{- end }}
+            {{- if .Values.config.jwt.enabled }}
+            {{- /*
+              Both are required, and GPM refuses to start without them. Fail at template time with
+              something readable rather than at pod start. See the note on audience in values.yaml:
+              without it GPM accepts an assertion the proxy minted for any other route it serves.
+            */}}
+            {{- if not .Values.config.jwt.jwkSetURL }}
+            {{- fail "config.jwt.enabled requires config.jwt.jwkSetURL, the proxy's JWKS endpoint" }}
+            {{- end }}
+            {{- if not .Values.config.jwt.audience }}
+            {{- fail "config.jwt.enabled requires config.jwt.audience, the host GPM is served on: without it GPM accepts an assertion the proxy minted for any other route" }}
+            {{- end }}
+            - name: GPM_AUTH_ENABLED
+              value: "JWT"
+            - name: GPM_JWT_JWK_SET_URL
+              value: {{ .Values.config.jwt.jwkSetURL | quote }}
+            - name: GPM_JWT_AUDIENCE
+              value: {{ .Values.config.jwt.audience | quote }}
+            {{- if .Values.config.jwt.headerName }}
+            - name: GPM_JWT_HEADER_NAME
+              value: {{ .Values.config.jwt.headerName | quote }}
+            {{- end }}
+            {{- if .Values.config.jwt.issuer }}
+            - name: GPM_JWT_ISSUER
+              value: {{ .Values.config.jwt.issuer | quote }}
+            {{- end }}
+            {{- if .Values.config.jwt.logoutURL }}
+            - name: GPM_JWT_LOGOUT_URL
+              value: {{ .Values.config.jwt.logoutURL | quote }}
+            {{- end }}
+            {{- end }}
             {{- if .Values.config.oidc.enabled }}
             {{- /*
               GPM refuses to start with the 1.x default secret key, because it is published in the

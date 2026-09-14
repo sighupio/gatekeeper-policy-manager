@@ -71,13 +71,17 @@ func rbacClaims(idToken *oidc.IDToken, displayName string) (string, []string) {
 		return displayName, nil
 	}
 
-	return identityFromClaims(all, displayName)
+	return identityFromClaims(all, displayName, slog.Warn)
 }
 
-// identityFromClaims maps a decoded ID token onto the username and groups the reviews will carry.
+// identityFromClaims maps a decoded token onto the username and groups the reviews will carry.
 // Split from rbacClaims because an oidc.IDToken cannot be built outside the library, and this is
 // the half worth testing.
-func identityFromClaims(all map[string]any, displayName string) (string, []string) {
+//
+// warn takes the misconfiguration reports rather than slog.Warn directly. OIDC reads these claims
+// once per login and passes slog.Warn. JWT mode reads them on every request, and passes a rationed
+// one, or a single misconfigured deployment fills the log.
+func identityFromClaims(all map[string]any, displayName string, warn func(string, ...any)) (string, []string) {
 	username := displayName
 	if claim := viper.GetString("rbac_username_claim"); claim != "" {
 		if v, ok := all[claim].(string); ok && v != "" {
@@ -86,7 +90,7 @@ func identityFromClaims(all map[string]any, displayName string) (string, []strin
 			// No fallback. The operator pinned this claim because it is the one the API server
 			// reads; reviewing some other claim would authorize a name nobody chose, which is the
 			// hazard the pinning removes. An empty username is an invalid identity, and denies.
-			slog.Warn("the configured RBAC username claim is missing from this ID token, so GPM "+
+			warn("the configured RBAC username claim is missing from this token, so GPM "+
 				"cannot authorize this person and shows them nothing. GPM does not fall back to "+
 				"another claim: that would review a name the operator never pinned",
 				"claim", claim)
@@ -107,10 +111,10 @@ func identityFromClaims(all map[string]any, displayName string) (string, []strin
 				}
 			}
 		case nil:
-			slog.Warn("the configured RBAC groups claim is missing from the ID token, so the reviews carry no groups. "+
+			warn("the configured RBAC groups claim is missing from the token, so the reviews carry no groups. "+
 				"Most providers add the claim only when a groups mapper is configured.", "claim", claim)
 		default:
-			slog.Warn("the configured RBAC groups claim is not a list, so the reviews carry no groups",
+			warn("the configured RBAC groups claim is not a list, so the reviews carry no groups",
 				"claim", claim, "type", fmt.Sprintf("%T", raw))
 		}
 	}
@@ -124,7 +128,12 @@ func identityFromClaims(all map[string]any, displayName string) (string, []strin
 func rbacIdentityFrom(sess *sessions.Session) rbacIdentity {
 	user, _ := sess.Values[sessionKeyRBACUser].(string)
 	groups, _ := sess.Values[sessionKeyRBACGroups].([]string)
+	return prefixedIdentity(user, groups)
+}
 
+// prefixedIdentity puts the cluster's prefixes in front of a raw username and group list. Both
+// authentication modes end here, so neither can drift from the other on what the reviews name.
+func prefixedIdentity(user string, groups []string) rbacIdentity {
 	id := rbacIdentity{}
 	if user != "" {
 		id.Username = viper.GetString("rbac_username_prefix") + user
@@ -137,6 +146,22 @@ func rbacIdentityFrom(sess *sessions.Session) rbacIdentity {
 		id.Groups = groups
 	}
 	return id
+}
+
+// identityFor returns the identity of whoever is asking, whichever mode authenticated them. OIDC
+// keeps it in the session cookie. JWT mode has no session: the middleware verified the assertion
+// and left the principal on the request, so this reads that instead.
+//
+// An error means GPM could not establish who is asking. Every caller treats that as "show nothing".
+func identityFor(c echo.Context) (rbacIdentity, error) {
+	if p, ok := c.Get(jwtPrincipalKey).(*jwtPrincipal); ok {
+		return prefixedIdentity(p.rbacUser, p.rbacGroups), nil
+	}
+	sess, err := session.Get(sessionName, c)
+	if err != nil {
+		return rbacIdentity{}, err
+	}
+	return rbacIdentityFrom(sess), nil
 }
 
 // accessChecker answers "may this person read this?" with SubjectAccessReviews, and remembers the
@@ -417,9 +442,9 @@ func (s *server) resolveAllowedViews(c echo.Context) map[string]bool {
 		}
 	}
 
-	sess, err := session.Get(sessionName, c)
+	id, err := identityFor(c)
 	if err != nil {
-		slog.Warn("could not read the session while resolving access, showing only the scoped view", "error", err)
+		slog.Warn("could not establish who is asking while resolving access, showing only the scoped view", "error", err)
 		return allowed
 	}
 	clients, err := s.clientsFor(c)
@@ -432,25 +457,8 @@ func (s *server) resolveAllowedViews(c echo.Context) map[string]bool {
 	// unrationed line per request buries everything else in the log.
 	checker := s.checkerFor(clients)
 
-	id := rbacIdentityFrom(sess)
 	if !id.valid() {
-		// Two different faults, and the wrong hint sends the operator hunting a claim that is fine.
-		// A session that was created before the feature was switched on carries no identity at all,
-		// because the claims are only read at login. Signing in again is the whole fix.
-		_, signedIn := sess.Values[sessionKeyUser]
-		_, reviewed := sess.Values[sessionKeyRBACUser]
-		switch {
-		case signedIn && !reviewed && checker.shouldReport("session-predates-filtering"):
-			slog.Warn("this session was created before GPM_RBAC_FILTERING was switched on, so it "+
-				"carries no identity to authorize, and this person sees only the scoped view. "+
-				"They have to sign out and in again",
-				"hint", "existing sessions do not pick the feature up; new logins do")
-		case !signedIn || reviewed:
-			if checker.shouldReport("no-identity") {
-				slog.Warn("no RBAC identity in the session, showing only the scoped view",
-					"hint", "check GPM_RBAC_USERNAME_CLAIM against the claims the provider issues")
-			}
-		}
+		reportNoIdentity(c, checker)
 		return allowed
 	}
 
@@ -484,6 +492,41 @@ func (s *server) resolveAllowedViews(c echo.Context) map[string]bool {
 			"identity", id.String())
 	}
 	return allowed
+}
+
+// reportNoIdentity says why GPM could not name this person, at most once per window. The advice
+// differs per fault, and the wrong hint sends the operator hunting a claim that is fine.
+func reportNoIdentity(c echo.Context, checker *accessChecker) {
+	// JWT mode reads the claims again on every request, so there is no stale login to blame: the
+	// assertion did not carry the claim the operator pinned.
+	if jwtAuthEnabled() {
+		if checker.shouldReport("no-identity") {
+			slog.Warn("the JWT assertion carries no RBAC identity, so this person sees only the scoped view",
+				"hint", "check GPM_RBAC_USERNAME_CLAIM against the claims the proxy puts in the assertion")
+		}
+		return
+	}
+
+	// A session created before the feature was switched on carries no identity at all, because OIDC
+	// reads the claims only at login. Signing in again is the whole fix.
+	sess, err := session.Get(sessionName, c)
+	if err != nil || sess == nil {
+		return
+	}
+	_, signedIn := sess.Values[sessionKeyUser]
+	_, reviewed := sess.Values[sessionKeyRBACUser]
+	switch {
+	case signedIn && !reviewed && checker.shouldReport("session-predates-filtering"):
+		slog.Warn("this session was created before GPM_RBAC_FILTERING was switched on, so it "+
+			"carries no identity to authorize, and this person sees only the scoped view. "+
+			"They have to sign out and in again",
+			"hint", "existing sessions do not pick the feature up; new logins do")
+	case !signedIn || reviewed:
+		if checker.shouldReport("no-identity") {
+			slog.Warn("no RBAC identity in the session, showing only the scoped view",
+				"hint", "check GPM_RBAC_USERNAME_CLAIM against the claims the provider issues")
+		}
+	}
 }
 
 // validateBool reads a GPM_ boolean strictly. viper reads anything it cannot parse as false, so a
@@ -523,7 +566,7 @@ func (s *server) checkRBACConfig() error {
 	}
 	if !authEnabled() {
 		return fmt.Errorf("GPM_RBAC_FILTERING needs authentication: there is no identity to authorize " +
-			"without it. Set GPM_AUTH_ENABLED=OIDC, or unset GPM_RBAC_FILTERING")
+			"without it. Set GPM_AUTH_ENABLED to OIDC or to JWT, or unset GPM_RBAC_FILTERING")
 	}
 	if viper.GetString("rbac_username_claim") == "" {
 		return fmt.Errorf("GPM_RBAC_FILTERING needs GPM_RBAC_USERNAME_CLAIM: without it the reviews " +
