@@ -125,8 +125,10 @@ config:
   # text above. If set, config.secretKey must be null. Expected field in the secret: secretKey
   secretRef: null # Name of an existing Secret holding the session key, instead of secretKey.
   # RBAC-aligned views: each person sees the views and the objects their own Kubernetes account can
-  # read (issue #261). Needs OIDC authentication and a single cluster -- GPM refuses to start with
-  # this on and either missing. Turning it on adds `create subjectaccessreviews` to GPM's
+  # read (issue #261). Needs authentication -- config.oidc or config.jwt -- and a single cluster.
+  # GPM refuses to start with this on and either missing. Your API server must also authenticate the
+  # same people: one that does not know the name GPM asks about denies it like any other, and the
+  # page then blames the reader. GPM cannot check that for you. Turning it on adds `create subjectaccessreviews` to GPM's
   # ClusterRole, which is how it asks the API server what a user may see. It never impersonates.
   rbacFiltering:
     # Needs `create subjectaccessreviews`. The chart adds the rule to the ClusterRole it creates, or
@@ -138,9 +140,9 @@ config:
     # Set the prefixes when the API server adds --oidc-username-prefix / --oidc-groups-prefix. A
     # mismatch denies everything: the user sees an empty page, and the chip on it shows the name GPM
     # asked about.
-    usernameClaim: null # Required when enabled. ID-token claim holding the username the API server knows.
+    usernameClaim: null # Required when enabled. Claim holding the username the API server knows.
     usernamePrefix: null # Prefix the API server's --oidc-username-prefix adds, for example oidc:.
-    groupsClaim: null # ID-token claim listing the person's groups.
+    groupsClaim: null # Claim listing the person's groups.
     groupsPrefix: null # Prefix the API server's --oidc-groups-prefix adds.
 
   multiCluster:
@@ -165,6 +167,20 @@ config:
         user:
           client-certificate-data: REDACTED
           client-key-data: REDACTED
+  # JWT authentication: an authenticating proxy such as Pomerium identifies the person, and GPM
+  # verifies the assertion it signs. There is no login page and no session, so config.secretKey is
+  # not needed. Turn on either this or config.oidc, never both.
+  jwt:
+    enabled: false # Trust a signed identity assertion from an authenticating proxy.
+    jwkSetURL: # Required. The proxy's JWKS, https only. For example https://pomerium.example.com/.well-known/pomerium/jwks.json
+    # Required. The aud claim GPM accepts, which is the host GPM is served on. A proxy signs every
+    # route with one key, so without this GPM accepts an assertion made for a different route, and
+    # a person that route allows can read GPM. For Pomerium use the bare host, with no scheme.
+    audience: # Required. The host GPM is served on, for example gpm.example.com.
+    headerName: # Header carrying the assertion. Default X-Pomerium-Jwt-Assertion. Use Authorization for oauth2-proxy.
+    issuer: # The iss claim GPM accepts. Not checked when empty. Set it when jwkSetURL points at an identity provider.
+    logoutURL: # Where the Log out button points, for example https://gpm.example.com/.pomerium/sign_out. No button when empty.
+
   oidc:
     enabled: false # Require a login through an OIDC provider.
     issuer: # Issuer URL. GPM discovers the rest of the provider's configuration from it.

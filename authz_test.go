@@ -344,7 +344,7 @@ func TestAGroupsClaimThatDoesNotArriveIsReported(t *testing.T) {
 		want   string
 		groups int
 	}{
-		"absent from the token": {map[string]any{"sub": "dev"}, "missing from the ID token", 0},
+		"absent from the token": {map[string]any{"sub": "dev"}, "missing from the token", 0},
 		"a string, not a list":  {map[string]any{"groups": "platform,payments"}, "not a list", 0},
 		"in no groups at all":   {map[string]any{"groups": []any{}}, "", 0},
 		"a proper list":         {map[string]any{"groups": []any{"platform"}}, "", 1},
@@ -355,7 +355,7 @@ func TestAGroupsClaimThatDoesNotArriveIsReported(t *testing.T) {
 			slog.SetDefault(slog.New(slog.NewJSONHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn})))
 			t.Cleanup(func() { slog.SetDefault(restore) })
 
-			_, groups := identityFromClaims(tt.claims, "dev")
+			_, groups := identityFromClaims(tt.claims, "dev", slog.Warn)
 			if len(groups) != tt.groups {
 				t.Errorf("groups = %v, want %d of them", groups, tt.groups)
 			}
@@ -647,7 +647,7 @@ func TestAMissingPinnedClaimAuthorizesNobody(t *testing.T) {
 	t.Cleanup(viper.Reset)
 	viper.Set("rbac_username_claim", "upn")
 
-	if got, _ := identityFromClaims(map[string]any{"upn": "someone@corp.example"}, "display-name"); got != "someone@corp.example" {
+	if got, _ := identityFromClaims(map[string]any{"upn": "someone@corp.example"}, "display-name", slog.Warn); got != "someone@corp.example" {
 		t.Errorf("the pinned claim must name the subject, got %q", got)
 	}
 
@@ -660,7 +660,7 @@ func TestAMissingPinnedClaimAuthorizesNobody(t *testing.T) {
 		{"the claim is not a string", map[string]any{"upn": []any{"someone-else"}}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got, _ := identityFromClaims(tt.claims, "display-name")
+			got, _ := identityFromClaims(tt.claims, "display-name", slog.Warn)
 			if got != "" {
 				t.Errorf("GPM fell back to %q; a name the operator did not pin must not be reviewed", got)
 			}

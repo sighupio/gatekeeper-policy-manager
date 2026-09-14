@@ -69,10 +69,44 @@ type authenticator struct {
 	renderError func(c echo.Context, status int, e ssrErrorView) error
 }
 
-// Reports whether the operator asked for OIDC. Anything other than "OIDC" (including the Python
-// backend's "Anonymous") leaves GPM unauthenticated.
-func authEnabled() bool {
-	return strings.EqualFold(viper.GetString("auth_enabled"), "OIDC")
+// The values GPM_AUTH_ENABLED accepts, beside the Python backend's "Anonymous" and anything else,
+// which all leave GPM unauthenticated.
+const (
+	authModeOIDC = "OIDC"
+	authModeJWT  = "JWT"
+)
+
+// authMode normalises GPM_AUTH_ENABLED to one of the constants above, or "" for unauthenticated.
+// Case-insensitive, because operators write this by hand in a values file.
+func authMode() string {
+	switch mode := viper.GetString("auth_enabled"); {
+	case strings.EqualFold(mode, authModeOIDC):
+		return authModeOIDC
+	case strings.EqualFold(mode, authModeJWT):
+		return authModeJWT
+	}
+	return ""
+}
+
+// Reports whether GPM authenticates at all, in either mode. This is the switch the RBAC feature and
+// the Log out control read: neither cares which mode named the person.
+func authEnabled() bool { return authMode() != "" }
+
+// Reports whether an authenticating proxy names the person, and GPM verifies the assertion.
+func jwtAuthEnabled() bool { return authMode() == authModeJWT }
+
+// logoutTarget is where the Log out control points, or "" when GPM has nothing to log out of. OIDC
+// clears its own session at /logout. JWT mode holds no session, so the only useful destination is
+// the proxy's sign-out page; without one configured GPM shows no control at all, rather than a
+// button that appears to end a session and does not.
+func logoutTarget() string {
+	switch authMode() {
+	case authModeOIDC:
+		return browserPath("/logout")
+	case authModeJWT:
+		return viper.GetString("jwt_logout_url")
+	}
+	return ""
 }
 
 // Builds the provider configuration, either from discovery on the issuer or from the endpoints

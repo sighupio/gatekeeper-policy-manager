@@ -96,11 +96,15 @@ GPM is a stateless application. You can configure it with environment variables.
 
 ### Authentication
 
-GPM is unauthenticated by default. Set `GPM_AUTH_ENABLED` to `OIDC` to require a login.
+GPM is unauthenticated by default. There are two ways to protect it:
+
+- `GPM_AUTH_ENABLED=OIDC`. GPM runs the login flow itself against an OpenID Connect provider.
+- `GPM_AUTH_ENABLED=JWT`. An authenticating proxy in front of GPM identifies the user. See
+  [Behind an authenticating proxy](#behind-an-authenticating-proxy).
 
 | Env Var Name                      | Description                                                                                                                                              | Default                |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| `GPM_AUTH_ENABLED`                | Set to `OIDC` to protect GPM with an OpenID Connect provider. Any other value leaves it open.                                                            | `Anonymous`            |
+| `GPM_AUTH_ENABLED`                | Set to `OIDC` or to `JWT` to protect GPM. Any other value leaves it open.                                                            | `Anonymous`            |
 | `GPM_SECRET_KEY`                  | Key used to sign and encrypt the session cookie. **Required when authentication is on**: GPM refuses to start if it is still the 1.x default, which is published in this repository, so anyone can forge a session. | `g8k1p3rp0l1c7m4n4g3r` (the 1.x default) |
 | `GPM_PREFERRED_URL_SCHEME`        | Set to `https` when GPM is served over TLS, so the session cookie is marked `Secure`. A `GPM_OIDC_REDIRECT_DOMAIN` that starts with `https://` also marks it `Secure`. | `http`                 |
 | `GPM_SESSION_MAX_AGE`             | How long a session lasts, in seconds.                                                                                                                    | `28800` (8 hours)      |
@@ -153,6 +157,53 @@ Everything else — every page, including the list of clusters — needs a valid
 
 When the session expires, GPM sends the user to `/login` to sign in again. The login route accepts
 `?next=` with a same-site path that says where the user lands after signing in.
+
+### Behind an authenticating proxy
+
+Set `GPM_AUTH_ENABLED=JWT` when a proxy such as Pomerium already identifies your users. The proxy
+signs an assertion for each request, and GPM verifies that signature against the proxy's keys.
+
+| Env Var Name | Description | Default |
+| --- | --- | --- |
+| `GPM_JWT_JWK_SET_URL` | The proxy's JWKS. For Pomerium it is `https://<pomerium-host>/.well-known/pomerium/jwks.json`. Required. | |
+| `GPM_JWT_AUDIENCE` | The `aud` claim GPM accepts. Set it to the host GPM is served on, for example `gpm.example.com`. Required, and see the warning below. | |
+| `GPM_JWT_HEADER_NAME` | The header that carries the assertion. Set it to `Authorization` for oauth2-proxy with `--set-authorization-header`. A `Bearer ` prefix is removed. | `X-Pomerium-Jwt-Assertion` |
+| `GPM_JWT_ISSUER` | The `iss` claim GPM accepts. Not checked when this is empty. Set it when the keys belong to an identity provider. See the note below. | |
+| `GPM_JWT_LOGOUT_URL` | Where the Log out button points, for example `https://gpm.example.com/.pomerium/sign_out`. GPM shows no Log out button when this is empty. | |
+
+GPM verifies the signature, the audience, the issuer when you set one, and the expiry time. A
+request with no assertion, or with one that does not pass, gets a 401 and no data. GPM accepts
+RS256 and ES256. Pomerium signs with ES256.
+
+This mode has no login page and no session cookie, so GPM does not read `GPM_SECRET_KEY`. GPM reads
+the assertion again on every request, which is also why a change to a user's groups takes effect
+immediately.
+
+> [!WARNING]
+> `GPM_JWT_AUDIENCE` is required, and GPM does not start without it.
+>
+> A proxy signs every route it serves with the same key, and it writes the route into the `aud`
+> claim. Without this check, GPM accepts an assertion that the proxy made for a different route. A
+> user who is allowed on that other route can then read GPM.
+>
+> For Pomerium the value is the bare host, with no scheme and no trailing slash.
+
+> [!NOTE]
+> Set `GPM_JWT_ISSUER` when `GPM_JWT_JWK_SET_URL` points at an identity provider and not at the
+> proxy. With Pomerium, one key set serves the routes of one proxy, and `GPM_JWT_AUDIENCE` already
+> names this route, so the issuer adds little. With a shared identity provider, one key set and one
+> client ID cover many tenants, and the issuer is the claim that separates them.
+>
+> GPM writes a warning at start when `GPM_JWT_ISSUER` is empty.
+
+> [!NOTE]
+> GPM fetches the keys from `GPM_JWT_JWK_SET_URL` over HTTPS. A plaintext `http://` URL is refused:
+> these keys decide who every user is. If your proxy uses a certificate from
+> a private CA, mount that CA into the GPM Pod. GPM has no setting to skip this check.
+
+Authentication is not authorization. The proxy decides who reaches GPM. To also limit what each
+person sees, turn on [RBAC-aligned views](#rbac-aligned-views). That feature works the same way in
+both modes.
 
 ### Running behind a reverse proxy on a subpath
 
@@ -222,7 +273,9 @@ in the pod reads all of them.
 
 This feature needs three things, and GPM refuses to start without them:
 
-- **Authentication.** Without OIDC there is no identity to ask about.
+- **Authentication.** Without an identity there is nobody to ask about. `GPM_AUTH_ENABLED` must be
+  `OIDC` or `JWT`. Both modes work the same way here: GPM reads the same claims, applies the same
+  prefixes, and sends the same reviews.
 - **One cluster.** One identity cannot be authorized against several clusters, so GPM refuses to
   start when the kubeconfig names more than one context.
 - **A named username claim.** `GPM_RBAC_USERNAME_CLAIM` must name the claim the API server reads.
@@ -234,15 +287,28 @@ The name that GPM sends must be the name that the API server knows. Many cluster
 
 | Variable | Purpose |
 | --- | --- |
-| `GPM_RBAC_USERNAME_CLAIM` | **Required.** The ID-token claim that holds the username the API server knows. Use the claim your API server reads in `--oidc-username-claim`. |
+| `GPM_RBAC_USERNAME_CLAIM` | **Required.** The claim that holds the username the API server knows. Use the claim your API server reads in `--oidc-username-claim`. |
 | `GPM_RBAC_USERNAME_PREFIX` | The prefix that `--oidc-username-prefix` adds, for example `oidc:`. |
-| `GPM_RBAC_GROUPS_CLAIM` | The ID-token claim that lists the groups. The default is `groups`. |
+| `GPM_RBAC_GROUPS_CLAIM` | The claim that lists the groups. The default is `groups`. |
 | `GPM_RBAC_GROUPS_PREFIX` | The prefix that `--oidc-groups-prefix` adds. |
 
 > [!NOTE]
 > A wrong name denies everything, and the page is empty. To find the name that GPM used, put the
 > pointer on the "scoped to your access" label next to the page title. Compare that name with the
 > subject of your `RoleBinding`. GPM writes the same name to its log.
+
+> [!IMPORTANT]
+> Your API server must authenticate the same users. GPM asks it about a person by name, and an API
+> server that does not know that name denies it, exactly as it denies a person with no access. The
+> page then says that the person can read nothing, which hides the real cause.
+>
+> Before you turn this on, confirm that your API server runs with `--oidc-issuer-url`,
+> `--oidc-username-claim` and the matching prefixes. GPM cannot check this for you.
+
+In `JWT` mode GPM reads these claims from the proxy's assertion, on every request, instead of from
+an ID token at login. A change to a person's groups therefore takes effect at once. The claims must
+still be the ones the API server reads, and the proxy must put them in the assertion. For Pomerium,
+`email` and `groups` are both present.
 
 ### Multi-cluster support
 

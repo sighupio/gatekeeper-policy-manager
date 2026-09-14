@@ -140,6 +140,17 @@ func bindSettings() {
 	viper.SetDefault("preferred_url_scheme", "http")
 	_ = viper.BindEnv("session_max_age")
 	viper.SetDefault("session_max_age", defaultSessionMaxAge)
+	// JWT mode: an authenticating proxy names the person and signs the assertion GPM verifies.
+	// GPM_JWT_JWK_SET_URL and GPM_JWT_AUDIENCE are both required when the mode is on; see
+	// newJWTAuthenticator for why the audience is not optional.
+	_ = viper.BindEnv("jwt_jwk_set_url")
+	_ = viper.BindEnv("jwt_audience")
+	_ = viper.BindEnv("jwt_issuer")
+	// No SetDefault: newJWTAuthenticator falls back to defaultJWTHeaderName, which also covers an
+	// explicitly empty value. A default here would let GPM_JWT_HEADER_NAME="" read a nameless header.
+	_ = viper.BindEnv("jwt_header_name")
+	_ = viper.BindEnv("jwt_logout_url")
+
 	for _, k := range []string{
 		"oidc_redirect_domain",
 		"oidc_client_id",
@@ -245,7 +256,9 @@ func main() {
 	// Authentication. When it is off, no session or auth middleware is installed at all, so the
 	// unauthenticated path stays exactly as it was.
 	var auth *authenticator
-	if authEnabled() {
+	var jwtAuth *jwtAuthenticator
+	switch authMode() {
+	case authModeOIDC:
 		if msg := secretKeyError(viper.GetString("secret_key")); msg != "" {
 			slog.Error(msg, "action", "set GPM_SECRET_KEY to a long random string before enabling authentication")
 			os.Exit(1)
@@ -264,7 +277,19 @@ func main() {
 		}
 		e.Use(session.Middleware(newSessionStore()))
 		e.Use(auth.middleware())
-	} else {
+
+	case authModeJWT:
+		// No session store and no GPM_SECRET_KEY: the assertion is re-read on every request, so
+		// GPM keeps nothing between them.
+		var authErr error
+		jwtAuth, authErr = newJWTAuthenticator(context.Background())
+		if authErr != nil {
+			slog.Error("JWT authentication could not be configured", "error", authErr)
+			os.Exit(1)
+		}
+		e.Use(jwtAuth.middleware())
+
+	default:
 		slog.Warn("authentication is disabled, GPM is readable by anyone who can reach it")
 	}
 
@@ -320,6 +345,9 @@ func main() {
 		// The local logout path renders the SSR "signed out" page; wire it now that s exists.
 		auth.renderLoggedOut = s.renderLoggedOut
 		auth.renderError = s.renderError
+	}
+	if jwtAuth != nil {
+		jwtAuth.renderError = s.renderError
 	}
 
 	// One rewrite instead of registering every route twice. Pre, so it runs before routing.
