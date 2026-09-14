@@ -11,7 +11,7 @@ The following table lists the configurable parameters of the Gatekeeper Policy M
 | `replicaCount` | How many GPM pods to run. GPM holds no state, so more than one is safe. | 1 |
 | `image.repository` | Container image to run. | "quay.io/sighup/gatekeeper-policy-manager" |
 | `image.pullPolicy` | When the kubelet pulls the image. | "IfNotPresent" |
-| `image.tag` | Image tag. Defaults to the chart's appVersion when empty. | "v2.0.0" |
+| `image.tag` | Image tag. Defaults to the chart's appVersion when empty. | "v2.1.0" |
 | `command` | Overrides the image entrypoint. | null |
 | `args` | Overrides the arguments passed to the entrypoint. | null |
 | `imagePullSecrets` | Secrets that hold the credentials for a private registry. | [] |
