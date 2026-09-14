@@ -50,7 +50,13 @@ To release a new Helm Chart version:
 
 1. Update the `/chart/Chart.yaml` file accordingly (i.e. bumping the version of the Chart)
 
-2. Update the `/chart/README.md` file if you made changes to the chart. The `chart-readme` task generates it with [`frigate`](https://frigate.readthedocs.io/):
+2. Update the `/chart/README.md` file if you made changes to the chart. Regenerate it whenever you
+   change the chart version: line 1 carries that version, and `bumpversion` does not touch it,
+   because it is not the app version.
+
+   `chart/README.md` **is** in `.bumpversion.cfg`, because frigate quotes the app version as the
+   `image.tag` default. Do not add a comment to `.bumpversion.cfg` to explain that: `bumpversion`
+   rewrites the file on every run and drops comments. The `chart-readme` task generates it with [`frigate`](https://frigate.readthedocs.io/):
 
 ```bash
 mise run chart-readme
