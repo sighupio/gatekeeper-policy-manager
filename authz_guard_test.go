@@ -1050,7 +1050,7 @@ func TestAViewFailureKeepsItsDetailOffAScopedPage(t *testing.T) {
 	}
 }
 
-// The README tells an operator whose users see nothing to compare the name on the page with the
+// The docs tell an operator whose users see nothing to compare the name on the page with the
 // subject of their RoleBinding, and says GPM writes that name to its log. It has to be there: a
 // correct restriction and a wrong username look identical from the browser.
 func TestAPersonWhoReachesNoViewHasTheirNameLogged(t *testing.T) {
@@ -1070,7 +1070,7 @@ func TestAPersonWhoReachesNoViewHasTheirNameLogged(t *testing.T) {
 	s.resolveAllowedViews(requestWithIdentity(t))
 
 	if !strings.Contains(logged.String(), "dev") {
-		t.Errorf("the name GPM asked about never reached the log, so the README's advice cannot be followed:\n%s", logged.String())
+		t.Errorf("the name GPM asked about never reached the log, so the docs' advice cannot be followed:\n%s", logged.String())
 	}
 }
 
