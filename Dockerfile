@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 
-FROM --platform=$BUILDPLATFORM golang:1.26.6 AS backend
+FROM --platform=$BUILDPLATFORM golang:1.26.10 AS backend
 ARG TARGETOS
 ARG TARGETARCH
 WORKDIR /app
