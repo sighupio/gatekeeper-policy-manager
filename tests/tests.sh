@@ -28,10 +28,18 @@ export KUBECACHEDIR="${TMPDIR:-/tmp}/gpm-e2e-kubectl-cache"
     deploy(){
         kustomize build --load-restrictor LoadRestrictionsNone tests/ |
             kapp deploy --app gpm-e2e --file - --file tests/kapp/exists.yaml \
-                --yes --wait-timeout 5m
+                --yes --wait-timeout 5m || return 1
         # Applied outside the kustomization on purpose: it sets `namespace: gatekeeper-system`, and
         # that transformer renames a Namespace object rather than leaving it alone.
-        kubectl apply -f tests/violating-workload.yaml
+        # kapp returns once the Gatekeeper Deployment is available, but its webhook Service can still
+        # refuse connections for a few seconds, and the apply fails with "connection refused". The
+        # apply goes through that webhook, so retry it until the webhook answers. A real denial still
+        # fails here, after the last attempt.
+        for _ in $(seq 1 30); do
+            kubectl apply -f tests/violating-workload.yaml && return 0
+            sleep 2
+        done
+        return 1
     }
     run deploy
     echo "$output"
