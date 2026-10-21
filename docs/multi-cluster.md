@@ -25,7 +25,7 @@ FROM curlimages/curl:7.81.0 as downloader
 RUN curl https://github.com/kubernetes-sigs/aws-iam-authenticator/releases/download/v0.5.5/aws-iam-authenticator_0.5.5_linux_amd64 --output /tmp/aws-iam-authenticator
 RUN chmod +x /tmp/aws-iam-authenticator
 
-FROM quay.io/sighup/gatekeeper-policy-manager:v2.1.0
+FROM quay.io/sighup/gatekeeper-policy-manager:v2.1.1
 COPY --from=downloader --chown=root:root /tmp/aws-iam-authenticator /usr/local/bin/
 ```
 
