@@ -32,6 +32,12 @@ GPM is unauthenticated by default. There are two ways to protect it:
 >
 > Set `GPM_PREFERRED_URL_SCHEME=https` whenever GPM is reachable over HTTPS.
 
+> [!WARNING]
+> GPM accepts RSA keys of 4096 bits or less. If the JWK set holds one larger RSA key, GPM refuses
+> the full set and rejects every token, also the tokens that a smaller key signed. This applies in
+> both modes: to the JWK set of the OIDC provider and to `GPM_JWT_JWK_SET_URL`. Remove the larger
+> key from the set, or replace it with a key of 4096 bits or less.
+
 GPM uses PKCE, so the authorization code cannot be used by anyone who intercepts it.
 
 The session is a cookie. GPM signs the cookie and also encrypts it, so the contents are not
