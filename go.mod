@@ -11,7 +11,7 @@ require (
 	github.com/gorilla/securecookie v1.1.2
 	github.com/gorilla/sessions v1.4.0
 	github.com/labstack/echo-contrib v0.50.1
-	github.com/labstack/echo/v4 v4.16.0
+	github.com/labstack/echo/v4 v4.16.1
 	github.com/spf13/viper v1.21.0
 	github.com/yuin/goldmark v1.8.6
 	golang.org/x/oauth2 v0.37.0
