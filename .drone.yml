@@ -195,12 +195,15 @@ steps:
       CONTAINER_IMAGE_TAG: test-${DRONE_BUILD_NUMBER}
       DOCKERFILE: Dockerfile
       BUILD_CONTEXT: "."
+      # Docker Hub credentials for the base image pulls; buildx forwards them to BuildKit.
+      DOCKER_CONFIG_JSON:
+        from_secret: DRONE_CONFIG_JSON_ADMIN
     volumes:
-      - name: dockerconfig
-        path: /root/.docker/config.json
       - name: dockersock
         path: /var/run/docker.sock
     commands:
+      - mkdir -p /root/.docker
+      - printf "%s" "$DOCKER_CONFIG_JSON" > /root/.docker/config.json
       - "apk add git"
       - "docker buildx create --name sighup-builder --use"
       - "docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 --pull -f $${DOCKERFILE} -t $${CONTAINER_IMAGE_NAME}:$${CONTAINER_IMAGE_TAG} $${BUILD_CONTEXT}"
@@ -210,9 +213,6 @@ volumes:
   - name: mise-cache
     host:
       path: /root/mise_data_dir
-  - name: dockerconfig
-    host:
-      path: /root/.docker/config.json
   - name: dockersock
     host:
       path: /var/run/docker.sock
@@ -251,8 +251,7 @@ steps:
       LOAD_IMAGE: gatekeeper-policy-manager:test-${DRONE_BUILD_NUMBER}
       CLUSTER_NAME: ${DRONE_REPO_NAME}-${DRONE_BUILD_NUMBER}
     volumes:
-      - name: dockerconfig
-        path: /root/.docker/config.json
+      # No dockerconfig: registry.sighup.io/fury serves the kind node image anonymously.
       - name: dockersock
         path: /var/run/docker.sock
       - name: mise-cache
@@ -354,7 +353,6 @@ steps:
         from_secret: github_token
       CLUSTER_NAME: ${DRONE_REPO_NAME}-${DRONE_BUILD_NUMBER}
     volumes:
-      # No dockerconfig here: this step pulls no image, it only deletes the cluster.
       - name: dockersock
         path: /var/run/docker.sock
       - name: mise-cache
@@ -370,9 +368,6 @@ steps:
         - failure
 
 volumes:
-  - name: dockerconfig
-    host:
-      path: /root/.docker/config.json
   - name: dockersock
     host:
       path: /var/run/docker.sock
