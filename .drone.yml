@@ -6,6 +6,9 @@ name: license
 kind: pipeline
 type: docker
 
+node:
+  performance: low
+
 volumes:
   - name: mise-cache
     host:
@@ -34,6 +37,9 @@ steps:
 name: qa
 kind: pipeline
 type: docker
+
+node:
+  performance: low
 
 depends_on:
   - license
@@ -145,6 +151,9 @@ name: build
 kind: pipeline
 type: docker
 
+node:
+  performance: low
+
 depends_on:
   - qa
 
@@ -212,6 +221,9 @@ volumes:
 name: e2e
 kind: pipeline
 type: docker
+
+node:
+  performance: low
 
 depends_on:
   - build
@@ -373,6 +385,9 @@ name: release
 kind: pipeline
 type: docker
 
+node:
+  performance: low
+
 depends_on:
   - license
   - e2e
@@ -530,6 +545,9 @@ volumes:
 name: release-helm-chart
 kind: pipeline
 type: docker
+
+node:
+  performance: low
 
 depends_on:
   - "release"
