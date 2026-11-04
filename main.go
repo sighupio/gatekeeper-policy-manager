@@ -175,6 +175,11 @@ func main() {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
+	// Since echo 4.16.3, RealIP() ignores forwarded headers unless an extractor is set, so the
+	// request log showed the ingress or proxy pod. Trust X-Forwarded-For from private, loopback and
+	// link-local peers. Only the log uses this value: a pod in the cluster can forge it, but it
+	// grants nothing.
+	e.IPExtractor = echo.ExtractIPFromXFFHeader()
 	p := prometheus.NewPrometheus("echo", nil)
 	// /metrics is reachable without a session so Prometheus can scrape it, which also means any
 	// client can influence the labels. Host comes straight from the request header, so leaving it
