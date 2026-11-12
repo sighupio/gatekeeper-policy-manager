@@ -24,10 +24,3 @@ updates:
     directory: "/tests/e2e"
     schedule:
       interval: "weekly"
-
-  # TEMPORARY: /app has no manifest since 2.0. This entry makes Dependabot submit an empty pip
-  # snapshot that replaces the stale 1.x one and its alerts. Remove it after the SBOM has no PyPI packages.
-  - package-ecosystem: "pip"
-    directory: "/app"
-    schedule:
-      interval: "weekly"
